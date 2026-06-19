@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    image: reno-planner
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      # Comma-separated "username:Display Name" pairs (display name optional).
+      APP_USERS: ${APP_USERS:-mykhailo:Mykhailo,anna:Anna}
+      # Secret used to sign session cookies. CHANGE THIS in production.
+      APP_SECRET: ${APP_SECRET:-please-change-this-secret}
+      # Timezone used to group activity into calendar days.
+      APP_TZ: ${APP_TZ:-UTC}
+    volumes:
+      - reno_data:/data
+    restart: unless-stopped
+
+volumes:
+  reno_data:
