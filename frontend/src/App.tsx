@@ -4,7 +4,8 @@ import { AuthProvider, useAuth } from "@/context/auth";
 import { AppLayout } from "@/components/AppLayout";
 import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
-import { ProjectPage } from "@/pages/Project";
+import { ProjectOverviewPage } from "@/pages/ProjectOverview";
+import { ProjectBoardPage } from "@/pages/ProjectBoard";
 import { TaskPage } from "@/pages/Task";
 import { CalendarPage } from "@/pages/Calendar";
 
@@ -32,7 +33,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<ProjectsPage />} />
-          <Route path="/projects/:id" element={<ProjectPage />} />
+          <Route path="/projects/:id" element={<ProjectOverviewPage />} />
+          <Route path="/projects/:id/board" element={<ProjectBoardPage />} />
           <Route path="/tasks/:id" element={<TaskPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
         </Route>

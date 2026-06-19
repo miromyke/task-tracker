@@ -19,3 +19,8 @@ npm-debug.log*
 *.swp
 .idea/
 .vscode/
+
+# Design artifacts
+House Reno Wireframes (standalone).html
+wf_*.png
+.wf-shot/

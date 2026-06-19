@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { api, type DayEvent } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatDayHeading, formatTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -39,7 +38,6 @@ function buildSlides(events: DayEvent[]): Slide[] {
   return slides;
 }
 
-// The phrase describing what happened, excluding the actor's name.
 function actionPhrase(e: DayEvent): string {
   if (e.type === "note") return e.text ? `logged “${e.text}”` : "added a photo";
   switch (e.toStatus) {
@@ -67,17 +65,17 @@ function adjacentDate(dates: string[], current: string, dir: 1 | -1): string | n
   return j >= 0 && j < dates.length ? dates[j] : null;
 }
 
-function EventRow({ event }: { event: DayEvent }) {
+function EventLine({ event }: { event: DayEvent }) {
   return (
     <div className="flex gap-3">
-      <UserAvatar name={event.user.name} avatarPath={event.user.avatarPath} className="mt-0.5 h-8 w-8 text-[10px]" />
+      <UserAvatar name={event.user.name} avatarPath={event.user.avatarPath} className="mt-0.5 h-9 w-9 text-[11px]" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm">
-          <span className="font-medium">{event.user.name}</span>{" "}
-          <span className="text-muted-foreground">{actionPhrase(event)}</span>{" "}
+        <p className="text-[15px] leading-snug">
+          <span className="font-semibold">{event.user.name}</span>{" "}
+          <span className="text-white/70">{actionPhrase(event)}</span>{" "}
           <span className="font-medium">«{event.task.title}»</span>
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="mt-0.5 text-xs text-white/50">
           {event.task.projectName} · #{event.task.tag} · {formatTime(event.createdAt)}
         </p>
       </div>
@@ -120,11 +118,6 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
     };
   }, [open, currentDate, tag]);
 
-  const hasNextDay = adjacentDate(activeDates, currentDate, 1) !== null;
-  const hasPrevDay = adjacentDate(activeDates, currentDate, -1) !== null;
-  const canNext = slideIndex < slides.length - 1 || hasNextDay;
-  const canPrev = slideIndex > 0 || hasPrevDay;
-
   function next() {
     if (slideIndex < slides.length - 1) {
       setSlideIndex((i) => i + 1);
@@ -153,53 +146,65 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[88vh] max-w-md flex-col gap-0 p-0 sm:h-[80vh]">
-        <div className="border-b p-4 pr-12">
-          <DialogTitle className="text-base">{formatDayHeading(currentDate)}</DialogTitle>
-          {tag && <Badge className="mt-1 border-transparent bg-secondary text-secondary-foreground">#{tag}</Badge>}
+      <DialogContent
+        hideClose
+        className="left-0 top-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-neutral-900 p-0 text-neutral-50 shadow-none sm:rounded-none"
+      >
+        {/* segmented progress */}
+        <div className="flex gap-1 px-3 pt-3">
+          {(slides.length ? slides : [0]).map((_, i) => (
+            <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+              <div className={cn("h-full rounded-full bg-white transition-all", i <= slideIndex ? "w-full" : "w-0")} />
+            </div>
+          ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* header */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <DialogTitle className="text-sm font-semibold">{formatDayHeading(currentDate)}</DialogTitle>
+            <div className="text-xs text-white/60">
+              {slides.length > 0 ? `${slideIndex + 1} / ${slides.length}` : "—"}
+              {tag ? ` · #${tag}` : ""}
+            </div>
+          </div>
+          <DialogClose className="rounded-full p-1 text-white/70 hover:text-white focus:outline-none">
+            <X className="h-5 w-5" />
+          </DialogClose>
+        </div>
+
+        {/* content + tap zones */}
+        <div className="relative min-h-0 flex-1">
           {loading ? (
             <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="h-6 w-6 animate-spin text-white/60" />
             </div>
           ) : !slide ? (
-            <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
               Nothing logged on this day.
             </div>
           ) : slide.kind === "media" ? (
-            <div className="flex h-full flex-col gap-3">
-              <a href={slide.event.imagePath!} target="_blank" rel="noreferrer" className="flex min-h-0 flex-1">
-                <img
-                  src={slide.event.imagePath!}
-                  alt="attachment"
-                  className="m-auto max-h-full max-w-full rounded-md object-contain"
-                />
-              </a>
-              <EventRow event={slide.event} />
+            <div className="absolute inset-0">
+              <img
+                src={slide.event.imagePath!}
+                alt="attachment"
+                className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
+                <EventLine event={slide.event} />
+              </div>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="flex h-full flex-col justify-center gap-6 px-6">
               {slide.events.map((e) => (
-                <EventRow key={e.id} event={e} />
+                <EventLine key={e.id} event={e} />
               ))}
             </div>
           )}
-        </div>
 
-        <div className="flex items-center justify-between border-t p-3">
-          <Button variant="ghost" size="sm" onClick={prev} disabled={!canPrev}>
-            <ChevronLeft className="h-4 w-4" />
-            Prev
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {slides.length > 0 ? `${slideIndex + 1} / ${slides.length}` : "—"}
-          </span>
-          <Button variant="ghost" size="sm" onClick={next} disabled={!canNext}>
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          {/* tap zones: left third = back, right two-thirds = forward */}
+          <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default" />
+          <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default" />
         </div>
       </DialogContent>
     </Dialog>

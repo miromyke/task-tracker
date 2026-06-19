@@ -7,7 +7,21 @@ export default {
   theme: {
     container: { center: true, padding: "1rem", screens: { "2xl": "1100px" } },
     extend: {
+      fontFamily: {
+        sans: ['Helvetica', 'Arial', '"Helvetica Neue"', "system-ui", "sans-serif"],
+      },
       colors: {
+        status: {
+          todo: "hsl(var(--status-todo))",
+          progress: "hsl(var(--status-progress))",
+          done: "hsl(var(--status-done))",
+          abandoned: "hsl(var(--status-abandoned))",
+        },
+        gold: "hsl(var(--gold))",
+        green1: "hsl(var(--green-1))",
+        green2: "hsl(var(--green-2))",
+        green3: "hsl(var(--green-3))",
+        green4: "hsl(var(--green-4))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

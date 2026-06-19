@@ -31,19 +31,19 @@ function todayStr() {
 }
 
 function cellClass(day: CalendarDay | undefined): string {
-  if (!day) return "bg-muted/40 text-muted-foreground/70";
-  if (day.gold) return "bg-amber-400 text-amber-950 font-semibold";
+  if (!day) return "bg-muted/60 text-muted-foreground/60";
+  if (day.gold) return "bg-gold text-amber-950 font-semibold";
   switch (day.level) {
     case 1:
-      return "bg-green-200 text-green-900";
+      return "bg-green1 text-green-900";
     case 2:
-      return "bg-green-300 text-green-900";
+      return "bg-green2 text-green-950";
     case 3:
-      return "bg-green-500 text-white";
+      return "bg-green3 text-white";
     case 4:
-      return "bg-green-700 text-white";
+      return "bg-green4 text-white";
     default:
-      return "bg-muted/40 text-muted-foreground/70";
+      return "bg-muted/60 text-muted-foreground/60";
   }
 }
 
@@ -195,18 +195,20 @@ export function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex">
-            <span className="h-3 w-3 rounded-sm bg-green-200" />
-            <span className="h-3 w-3 rounded-sm bg-green-300" />
-            <span className="h-3 w-3 rounded-sm bg-green-500" />
-            <span className="h-3 w-3 rounded-sm bg-green-700" />
+          Less
+          <span className="inline-flex gap-0.5">
+            <span className="h-3 w-3 rounded-sm bg-muted/60" />
+            <span className="h-3 w-3 rounded-sm bg-green1" />
+            <span className="h-3 w-3 rounded-sm bg-green2" />
+            <span className="h-3 w-3 rounded-sm bg-green3" />
+            <span className="h-3 w-3 rounded-sm bg-green4" />
           </span>
-          Activity logged
+          More
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-amber-400" />
+          <span className="h-3 w-3 rounded-sm bg-gold" />
           Task completed
         </span>
       </div>

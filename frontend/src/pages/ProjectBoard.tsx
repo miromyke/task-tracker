@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const ALL = "__all__";
 
-export function ProjectPage() {
+export function ProjectBoardPage() {
   const { id } = useParams();
   const projectId = Number(id);
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export function ProjectPage() {
     try {
       await api.updateTask(task.id, { status: to });
     } catch {
-      reload(); // revert to server truth on failure
+      reload();
     }
   }
 
@@ -63,7 +63,6 @@ export function ProjectPage() {
       </div>
     );
   }
-
   if (!project) {
     return (
       <div className="space-y-4">
@@ -77,36 +76,34 @@ export function ProjectPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="h-4 w-4" /> Projects
+      <Link
+        to={`/projects/${projectId}`}
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> {project.name}
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{project.name}</h1>
-          {project.description && <p className="text-sm text-muted-foreground">{project.description}</p>}
+        <h1 className="text-xl font-bold tracking-tight">Board</h1>
+        <div className="flex items-center gap-2">
+          <Select value={tagFilter} onValueChange={setTagFilter}>
+            <SelectTrigger className="h-9 w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All tags</SelectItem>
+              {tags.map((t) => (
+                <SelectItem key={t} value={t}>
+                  #{t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add task</span>
+          </Button>
         </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add task
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Tag</span>
-        <Select value={tagFilter} onValueChange={setTagFilter}>
-          <SelectTrigger className="h-9 w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All tags</SelectItem>
-            {tags.map((t) => (
-              <SelectItem key={t} value={t}>
-                #{t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <KanbanBoard
