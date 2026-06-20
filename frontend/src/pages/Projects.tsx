@@ -97,7 +97,7 @@ export function ProjectsPage() {
             <Trans>Projects</Trans>
           </h1>
           <p className="text-sm text-muted-foreground">
-            <Trans>House renovation · shared workspace</Trans>
+            <Trans>House renovation</Trans>
           </p>
         </div>
         <CreateProjectDialog onCreated={(p) => setProjects((prev) => [p, ...prev])} />

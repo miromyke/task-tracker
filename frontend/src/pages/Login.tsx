@@ -37,10 +37,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
-          <CardTitle className="text-xl">Reno Planner</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            <Trans>Sign in with your username</Trans>
-          </p>
+          <CardTitle className="text-xl">Mirodom</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -53,7 +50,6 @@ export function LoginPage() {
                 autoFocus
                 autoCapitalize="none"
                 autoCorrect="off"
-                placeholder={t`e.g. mykhailo`}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />

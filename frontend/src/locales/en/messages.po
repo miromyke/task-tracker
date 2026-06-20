@@ -6,6 +6,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
 "Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
 
 #. placeholder {0}: p.taskCount
 #: src/pages/Projects.tsx
@@ -160,10 +166,6 @@ msgstr "Due date"
 msgid "e.g. Kitchen Remodel"
 msgstr "e.g. Kitchen Remodel"
 
-#: src/pages/Login.tsx
-msgid "e.g. mykhailo"
-msgstr "e.g. mykhailo"
-
 #: src/components/TaskFormDialog.tsx
 msgid "e.g. roof"
 msgstr "e.g. roof"
@@ -178,8 +180,8 @@ msgid "edited this task"
 msgstr "edited this task"
 
 #: src/pages/Projects.tsx
-msgid "House renovation · shared workspace"
-msgstr "House renovation · shared workspace"
+msgid "House renovation"
+msgstr "House renovation"
 
 #: src/lib/constants.ts
 msgid "In progress"
@@ -293,10 +295,6 @@ msgstr "Projects"
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Save changes"
-
-#: src/pages/Login.tsx
-msgid "Sign in with your username"
-msgstr "Sign in with your username"
 
 #: src/pages/Task.tsx
 msgid "Someone"
