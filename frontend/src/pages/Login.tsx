@@ -36,7 +36,7 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="text-4xl">🛠️</div>
+          <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
           <CardTitle className="text-xl">Reno Planner</CardTitle>
           <p className="text-sm text-muted-foreground">
             <Trans>Sign in with your username</Trans>

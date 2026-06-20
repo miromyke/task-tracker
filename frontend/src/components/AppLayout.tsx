@@ -100,7 +100,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur">
         <Link to="/" className="flex items-center gap-2 font-semibold">
-          <span className="text-lg">🛠️</span>
+          <img src="/logo.png" alt="" className="h-7 w-7 object-contain" />
           <span>Reno Planner</span>
         </Link>
         <AccountDialog />

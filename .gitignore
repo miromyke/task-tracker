@@ -24,3 +24,6 @@ npm-debug.log*
 House Reno Wireframes (standalone).html
 wf_*.png
 .wf-shot/
+
+# Source logo (canonical copy lives in frontend/public/)
+/logo.png
