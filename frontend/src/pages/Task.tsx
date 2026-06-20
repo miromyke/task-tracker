@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ChevronLeft, ImagePlus, Loader2, Pencil, Send, X } from "lucide-react";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { msg } from "@lingui/core/macro";
+import type { MessageDescriptor } from "@lingui/core";
 import { api, type LogItem, type Status, type Task, type User } from "@/lib/api";
-import { STATUSES } from "@/lib/constants";
+import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
@@ -14,37 +17,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 import { formatDateTime, formatShortDate, isPast } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-function describe(log: LogItem): string {
+// Returns a translatable descriptor for an activity-log entry's action.
+function describeMsg(log: LogItem): MessageDescriptor {
   switch (log.type) {
     case "created":
-      return "created this task";
+      return msg`created this task`;
     case "note":
-      return log.text ? "logged a note" : "attached an image";
+      return log.text ? msg`logged a note` : msg`attached an image`;
     case "status_change": {
       const to = log.toStatus as Status | null;
-      if (to === "done") return "completed this task";
-      if (to === "abandoned") return "abandoned this task";
-      if (to === "in_progress") return "started working on this";
-      if (to === "todo") return "moved this back to To do";
-      return "changed the status";
+      if (to === "done") return msg`completed this task`;
+      if (to === "abandoned") return msg`abandoned this task`;
+      if (to === "in_progress") return msg`started working on this`;
+      if (to === "todo") return msg`moved this back to To do`;
+      return msg`changed the status`;
     }
     case "due_date_change":
-      return log.text || "changed the due date";
+      return msg`changed the due date`;
     case "edit":
-      return log.text || "edited this task";
+      return msg`edited this task`;
     default:
-      return log.text;
+      return msg`updated this task`;
   }
 }
 
 function LogEntry({ log, user }: { log: LogItem; user?: User }) {
-  const name = user?.name ?? "Someone";
+  const { i18n } = useLingui();
+  const name = user?.name ?? i18n._(msg`Someone`);
   return (
     <div className="flex gap-3">
       <UserAvatar name={name} avatarPath={user?.avatarPath} className="mt-0.5 h-8 w-8 text-[10px]" />
       <div className="min-w-0 flex-1">
         <div className="text-sm">
-          <span className="font-medium">{name}</span> <span className="text-muted-foreground">{describe(log)}</span>
+          <span className="font-medium">{name}</span>{" "}
+          <span className="text-muted-foreground">{i18n._(describeMsg(log))}</span>
           <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</span>
         </div>
         {log.type === "note" && log.text && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
@@ -58,7 +64,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
   );
 }
 
-function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+function MetaRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -70,6 +76,7 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 export function TaskPage() {
   const { id } = useParams();
   const taskId = Number(id);
+  const { t, i18n } = useLingui();
 
   const [task, setTask] = useState<Task | null>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
@@ -132,9 +139,11 @@ export function TaskPage() {
     return (
       <div className="space-y-4">
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" /> Back
+          <ChevronLeft className="h-4 w-4" /> <Trans>Back</Trans>
         </Link>
-        <p>Task not found.</p>
+        <p>
+          <Trans>Task not found.</Trans>
+        </p>
       </div>
     );
   }
@@ -149,66 +158,75 @@ export function TaskPage() {
         to={`/projects/${task.projectId}/board`}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
-        <ChevronLeft className="h-4 w-4" /> Back to board
+        <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
 
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-xl font-bold leading-tight">{task.title}</h1>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
           <Pencil className="h-4 w-4" />
-          Edit task
+          <Trans>Edit task</Trans>
         </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
-        {/* Properties rail — above the log on mobile, right column on desktop */}
+        {/* Properties rail */}
         <Card className="order-1 space-y-4 p-4 md:order-2 md:self-start">
-          <MetaRow label="Status">
+          <MetaRow label={<Trans>Status</Trans>}>
             <Select value={task.status} onValueChange={(v) => changeStatus(v as Status)}>
               <SelectTrigger className="h-9">
                 <StatusBadge status={task.status} />
               </SelectTrigger>
               <SelectContent>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s.key} value={s.key}>
-                    {s.label}
+                {STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {i18n._(STATUS_LABEL[s])}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </MetaRow>
-          <MetaRow label="Tag">
+          <MetaRow label={<Trans>Tag</Trans>}>
             <Badge className="border-transparent bg-secondary text-secondary-foreground">#{task.tag}</Badge>
           </MetaRow>
-          <MetaRow label="Assignee">
+          <MetaRow label={<Trans>Assignee</Trans>}>
             {assignee ? (
               <span className="inline-flex items-center gap-2">
                 <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-6 w-6 text-[10px]" />
                 {assignee.name}
               </span>
             ) : (
-              <span className="text-muted-foreground">Unassigned</span>
+              <span className="text-muted-foreground">
+                <Trans>Unassigned</Trans>
+              </span>
             )}
           </MetaRow>
-          <MetaRow label="Due date">
+          <MetaRow label={<Trans>Due date</Trans>}>
             {task.dueDate ? (
               <span className={cn(overdue && "text-destructive")}>{formatShortDate(task.dueDate)}</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </MetaRow>
-          <MetaRow label="Created">
+          <MetaRow label={<Trans>Created</Trans>}>
             {formatShortDate(task.createdAt.slice(0, 10))}
-            {creator && <span className="text-muted-foreground"> by {creator.name}</span>}
+            {creator && (
+              <span className="text-muted-foreground">
+                {" "}
+                <Trans>by {creator.name}</Trans>
+              </span>
+            )}
           </MetaRow>
         </Card>
 
-        {/* Main column: description, activity log, composer */}
+        {/* Main column */}
         <div className="order-2 space-y-5 md:order-1">
           {task.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
 
           <div className="space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity log</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Trans>Activity log</Trans>
+            </h2>
             {logs.map((log) => (
               <LogEntry key={log.id} log={log} user={usersById.get(log.userId)} />
             ))}
@@ -217,7 +235,7 @@ export function TaskPage() {
           <Card className="sticky bottom-20 p-3">
             <form onSubmit={postNote} className="space-y-2">
               <Textarea
-                placeholder="Log an update…"
+                placeholder={t`Log an update…`}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 className="min-h-[60px]"
@@ -240,11 +258,11 @@ export function TaskPage() {
                 />
                 <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
                   <ImagePlus className="h-4 w-4" />
-                  Photo
+                  <Trans>Photo</Trans>
                 </Button>
                 <Button type="submit" size="sm" disabled={posting || (!noteText.trim() && !noteImage)}>
                   {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Post
+                  <Trans>Post</Trans>
                 </Button>
               </div>
             </form>

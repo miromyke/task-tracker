@@ -1,0 +1,374 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-20 10:16+0300\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: uk\n"
+
+#. placeholder {0}: p.taskCount
+#: src/pages/Projects.tsx
+msgid "{0, plural, one {# task} other {# tasks}}"
+msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
+
+#. placeholder {0}: progress.done
+#. placeholder {1}: progress.total
+#: src/pages/ProjectOverview.tsx
+msgid "{0} of {1} tasks done"
+msgstr "{0} з {1} завдань виконано"
+
+#: src/pages/Calendar.tsx
+msgid "{z, plural, one {# month} other {# months}}"
+msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
+
+#: src/components/DayCarousel.tsx
+msgid "abandoned"
+msgstr "облишив"
+
+#: src/lib/constants.ts
+msgid "Abandoned"
+msgstr "Закинуто"
+
+#: src/pages/Task.tsx
+msgid "abandoned this task"
+msgstr "облишив це завдання"
+
+#: src/components/AppLayout.tsx
+msgid "Account"
+msgstr "Обліковий запис"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Activity calendar"
+msgstr "Календар активності"
+
+#: src/pages/Task.tsx
+msgid "Activity log"
+msgstr "Журнал дій"
+
+#: src/pages/ProjectBoard.tsx
+msgid "Add task"
+msgstr "Додати завдання"
+
+#: src/components/DayCarousel.tsx
+msgid "added a photo"
+msgstr "додав фото"
+
+#: src/pages/Calendar.tsx
+#: src/pages/ProjectBoard.tsx
+msgid "All tags"
+msgstr "Усі теги"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Assignee"
+msgstr "Виконавець"
+
+#: src/pages/Task.tsx
+msgid "attached an image"
+msgstr "додав зображення"
+
+#: src/pages/Task.tsx
+msgid "Back"
+msgstr "Назад"
+
+#: src/pages/Task.tsx
+msgid "Back to board"
+msgstr "Назад до дошки"
+
+#: src/pages/ProjectBoard.tsx
+msgid "Board"
+msgstr "Дошка"
+
+#. placeholder {0}: creator.name
+#: src/pages/Task.tsx
+msgid "by {0}"
+msgstr "автор: {0}"
+
+#: src/components/AppLayout.tsx
+msgid "Calendar"
+msgstr "Календар"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: src/components/AppLayout.tsx
+msgid "Change avatar"
+msgstr "Змінити аватар"
+
+#: src/pages/Task.tsx
+msgid "changed the due date"
+msgstr "змінив термін"
+
+#: src/pages/Task.tsx
+msgid "changed the status"
+msgstr "змінив статус"
+
+#: src/components/DayCarousel.tsx
+msgid "completed"
+msgstr "завершив"
+
+#: src/pages/Task.tsx
+msgid "completed this task"
+msgstr "завершив це завдання"
+
+#: src/pages/Login.tsx
+msgid "Continue"
+msgstr "Продовжити"
+
+#: src/pages/Login.tsx
+msgid "Could not log in"
+msgstr "Не вдалося увійти"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Could not save task"
+msgstr "Не вдалося зберегти завдання"
+
+#: src/pages/Projects.tsx
+msgid "Create"
+msgstr "Створити"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Create task"
+msgstr "Створити завдання"
+
+#: src/pages/ProjectOverview.tsx
+#: src/pages/Task.tsx
+msgid "Created"
+msgstr "Створено"
+
+#: src/pages/Task.tsx
+msgid "created this task"
+msgstr "створив це завдання"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Projects.tsx
+msgid "Description"
+msgstr "Опис"
+
+#: src/lib/constants.ts
+msgid "Done"
+msgstr "Готово"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Due date"
+msgstr "Термін"
+
+#: src/pages/Projects.tsx
+msgid "e.g. Kitchen Remodel"
+msgstr "напр. Ремонт кухні"
+
+#: src/pages/Login.tsx
+msgid "e.g. mykhailo"
+msgstr "напр. mykhailo"
+
+#: src/components/TaskFormDialog.tsx
+msgid "e.g. roof"
+msgstr "напр. дах"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Edit task"
+msgstr "Редагувати завдання"
+
+#: src/pages/Task.tsx
+msgid "edited this task"
+msgstr "відредагував завдання"
+
+#: src/pages/Projects.tsx
+msgid "House renovation · shared workspace"
+msgstr "Ремонт будинку · спільний простір"
+
+#: src/lib/constants.ts
+msgid "In progress"
+msgstr "В роботі"
+
+#: src/components/AppLayout.tsx
+msgid "Language"
+msgstr "Мова"
+
+#: src/pages/Calendar.tsx
+msgid "Less"
+msgstr "Менше"
+
+#: src/pages/Task.tsx
+msgid "Log an update…"
+msgstr "Залишити запис…"
+
+#: src/components/AppLayout.tsx
+msgid "Log out"
+msgstr "Вийти"
+
+#. placeholder {0}: event.text
+#: src/components/DayCarousel.tsx
+msgid "logged “{0}”"
+msgstr "занотував: “{0}”"
+
+#: src/pages/Task.tsx
+msgid "logged a note"
+msgstr "залишив нотатку"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Members"
+msgstr "Учасники"
+
+#: src/pages/Calendar.tsx
+msgid "More"
+msgstr "Більше"
+
+#: src/components/KanbanBoard.tsx
+msgid "Move:"
+msgstr "Перемістити:"
+
+#: src/pages/Task.tsx
+msgid "moved this back to To do"
+msgstr "повернув у «Зробити»"
+
+#: src/components/DayCarousel.tsx
+msgid "moved to To do"
+msgstr "повернув у «Зробити»"
+
+#: src/pages/Projects.tsx
+msgid "Name"
+msgstr "Назва"
+
+#: src/pages/Projects.tsx
+msgid "New project"
+msgstr "Новий проєкт"
+
+#: src/components/TaskFormDialog.tsx
+msgid "New task"
+msgstr "Нове завдання"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Next due"
+msgstr "Найближчий термін"
+
+#: src/pages/Projects.tsx
+msgid "No projects yet. Create your first one to get started."
+msgstr "Ще немає проєктів. Створіть перший, щоб почати."
+
+#: src/components/KanbanBoard.tsx
+msgid "No tasks"
+msgstr "Немає завдань"
+
+#: src/components/KanbanBoard.tsx
+msgid "No tasks in {activeLabel}."
+msgstr "Немає завдань у «{activeLabel}»."
+
+#: src/components/DayCarousel.tsx
+msgid "Nothing logged on this day."
+msgstr "Цього дня нічого не записано."
+
+#: src/pages/ProjectOverview.tsx
+msgid "Nothing open — nice work."
+msgstr "Немає відкритих завдань — чудова робота."
+
+#: src/pages/ProjectOverview.tsx
+msgid "Open board"
+msgstr "Відкрити дошку"
+
+#: src/pages/Task.tsx
+msgid "Photo"
+msgstr "Фото"
+
+#: src/pages/Task.tsx
+msgid "Post"
+msgstr "Надіслати"
+
+#: src/pages/ProjectBoard.tsx
+#: src/pages/ProjectOverview.tsx
+msgid "Project not found."
+msgstr "Проєкт не знайдено."
+
+#: src/components/AppLayout.tsx
+#: src/pages/ProjectBoard.tsx
+#: src/pages/ProjectOverview.tsx
+#: src/pages/Projects.tsx
+msgid "Projects"
+msgstr "Проєкти"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Save changes"
+msgstr "Зберегти зміни"
+
+#: src/pages/Login.tsx
+msgid "Sign in with your username"
+msgstr "Увійдіть за іменем користувача"
+
+#: src/pages/Task.tsx
+msgid "Someone"
+msgstr "Хтось"
+
+#: src/components/DayCarousel.tsx
+msgid "started"
+msgstr "розпочав"
+
+#: src/pages/Task.tsx
+msgid "started working on this"
+msgstr "взявся за роботу"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Status"
+msgstr "Статус"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Tag"
+msgstr "Тег"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Tag is required"
+msgstr "Тег обовʼязковий"
+
+#: src/pages/Calendar.tsx
+msgid "Task completed"
+msgstr "Завдання завершено"
+
+#: src/pages/Task.tsx
+msgid "Task not found."
+msgstr "Завдання не знайдено."
+
+#: src/pages/Calendar.tsx
+msgid "Timeline"
+msgstr "Хронологія"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Title"
+msgstr "Назва"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Title is required"
+msgstr "Назва обовʼязкова"
+
+#: src/lib/constants.ts
+msgid "To do"
+msgstr "Зробити"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Unassigned"
+msgstr "Без виконавця"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Up next"
+msgstr "На черзі"
+
+#: src/components/DayCarousel.tsx
+msgid "updated"
+msgstr "оновив"
+
+#: src/pages/Task.tsx
+msgid "updated this task"
+msgstr "оновив завдання"
+
+#: src/components/AppLayout.tsx
+msgid "Uploading…"
+msgstr "Завантаження…"
+
+#: src/pages/Login.tsx
+msgid "Username"
+msgstr "Імʼя користувача"

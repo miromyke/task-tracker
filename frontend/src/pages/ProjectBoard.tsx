@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Loader2, Plus } from "lucide-react";
+import { Trans } from "@lingui/react/macro";
 import { api, type Project, type Status, type Task, type User } from "@/lib/api";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
@@ -67,9 +68,11 @@ export function ProjectBoardPage() {
     return (
       <div className="space-y-4">
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" /> Projects
+          <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
         </Link>
-        <p>Project not found.</p>
+        <p>
+          <Trans>Project not found.</Trans>
+        </p>
       </div>
     );
   }
@@ -84,14 +87,18 @@ export function ProjectBoardPage() {
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold tracking-tight">Board</h1>
+        <h1 className="text-xl font-bold tracking-tight">
+          <Trans>Board</Trans>
+        </h1>
         <div className="flex items-center gap-2">
           <Select value={tagFilter} onValueChange={setTagFilter}>
             <SelectTrigger className="h-9 w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All tags</SelectItem>
+              <SelectItem value={ALL}>
+                <Trans>All tags</Trans>
+              </SelectItem>
               {tags.map((t) => (
                 <SelectItem key={t} value={t}>
                   #{t}
@@ -101,7 +108,9 @@ export function ProjectBoardPage() {
           </Select>
           <Button onClick={() => setFormOpen(true)}>
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add task</span>
+            <span className="hidden sm:inline">
+              <Trans>Add task</Trans>
+            </span>
           </Button>
         </div>
       </div>

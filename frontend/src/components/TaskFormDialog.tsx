@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type Status, type Task, type User } from "@/lib/api";
-import { STATUSES } from "@/lib/constants";
+import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ interface Props {
 const NONE = "__none__";
 
 export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tags, onSaved }: Props) {
+  const { t, i18n } = useLingui();
   const editing = !!task;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -51,8 +53,8 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return setError("Title is required");
-    if (!tag.trim()) return setError("Tag is required");
+    if (!title.trim()) return setError(t`Title is required`);
+    if (!tag.trim()) return setError(t`Tag is required`);
     setBusy(true);
     setError(null);
     const payload = {
@@ -73,7 +75,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
       onSaved(saved);
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save task");
+      setError(err instanceof Error ? err.message : t`Could not save task`);
     } finally {
       setBusy(false);
     }
@@ -83,50 +85,56 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit task" : "New task"}</DialogTitle>
+          <DialogTitle>{editing ? <Trans>Edit task</Trans> : <Trans>New task</Trans>}</DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">
+              <Trans>Title</Trans>
+            </Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!editing} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">
+              <Trans>Description</Trans>
+            </Label>
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="tag">Tag</Label>
-              <Input
-                id="tag"
-                list="tag-suggestions"
-                placeholder="e.g. roof"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-              />
+              <Label htmlFor="tag">
+                <Trans>Tag</Trans>
+              </Label>
+              <Input id="tag" list="tag-suggestions" placeholder={t`e.g. roof`} value={tag} onChange={(e) => setTag(e.target.value)} />
               <datalist id="tag-suggestions">
-                {tags.map((t) => (
-                  <option key={t} value={t} />
+                {tags.map((tg) => (
+                  <option key={tg} value={tg} />
                 ))}
               </datalist>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="due">Due date</Label>
+              <Label htmlFor="due">
+                <Trans>Due date</Trans>
+              </Label>
               <Input id="due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Assignee</Label>
+              <Label>
+                <Trans>Assignee</Trans>
+              </Label>
               <Select value={assignee} onValueChange={setAssignee}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Unassigned</SelectItem>
+                  <SelectItem value={NONE}>
+                    <Trans>Unassigned</Trans>
+                  </SelectItem>
                   {users.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.name}
@@ -136,15 +144,17 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>
+                <Trans>Status</Trans>
+              </Label>
               <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.label}
+                  {STATUS_ORDER.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {i18n._(STATUS_LABEL[s])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -156,11 +166,11 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancel
+              <Trans>Cancel</Trans>
             </Button>
             <Button type="submit" disabled={busy}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editing ? "Save changes" : "Create task"}
+              {editing ? <Trans>Save changes</Trans> : <Trans>Create task</Trans>}
             </Button>
           </DialogFooter>
         </form>

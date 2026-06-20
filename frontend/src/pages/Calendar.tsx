@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import { api, type CalendarDay } from "@/lib/api";
 import { DayCarousel } from "@/components/DayCarousel";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,6 @@ import { cn } from "@/lib/utils";
 
 const ALL = "__all__";
 const ZOOMS = [1, 2, 3, 6];
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (y: number, m0: number, d: number) => `${y}-${pad(m0 + 1)}-${pad(d)}`;
@@ -50,11 +46,15 @@ function cellClass(day: CalendarDay | undefined): string {
 function MonthGrid({
   year,
   month0,
+  title,
+  weekdays,
   data,
   onPick,
 }: {
   year: number;
   month0: number;
+  title: string;
+  weekdays: string[];
   data: Map<string, CalendarDay>;
   onPick: (date: string) => void;
 }) {
@@ -67,12 +67,10 @@ function MonthGrid({
 
   return (
     <div className="rounded-lg border p-3">
-      <h3 className="mb-2 text-center text-sm font-semibold">
-        {MONTH_NAMES[month0]} {year}
-      </h3>
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-muted-foreground">
-        {WEEKDAYS.map((w) => (
-          <div key={w}>{w}</div>
+      <h3 className="mb-2 text-center text-sm font-semibold capitalize">{title}</h3>
+      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium capitalize text-muted-foreground">
+        {weekdays.map((w, i) => (
+          <div key={i}>{w}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -103,6 +101,7 @@ function MonthGrid({
 }
 
 export function CalendarPage() {
+  const { i18n } = useLingui();
   const [zoom, setZoom] = useState<number>(() =>
     typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? 2 : 1
   );
@@ -114,6 +113,17 @@ export function CalendarPage() {
 
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState("");
+
+  // Locale-aware month + weekday names.
+  const monthLong = useMemo(() => new Intl.DateTimeFormat(i18n.locale, { month: "long" }), [i18n.locale]);
+  const monthShort = useMemo(() => new Intl.DateTimeFormat(i18n.locale, { month: "short" }), [i18n.locale]);
+  const weekdays = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(i18n.locale, { weekday: "short" });
+    // 2024-01-01 is a Monday
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+  }, [i18n.locale]);
+  const mLong = (m0: number) => monthLong.format(new Date(2000, m0, 1));
+  const mShort = (m0: number) => monthShort.format(new Date(2000, m0, 1));
 
   useEffect(() => {
     api.listTags().then(setTags);
@@ -133,20 +143,24 @@ export function CalendarPage() {
   const months = Array.from({ length: zoom }, (_, i) => addMonths(anchor.year, anchor.month0, i));
   const rangeLabel =
     zoom === 1
-      ? `${MONTH_NAMES[anchor.month0]} ${anchor.year}`
-      : `${MONTH_NAMES[anchor.month0].slice(0, 3)} ${anchor.year} – ${MONTH_NAMES[last.month0].slice(0, 3)} ${last.year}`;
+      ? `${mLong(anchor.month0)} ${anchor.year}`
+      : `${mShort(anchor.month0)} ${anchor.year} – ${mShort(last.month0)} ${last.year}`;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Timeline</h1>
+        <h1 className="text-2xl font-bold">
+          <Trans>Timeline</Trans>
+        </h1>
         <div className="flex items-center gap-2">
           <Select value={tag} onValueChange={setTag}>
             <SelectTrigger className="h-9 w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All tags</SelectItem>
+              <SelectItem value={ALL}>
+                <Trans>All tags</Trans>
+              </SelectItem>
               {tags.map((t) => (
                 <SelectItem key={t} value={t}>
                   #{t}
@@ -161,7 +175,7 @@ export function CalendarPage() {
             <SelectContent>
               {ZOOMS.map((z) => (
                 <SelectItem key={z} value={String(z)}>
-                  {z} {z === 1 ? "month" : "months"}
+                  <Plural value={z} one="# month" other="# months" />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -173,7 +187,7 @@ export function CalendarPage() {
         <Button variant="outline" size="icon" onClick={() => setAnchor(addMonths(anchor.year, anchor.month0, -zoom))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="text-sm font-medium">{rangeLabel}</div>
+        <div className="text-sm font-medium capitalize">{rangeLabel}</div>
         <Button variant="outline" size="icon" onClick={() => setAnchor(addMonths(anchor.year, anchor.month0, zoom))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -185,6 +199,8 @@ export function CalendarPage() {
             key={`${m.year}-${m.month0}`}
             year={m.year}
             month0={m.month0}
+            title={`${mLong(m.month0)} ${m.year}`}
+            weekdays={weekdays}
             data={data}
             onPick={(date) => {
               setPickedDate(date);
@@ -197,7 +213,7 @@ export function CalendarPage() {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          Less
+          <Trans>Less</Trans>
           <span className="inline-flex gap-0.5">
             <span className="h-3 w-3 rounded-sm bg-muted/60" />
             <span className="h-3 w-3 rounded-sm bg-green1" />
@@ -205,11 +221,11 @@ export function CalendarPage() {
             <span className="h-3 w-3 rounded-sm bg-green3" />
             <span className="h-3 w-3 rounded-sm bg-green4" />
           </span>
-          More
+          <Trans>More</Trans>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-gold" />
-          Task completed
+          <Trans>Task completed</Trans>
         </span>
       </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CalendarClock, CalendarDays, ChevronLeft, KanbanSquare, Loader2 } from "lucide-react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type Project, type Task, type User } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { ProgressBar } from "@/components/ProgressBar";
@@ -16,6 +17,7 @@ export function ProjectOverviewPage() {
   const { id } = useParams();
   const projectId = Number(id);
   const navigate = useNavigate();
+  const { i18n } = useLingui();
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -50,9 +52,11 @@ export function ProjectOverviewPage() {
     return (
       <div className="space-y-4">
         <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" /> Projects
+          <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
         </Link>
-        <p>Project not found.</p>
+        <p>
+          <Trans>Project not found.</Trans>
+        </p>
       </div>
     );
   }
@@ -60,7 +64,7 @@ export function ProjectOverviewPage() {
   return (
     <div className="space-y-5">
       <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        <ChevronLeft className="h-4 w-4" /> Projects
+        <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
       </Link>
 
       <div>
@@ -72,7 +76,9 @@ export function ProjectOverviewPage() {
       <Card className="space-y-3 p-4">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-medium">
-            {progress.done} of {progress.total} tasks done
+            <Trans>
+              {progress.done} of {progress.total} tasks done
+            </Trans>
           </span>
           <span className="text-sm font-semibold tabular-nums">{progress.percent}%</span>
         </div>
@@ -81,7 +87,7 @@ export function ProjectOverviewPage() {
           {STATUS_ORDER.map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5">
               <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[s])} />
-              {STATUS_LABEL[s]} {progress.counts[s]}
+              {i18n._(STATUS_LABEL[s])} {progress.counts[s]}
             </span>
           ))}
         </div>
@@ -90,9 +96,13 @@ export function ProjectOverviewPage() {
       <div className="grid gap-4 md:grid-cols-[1fr_260px]">
         {/* Up next */}
         <Card className="p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Up next</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <Trans>Up next</Trans>
+          </h2>
           {next.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Nothing open — nice work.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              <Trans>Nothing open — nice work.</Trans>
+            </p>
           ) : (
             <ul className="divide-y">
               {next.map((t) => {
@@ -120,7 +130,9 @@ export function ProjectOverviewPage() {
         {/* Meta rail */}
         <Card className="space-y-4 p-4">
           <div>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Members</h2>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Trans>Members</Trans>
+            </h2>
             <div className="space-y-2">
               {members.map((m) => (
                 <div key={m.id} className="flex items-center gap-2">
@@ -132,11 +144,15 @@ export function ProjectOverviewPage() {
           </div>
           <div className="space-y-1 border-t pt-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Created</span>
+              <span className="text-muted-foreground">
+                <Trans>Created</Trans>
+              </span>
               <span>{formatShortDate(project.createdAt.slice(0, 10))}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Next due</span>
+              <span className="text-muted-foreground">
+                <Trans>Next due</Trans>
+              </span>
               <span>{due ? formatShortDate(due) : "—"}</span>
             </div>
           </div>
@@ -147,11 +163,11 @@ export function ProjectOverviewPage() {
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button className="flex-1" onClick={() => navigate(`/projects/${projectId}/board`)}>
           <KanbanSquare className="h-4 w-4" />
-          Open board
+          <Trans>Open board</Trans>
         </Button>
         <Button variant="outline" className="flex-1" onClick={() => navigate("/calendar")}>
           <CalendarDays className="h-4 w-4" />
-          Activity calendar
+          <Trans>Activity calendar</Trans>
         </Button>
       </div>
     </div>

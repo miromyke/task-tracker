@@ -1,17 +1,16 @@
+import { msg } from "@lingui/core/macro";
+import type { MessageDescriptor } from "@lingui/core";
 import type { Status } from "./api";
 
-export const STATUSES: { key: Status; label: string }[] = [
-  { key: "todo", label: "To do" },
-  { key: "in_progress", label: "In progress" },
-  { key: "done", label: "Done" },
-  { key: "abandoned", label: "Abandoned" },
-];
+// Order used by the kanban board and progress bar.
+export const STATUS_ORDER: Status[] = ["todo", "in_progress", "done", "abandoned"];
 
-export const STATUS_LABEL: Record<Status, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  done: "Done",
-  abandoned: "Abandoned",
+// Translatable labels (resolve with i18n._(STATUS_LABEL[status])).
+export const STATUS_LABEL: Record<Status, MessageDescriptor> = {
+  todo: msg`To do`,
+  in_progress: msg`In progress`,
+  done: msg`Done`,
+  abandoned: msg`Abandoned`,
 };
 
 // Tailwind classes for status badges (tinted chip + colored text).
@@ -29,6 +28,3 @@ export const STATUS_DOT: Record<Status, string> = {
   done: "bg-status-done",
   abandoned: "bg-status-abandoned",
 };
-
-// Order used by the kanban board and progress bar.
-export const STATUS_ORDER: Status[] = ["todo", "in_progress", "done", "abandoned"];

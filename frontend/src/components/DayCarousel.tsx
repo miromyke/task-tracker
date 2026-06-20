@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { msg } from "@lingui/core/macro";
+import type { MessageDescriptor } from "@lingui/core";
 import { api, type DayEvent } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -38,19 +41,18 @@ function buildSlides(events: DayEvent[]): Slide[] {
   return slides;
 }
 
-function actionPhrase(e: DayEvent): string {
-  if (e.type === "note") return e.text ? `logged “${e.text}”` : "added a photo";
-  switch (e.toStatus) {
+function statusActionMsg(toStatus: string | null): MessageDescriptor {
+  switch (toStatus) {
     case "done":
-      return "completed";
+      return msg`completed`;
     case "abandoned":
-      return "abandoned";
+      return msg`abandoned`;
     case "in_progress":
-      return "started";
+      return msg`started`;
     case "todo":
-      return "moved to To do";
+      return msg`moved to To do`;
     default:
-      return "updated";
+      return msg`updated`;
   }
 }
 
@@ -66,13 +68,19 @@ function adjacentDate(dates: string[], current: string, dir: 1 | -1): string | n
 }
 
 function EventLine({ event }: { event: DayEvent }) {
+  const { t, i18n } = useLingui();
+  const action =
+    event.type === "note"
+      ? event.text
+        ? t`logged “${event.text}”`
+        : i18n._(msg`added a photo`)
+      : i18n._(statusActionMsg(event.toStatus));
   return (
     <div className="flex gap-3">
       <UserAvatar name={event.user.name} avatarPath={event.user.avatarPath} className="mt-0.5 h-9 w-9 text-[11px]" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] leading-snug">
-          <span className="font-semibold">{event.user.name}</span>{" "}
-          <span className="text-white/70">{actionPhrase(event)}</span>{" "}
+          <span className="font-semibold">{event.user.name}</span> <span className="text-white/70">{action}</span>{" "}
           <span className="font-medium">«{event.task.title}»</span>
         </p>
         <p className="mt-0.5 text-xs text-white/50">
@@ -162,7 +170,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
         {/* header */}
         <div className="flex items-center justify-between px-4 py-3">
           <div>
-            <DialogTitle className="text-sm font-semibold">{formatDayHeading(currentDate)}</DialogTitle>
+            <DialogTitle className="text-sm font-semibold capitalize">{formatDayHeading(currentDate)}</DialogTitle>
             <div className="text-xs text-white/60">
               {slides.length > 0 ? `${slideIndex + 1} / ${slides.length}` : "—"}
               {tag ? ` · #${tag}` : ""}
@@ -181,7 +189,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
             </div>
           ) : !slide ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
-              Nothing logged on this day.
+              <Trans>Nothing logged on this day.</Trans>
             </div>
           ) : slide.kind === "media" ? (
             <div className="absolute inset-0">

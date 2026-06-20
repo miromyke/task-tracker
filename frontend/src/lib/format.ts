@@ -1,3 +1,10 @@
+import { i18n } from "@lingui/core";
+
+// Active app locale for date formatting (falls back to the browser default).
+function loc(): string | undefined {
+  return i18n.locale || undefined;
+}
+
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -26,11 +33,11 @@ export function avatarColor(seed: string): string {
 }
 
 export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(loc(), { hour: "2-digit", minute: "2-digit" });
 }
 
 export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return new Date(iso).toLocaleString(loc(), {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -41,7 +48,7 @@ export function formatDateTime(iso: string): string {
 // "2026-06-19" -> "Friday, June 19, 2026"
 export function formatDayHeading(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+  return new Date(y, m - 1, d).toLocaleDateString(loc(), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -52,7 +59,7 @@ export function formatDayHeading(date: string): string {
 // "2026-06-19" -> "Jun 19"
 export function formatShortDate(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(y, m - 1, d).toLocaleDateString(loc(), { month: "short", day: "numeric" });
 }
 
 export function isPast(date: string): boolean {

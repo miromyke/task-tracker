@@ -1,0 +1,374 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-06-20 10:16+0300\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+
+#. placeholder {0}: p.taskCount
+#: src/pages/Projects.tsx
+msgid "{0, plural, one {# task} other {# tasks}}"
+msgstr "{0, plural, one {# task} other {# tasks}}"
+
+#. placeholder {0}: progress.done
+#. placeholder {1}: progress.total
+#: src/pages/ProjectOverview.tsx
+msgid "{0} of {1} tasks done"
+msgstr "{0} of {1} tasks done"
+
+#: src/pages/Calendar.tsx
+msgid "{z, plural, one {# month} other {# months}}"
+msgstr "{z, plural, one {# month} other {# months}}"
+
+#: src/components/DayCarousel.tsx
+msgid "abandoned"
+msgstr "abandoned"
+
+#: src/lib/constants.ts
+msgid "Abandoned"
+msgstr "Abandoned"
+
+#: src/pages/Task.tsx
+msgid "abandoned this task"
+msgstr "abandoned this task"
+
+#: src/components/AppLayout.tsx
+msgid "Account"
+msgstr "Account"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Activity calendar"
+msgstr "Activity calendar"
+
+#: src/pages/Task.tsx
+msgid "Activity log"
+msgstr "Activity log"
+
+#: src/pages/ProjectBoard.tsx
+msgid "Add task"
+msgstr "Add task"
+
+#: src/components/DayCarousel.tsx
+msgid "added a photo"
+msgstr "added a photo"
+
+#: src/pages/Calendar.tsx
+#: src/pages/ProjectBoard.tsx
+msgid "All tags"
+msgstr "All tags"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Assignee"
+msgstr "Assignee"
+
+#: src/pages/Task.tsx
+msgid "attached an image"
+msgstr "attached an image"
+
+#: src/pages/Task.tsx
+msgid "Back"
+msgstr "Back"
+
+#: src/pages/Task.tsx
+msgid "Back to board"
+msgstr "Back to board"
+
+#: src/pages/ProjectBoard.tsx
+msgid "Board"
+msgstr "Board"
+
+#. placeholder {0}: creator.name
+#: src/pages/Task.tsx
+msgid "by {0}"
+msgstr "by {0}"
+
+#: src/components/AppLayout.tsx
+msgid "Calendar"
+msgstr "Calendar"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Cancel"
+msgstr "Cancel"
+
+#: src/components/AppLayout.tsx
+msgid "Change avatar"
+msgstr "Change avatar"
+
+#: src/pages/Task.tsx
+msgid "changed the due date"
+msgstr "changed the due date"
+
+#: src/pages/Task.tsx
+msgid "changed the status"
+msgstr "changed the status"
+
+#: src/components/DayCarousel.tsx
+msgid "completed"
+msgstr "completed"
+
+#: src/pages/Task.tsx
+msgid "completed this task"
+msgstr "completed this task"
+
+#: src/pages/Login.tsx
+msgid "Continue"
+msgstr "Continue"
+
+#: src/pages/Login.tsx
+msgid "Could not log in"
+msgstr "Could not log in"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Could not save task"
+msgstr "Could not save task"
+
+#: src/pages/Projects.tsx
+msgid "Create"
+msgstr "Create"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Create task"
+msgstr "Create task"
+
+#: src/pages/ProjectOverview.tsx
+#: src/pages/Task.tsx
+msgid "Created"
+msgstr "Created"
+
+#: src/pages/Task.tsx
+msgid "created this task"
+msgstr "created this task"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Projects.tsx
+msgid "Description"
+msgstr "Description"
+
+#: src/lib/constants.ts
+msgid "Done"
+msgstr "Done"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Due date"
+msgstr "Due date"
+
+#: src/pages/Projects.tsx
+msgid "e.g. Kitchen Remodel"
+msgstr "e.g. Kitchen Remodel"
+
+#: src/pages/Login.tsx
+msgid "e.g. mykhailo"
+msgstr "e.g. mykhailo"
+
+#: src/components/TaskFormDialog.tsx
+msgid "e.g. roof"
+msgstr "e.g. roof"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Edit task"
+msgstr "Edit task"
+
+#: src/pages/Task.tsx
+msgid "edited this task"
+msgstr "edited this task"
+
+#: src/pages/Projects.tsx
+msgid "House renovation · shared workspace"
+msgstr "House renovation · shared workspace"
+
+#: src/lib/constants.ts
+msgid "In progress"
+msgstr "In progress"
+
+#: src/components/AppLayout.tsx
+msgid "Language"
+msgstr "Language"
+
+#: src/pages/Calendar.tsx
+msgid "Less"
+msgstr "Less"
+
+#: src/pages/Task.tsx
+msgid "Log an update…"
+msgstr "Log an update…"
+
+#: src/components/AppLayout.tsx
+msgid "Log out"
+msgstr "Log out"
+
+#. placeholder {0}: event.text
+#: src/components/DayCarousel.tsx
+msgid "logged “{0}”"
+msgstr "logged “{0}”"
+
+#: src/pages/Task.tsx
+msgid "logged a note"
+msgstr "logged a note"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Members"
+msgstr "Members"
+
+#: src/pages/Calendar.tsx
+msgid "More"
+msgstr "More"
+
+#: src/components/KanbanBoard.tsx
+msgid "Move:"
+msgstr "Move:"
+
+#: src/pages/Task.tsx
+msgid "moved this back to To do"
+msgstr "moved this back to To do"
+
+#: src/components/DayCarousel.tsx
+msgid "moved to To do"
+msgstr "moved to To do"
+
+#: src/pages/Projects.tsx
+msgid "Name"
+msgstr "Name"
+
+#: src/pages/Projects.tsx
+msgid "New project"
+msgstr "New project"
+
+#: src/components/TaskFormDialog.tsx
+msgid "New task"
+msgstr "New task"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Next due"
+msgstr "Next due"
+
+#: src/pages/Projects.tsx
+msgid "No projects yet. Create your first one to get started."
+msgstr "No projects yet. Create your first one to get started."
+
+#: src/components/KanbanBoard.tsx
+msgid "No tasks"
+msgstr "No tasks"
+
+#: src/components/KanbanBoard.tsx
+msgid "No tasks in {activeLabel}."
+msgstr "No tasks in {activeLabel}."
+
+#: src/components/DayCarousel.tsx
+msgid "Nothing logged on this day."
+msgstr "Nothing logged on this day."
+
+#: src/pages/ProjectOverview.tsx
+msgid "Nothing open — nice work."
+msgstr "Nothing open — nice work."
+
+#: src/pages/ProjectOverview.tsx
+msgid "Open board"
+msgstr "Open board"
+
+#: src/pages/Task.tsx
+msgid "Photo"
+msgstr "Photo"
+
+#: src/pages/Task.tsx
+msgid "Post"
+msgstr "Post"
+
+#: src/pages/ProjectBoard.tsx
+#: src/pages/ProjectOverview.tsx
+msgid "Project not found."
+msgstr "Project not found."
+
+#: src/components/AppLayout.tsx
+#: src/pages/ProjectBoard.tsx
+#: src/pages/ProjectOverview.tsx
+#: src/pages/Projects.tsx
+msgid "Projects"
+msgstr "Projects"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Save changes"
+msgstr "Save changes"
+
+#: src/pages/Login.tsx
+msgid "Sign in with your username"
+msgstr "Sign in with your username"
+
+#: src/pages/Task.tsx
+msgid "Someone"
+msgstr "Someone"
+
+#: src/components/DayCarousel.tsx
+msgid "started"
+msgstr "started"
+
+#: src/pages/Task.tsx
+msgid "started working on this"
+msgstr "started working on this"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Status"
+msgstr "Status"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Tag"
+msgstr "Tag"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Tag is required"
+msgstr "Tag is required"
+
+#: src/pages/Calendar.tsx
+msgid "Task completed"
+msgstr "Task completed"
+
+#: src/pages/Task.tsx
+msgid "Task not found."
+msgstr "Task not found."
+
+#: src/pages/Calendar.tsx
+msgid "Timeline"
+msgstr "Timeline"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Title"
+msgstr "Title"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Title is required"
+msgstr "Title is required"
+
+#: src/lib/constants.ts
+msgid "To do"
+msgstr "To do"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Unassigned"
+msgstr "Unassigned"
+
+#: src/pages/ProjectOverview.tsx
+msgid "Up next"
+msgstr "Up next"
+
+#: src/components/DayCarousel.tsx
+msgid "updated"
+msgstr "updated"
+
+#: src/pages/Task.tsx
+msgid "updated this task"
+msgstr "updated this task"
+
+#: src/components/AppLayout.tsx
+msgid "Uploading…"
+msgstr "Uploading…"
+
+#: src/pages/Login.tsx
+msgid "Username"
+msgstr "Username"

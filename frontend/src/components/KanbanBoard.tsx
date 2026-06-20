@@ -3,7 +3,6 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -12,8 +11,9 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { CalendarClock } from "lucide-react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import type { Status, Task, User } from "@/lib/api";
-import { STATUSES, STATUS_DOT, STATUS_LABEL } from "@/lib/constants";
+import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -83,12 +83,13 @@ function Column({
   usersById: Map<number, User>;
   onCardClick: (id: number) => void;
 }) {
+  const { i18n } = useLingui();
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
     <div className="flex min-w-0 flex-col">
       <div className="mb-2 flex items-center gap-2 px-1">
         <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[status])} />
-        <span className="text-sm font-semibold">{STATUS_LABEL[status]}</span>
+        <span className="text-sm font-semibold">{i18n._(STATUS_LABEL[status])}</span>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{tasks.length}</span>
       </div>
       <div
@@ -101,7 +102,11 @@ function Column({
         {tasks.map((t) => (
           <DraggableCard key={t.id} task={t} usersById={usersById} onClick={() => onCardClick(t.id)} />
         ))}
-        {tasks.length === 0 && <p className="px-1 py-4 text-center text-xs text-muted-foreground">No tasks</p>}
+        {tasks.length === 0 && (
+          <p className="px-1 py-4 text-center text-xs text-muted-foreground">
+            <Trans>No tasks</Trans>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -125,11 +130,11 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveTask(null)}>
       <div className="grid grid-cols-4 gap-3">
-        {STATUSES.map((s) => (
+        {STATUS_ORDER.map((s) => (
           <Column
-            key={s.key}
-            status={s.key}
-            tasks={tasks.filter((t) => t.status === s.key)}
+            key={s}
+            status={s}
+            tasks={tasks.filter((t) => t.status === s)}
             usersById={usersById}
             onCardClick={onCardClick}
           />
@@ -149,26 +154,28 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 /* ---------- Mobile: status tabs, one column ---------- */
 
 function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
+  const { i18n } = useLingui();
   const [active, setActive] = useState<Status>("todo");
   const colTasks = tasks.filter((t) => t.status === active);
+  const activeLabel = i18n._(STATUS_LABEL[active]);
 
   return (
     <div className="space-y-3">
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-        {STATUSES.map((s) => {
-          const count = tasks.filter((t) => t.status === s.key).length;
-          const on = active === s.key;
+        {STATUS_ORDER.map((s) => {
+          const count = tasks.filter((t) => t.status === s).length;
+          const on = active === s;
           return (
             <button
-              key={s.key}
-              onClick={() => setActive(s.key)}
+              key={s}
+              onClick={() => setActive(s)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                 on ? "border-transparent bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
               )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s.key])} />
-              {s.label}
+              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s])} />
+              {i18n._(STATUS_LABEL[s])}
               <span className={cn("text-xs", on ? "text-primary-foreground/70" : "text-muted-foreground")}>{count}</span>
             </button>
           );
@@ -177,7 +184,9 @@ function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 
       <div className="space-y-2">
         {colTasks.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">No tasks in {STATUS_LABEL[active]}.</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            <Trans>No tasks in {activeLabel}.</Trans>
+          </p>
         ) : (
           colTasks.map((t) => (
             <div key={t.id} className="rounded-lg border bg-card p-3 shadow-sm">
@@ -187,13 +196,15 @@ function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
               <div className="mt-2 flex items-center justify-end border-t pt-2">
                 <Select value={t.status} onValueChange={(v) => onMove(t, v as Status)}>
                   <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs text-muted-foreground shadow-none">
-                    <span className="text-muted-foreground">Move:</span>
+                    <span className="text-muted-foreground">
+                      <Trans>Move:</Trans>
+                    </span>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s.key} value={s.key}>
-                        {s.label}
+                    {STATUS_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {i18n._(STATUS_LABEL[s])}
                       </SelectItem>
                     ))}
                   </SelectContent>
