@@ -1,13 +1,17 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/context/auth";
 import { AppLayout } from "@/components/AppLayout";
 import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
-import { ProjectOverviewPage } from "@/pages/ProjectOverview";
-import { ProjectBoardPage } from "@/pages/ProjectBoard";
 import { TaskPage } from "@/pages/Task";
 import { CalendarPage } from "@/pages/Calendar";
+
+// Old per-project routes now map onto the overview's project filter.
+function ProjectRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/?project=${id}` : "/"} replace />;
+}
 
 function RequireAuth() {
   const { user, loading } = useAuth();
@@ -33,8 +37,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/" element={<ProjectsPage />} />
-          <Route path="/projects/:id" element={<ProjectOverviewPage />} />
-          <Route path="/projects/:id/board" element={<ProjectBoardPage />} />
+          <Route path="/projects/:id" element={<ProjectRedirect />} />
+          <Route path="/projects/:id/board" element={<ProjectRedirect />} />
           <Route path="/tasks/:id" element={<TaskPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
         </Route>

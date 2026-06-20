@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, type Status, type Task, type User } from "@/lib/api";
+import { api, type Project, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,8 @@ import {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: number;
+  projectId?: number | null; // preselected project; when absent in create mode, the user picks one
+  projects?: Project[]; // choices for the project picker (create mode, no fixed project)
   task?: Task | null; // present => edit mode
   users: User[];
   tags: string[];
@@ -28,7 +29,7 @@ interface Props {
 
 const NONE = "__none__";
 
-export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tags, onSaved }: Props) {
+export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, users, tags, onSaved }: Props) {
   const { t, i18n } = useLingui();
   const editing = !!task;
   const [title, setTitle] = useState("");
@@ -37,8 +38,12 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
   const [assignee, setAssignee] = useState<string>(NONE);
   const [dueDate, setDueDate] = useState("");
   const [status, setStatus] = useState<Status>("todo");
+  const [project, setProject] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Only offer the picker when creating without a fixed project.
+  const showProjectPicker = !editing && !projectId && !!projects?.length;
 
   useEffect(() => {
     if (!open) return;
@@ -48,13 +53,16 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
     setAssignee(task?.assigneeId ? String(task.assigneeId) : NONE);
     setDueDate(task?.dueDate ?? "");
     setStatus(task?.status ?? "todo");
+    setProject(projectId ? String(projectId) : "");
     setError(null);
-  }, [open, task]);
+  }, [open, task, projectId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return setError(t`Title is required`);
     if (!tag.trim()) return setError(t`Tag is required`);
+    const targetProject = projectId || Number(project);
+    if (!editing && !targetProject) return setError(t`Pick a project`);
     setBusy(true);
     setError(null);
     const payload = {
@@ -70,7 +78,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
       if (editing && task) {
         saved = (await api.updateTask(task.id, payload)).task;
       } else {
-        saved = await api.createTask(projectId, payload);
+        saved = await api.createTask(targetProject, payload);
       }
       onSaved(saved);
       onOpenChange(false);
@@ -88,6 +96,26 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
           <DialogTitle>{editing ? <Trans>Edit task</Trans> : <Trans>New task</Trans>}</DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
+          {showProjectPicker && (
+            <div className="space-y-2">
+              <Label>
+                <Trans>Project</Trans>
+              </Label>
+              <Select value={project} onValueChange={setProject}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t`Select a project`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects!.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="title">
               <Trans>Title</Trans>

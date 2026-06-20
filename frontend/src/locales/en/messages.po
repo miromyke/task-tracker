@@ -29,8 +29,8 @@ msgstr "{0, plural, one {# log} other {# logs}}"
 
 #. placeholder {0}: p.taskCount
 #: src/pages/Projects.tsx
-msgid "{0, plural, one {# task} other {# tasks}}"
-msgstr "{0, plural, one {# task} other {# tasks}}"
+#~ msgid "{0, plural, one {# task} other {# tasks}}"
+#~ msgstr "{0, plural, one {# task} other {# tasks}}"
 
 #. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
@@ -91,7 +91,7 @@ msgstr "Activity"
 msgid "Activity log"
 msgstr "Activity log"
 
-#: src/pages/ProjectBoard.tsx
+#: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Add task"
 
@@ -99,8 +99,15 @@ msgstr "Add task"
 msgid "added a photo"
 msgstr "added a photo"
 
+#: src/pages/Projects.tsx
+msgid "All"
+msgstr "All"
+
+#: src/pages/Projects.tsx
+msgid "All projects"
+msgstr "All projects"
+
 #: src/pages/Calendar.tsx
-#: src/pages/ProjectBoard.tsx
 msgid "All tags"
 msgstr "All tags"
 
@@ -122,8 +129,8 @@ msgid "Back to board"
 msgstr "Back to board"
 
 #: src/pages/ProjectBoard.tsx
-msgid "Board"
-msgstr "Board"
+#~ msgid "Board"
+#~ msgstr "Board"
 
 #. placeholder {0}: creator.name
 #: src/pages/Task.tsx
@@ -227,8 +234,8 @@ msgid "Has attachment"
 msgstr "Has attachment"
 
 #: src/pages/Projects.tsx
-msgid "House renovation"
-msgstr "House renovation"
+#~ msgid "House renovation"
+#~ msgstr "House renovation"
 
 #: src/lib/constants.ts
 msgid "In progress"
@@ -289,6 +296,10 @@ msgid "Name"
 msgstr "Name"
 
 #: src/pages/Projects.tsx
+msgid "New"
+msgstr "New"
+
+#: src/pages/Projects.tsx
 msgid "New project"
 msgstr "New project"
 
@@ -301,8 +312,8 @@ msgstr "New task"
 #~ msgstr "Next due"
 
 #: src/pages/Projects.tsx
-msgid "No projects yet. Create your first one to get started."
-msgstr "No projects yet. Create your first one to get started."
+#~ msgid "No projects yet. Create your first one to get started."
+#~ msgstr "No projects yet. Create your first one to get started."
 
 #: src/components/KanbanBoard.tsx
 msgid "No tasks"
@@ -332,18 +343,24 @@ msgstr "Nothing logged on this day."
 msgid "Photo"
 msgstr "Photo"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Pick a project"
+msgstr "Pick a project"
+
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Post"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Project"
+msgstr "Project"
+
 #: src/pages/ProjectBoard.tsx
 #: src/pages/ProjectOverview.tsx
-msgid "Project not found."
-msgstr "Project not found."
+#~ msgid "Project not found."
+#~ msgstr "Project not found."
 
 #: src/components/AppLayout.tsx
-#: src/pages/ProjectBoard.tsx
-#: src/pages/ProjectOverview.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Projects"
@@ -355,6 +372,10 @@ msgstr "Projects"
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Save changes"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Select a project"
+msgstr "Select a project"
 
 #: src/pages/Task.tsx
 msgid "Someone"

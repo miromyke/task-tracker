@@ -155,7 +155,7 @@ export function TaskPage() {
   return (
     <div className="space-y-5">
       <Link
-        to={`/projects/${task.projectId}/board`}
+        to={`/?project=${task.projectId}`}
         className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>

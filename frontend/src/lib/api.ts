@@ -151,11 +151,16 @@ export const api = {
   createProject: (name: string, description: string) =>
     req<Project>("/projects", jsonBody("POST", { name, description })),
   getProject: (id: number) => req<Project>(`/projects/${id}`),
-  getProjectPulse: (id: number) => req<Pulse>(`/projects/${id}/pulse`),
+  // Activity pulse across all projects, or one when projectId is given.
+  getPulse: (projectId?: number) =>
+    req<Pulse>(`/pulse${qs({ project: projectId ? String(projectId) : undefined })}`),
 
   // tasks
   listTasks: (projectId: number, opts: { status?: string; tag?: string } = {}) =>
     req<Task[]>(`/projects/${projectId}/tasks${qs(opts)}`),
+  // Tasks across all projects.
+  listAllTasks: (opts: { status?: string; tag?: string } = {}) =>
+    req<Task[]>(`/tasks${qs(opts)}`),
   createTask: (
     projectId: number,
     body: {

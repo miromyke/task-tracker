@@ -29,8 +29,8 @@ msgstr "{0, plural, one {# запис} few {# записи} many {# записі
 
 #. placeholder {0}: p.taskCount
 #: src/pages/Projects.tsx
-msgid "{0, plural, one {# task} other {# tasks}}"
-msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
+#~ msgid "{0, plural, one {# task} other {# tasks}}"
+#~ msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
 
 #. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
@@ -81,7 +81,7 @@ msgstr "Обліковий запис"
 
 #: src/pages/Calendar.tsx
 msgid "Activity"
-msgstr ""
+msgstr "Активність"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Activity calendar"
@@ -91,7 +91,7 @@ msgstr ""
 msgid "Activity log"
 msgstr "Журнал дій"
 
-#: src/pages/ProjectBoard.tsx
+#: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Додати завдання"
 
@@ -99,8 +99,15 @@ msgstr "Додати завдання"
 msgid "added a photo"
 msgstr "додано фото"
 
+#: src/pages/Projects.tsx
+msgid "All"
+msgstr "Усі"
+
+#: src/pages/Projects.tsx
+msgid "All projects"
+msgstr "Усі проєкти"
+
 #: src/pages/Calendar.tsx
-#: src/pages/ProjectBoard.tsx
 msgid "All tags"
 msgstr "Усі теги"
 
@@ -122,8 +129,8 @@ msgid "Back to board"
 msgstr "Назад до дошки"
 
 #: src/pages/ProjectBoard.tsx
-msgid "Board"
-msgstr "Дошка"
+#~ msgid "Board"
+#~ msgstr "Дошка"
 
 #. placeholder {0}: creator.name
 #: src/pages/Task.tsx
@@ -224,11 +231,11 @@ msgstr "відредаговано завдання"
 
 #: src/pages/Calendar.tsx
 msgid "Has attachment"
-msgstr ""
+msgstr "З вкладенням"
 
 #: src/pages/Projects.tsx
-msgid "House renovation"
-msgstr "Ремонт будинку"
+#~ msgid "House renovation"
+#~ msgstr "Ремонт будинку"
 
 #: src/lib/constants.ts
 msgid "In progress"
@@ -289,6 +296,10 @@ msgid "Name"
 msgstr "Назва"
 
 #: src/pages/Projects.tsx
+msgid "New"
+msgstr "Новий"
+
+#: src/pages/Projects.tsx
 msgid "New project"
 msgstr "Новий проєкт"
 
@@ -301,8 +312,8 @@ msgstr "Нове завдання"
 #~ msgstr "Найближчий термін"
 
 #: src/pages/Projects.tsx
-msgid "No projects yet. Create your first one to get started."
-msgstr "Ще немає проєктів. Створіть перший, щоб почати."
+#~ msgid "No projects yet. Create your first one to get started."
+#~ msgstr "Ще немає проєктів. Створіть перший, щоб почати."
 
 #: src/components/KanbanBoard.tsx
 msgid "No tasks"
@@ -332,18 +343,24 @@ msgstr "Цього дня нічого не записано."
 msgid "Photo"
 msgstr "Фото"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Pick a project"
+msgstr "Оберіть проєкт"
+
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Надіслати"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Project"
+msgstr "Проєкт"
+
 #: src/pages/ProjectBoard.tsx
 #: src/pages/ProjectOverview.tsx
-msgid "Project not found."
-msgstr "Проєкт не знайдено."
+#~ msgid "Project not found."
+#~ msgstr "Проєкт не знайдено."
 
 #: src/components/AppLayout.tsx
-#: src/pages/ProjectBoard.tsx
-#: src/pages/ProjectOverview.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Проєкти"
@@ -355,6 +372,10 @@ msgstr "Проєкти"
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Зберегти зміни"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Select a project"
+msgstr "Виберіть проєкт"
 
 #: src/pages/Task.tsx
 msgid "Someone"

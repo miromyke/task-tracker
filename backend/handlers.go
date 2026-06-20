@@ -40,10 +40,12 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/projects/{id}/tasks", s.requireAuth(s.handleListTasks))
 	mux.HandleFunc("POST /api/projects/{id}/tasks", s.requireAuth(s.handleCreateTask))
 
+	mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListAllTasks))
 	mux.HandleFunc("GET /api/tasks/{id}", s.requireAuth(s.handleGetTask))
 	mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
 	mux.HandleFunc("POST /api/tasks/{id}/log", s.requireAuth(s.handleAddLog))
 
+	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
 	mux.HandleFunc("GET /api/calendar", s.requireAuth(s.handleCalendar))
 	mux.HandleFunc("GET /api/calendar/day/{date}", s.requireAuth(s.handleCalendarDay))
@@ -251,6 +253,16 @@ func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tasks, err := s.store.ListTasks(id, r.URL.Query().Get("status"), r.URL.Query().Get("tag"))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, tasks)
+}
+
+// handleListAllTasks lists tasks across every project (for the projects overview).
+func (s *Server) handleListAllTasks(w http.ResponseWriter, r *http.Request) {
+	tasks, err := s.store.ListTasks(0, r.URL.Query().Get("status"), r.URL.Query().Get("tag"))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

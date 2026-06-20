@@ -29,7 +29,7 @@ const SPAN_LABEL: Record<Span, React.ReactNode> = {
   180: <Trans>6 months</Trans>,
 };
 
-export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId: number }) {
+export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: number }) {
   const { t } = useLingui();
   const [span, setSpan] = useState<Span>(30);
   const [open, setOpen] = useState(false);

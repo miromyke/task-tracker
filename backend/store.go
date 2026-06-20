@@ -313,8 +313,13 @@ func scanTask(sc scanner) (*Task, error) {
 }
 
 func (s *Store) ListTasks(projectID int64, status, tag string) ([]Task, error) {
-	q := "SELECT " + taskCols + " FROM tasks WHERE project_id=?"
-	args := []any{projectID}
+	// projectID == 0 means "all projects".
+	q := "SELECT " + taskCols + " FROM tasks WHERE 1=1"
+	args := []any{}
+	if projectID != 0 {
+		q += " AND project_id=?"
+		args = append(args, projectID)
+	}
 	if status != "" {
 		q += " AND status=?"
 		args = append(args, status)

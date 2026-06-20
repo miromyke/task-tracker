@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Plus } from "lucide-react";
-import { Plural, Trans, useLingui } from "@lingui/react/macro";
-import { api, type Project } from "@/lib/api";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { api, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
+import { PulseCard } from "@/components/PulseCard";
+import { KanbanBoard } from "@/components/KanbanBoard";
+import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -42,9 +45,9 @@ function CreateProjectDialog({ onCreated }: { onCreated: (p: Project) => void })
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="rounded-full">
+        <Button size="sm" variant="outline" className="rounded-full">
           <Plus className="h-4 w-4" />
-          <Trans>New project</Trans>
+          <Trans>New</Trans>
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -78,57 +81,175 @@ function CreateProjectDialog({ onCreated }: { onCreated: (p: Project) => void })
   );
 }
 
+function ProjectTile({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: React.ReactNode;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full",
+        active
+          ? "border-zinc-900 bg-zinc-900 text-white"
+          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+      )}
+    >
+      <span className="truncate font-medium">{label}</span>
+      <span className={cn("text-xs tabular-nums", active ? "text-white/60" : "text-zinc-400")}>{count}</span>
+    </button>
+  );
+}
+
 export function ProjectsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("project") ? Number(searchParams.get("project")) : null;
+
   const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [pulse, setPulse] = useState<Pulse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+
+  async function loadBase() {
+    const [p, t, u, g] = await Promise.all([
+      api.listProjects(),
+      api.listAllTasks(),
+      api.listUsers(),
+      api.listTags(),
+    ]);
+    setProjects(p);
+    setTasks(t);
+    setUsers(u);
+    setTags(g);
+  }
+
+  // The selected project filters the board and pulse; null => all projects.
+  const selectedProject = useMemo(
+    () => (selectedId ? projects.find((p) => p.id === selectedId) ?? null : null),
+    [projects, selectedId]
+  );
 
   useEffect(() => {
-    api
-      .listProjects()
-      .then(setProjects)
-      .finally(() => setLoading(false));
+    setLoading(true);
+    loadBase().finally(() => setLoading(false));
   }, []);
 
+  // Pulse is scoped server-side, so refetch whenever the selection changes.
+  useEffect(() => {
+    api.getPulse(selectedId ?? undefined).then(setPulse);
+  }, [selectedId]);
+
+  function select(id: number | null) {
+    setSearchParams(id ? { project: String(id) } : {}, { replace: true });
+  }
+
+  const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+  const visibleTasks = useMemo(
+    () => (selectedId ? tasks.filter((t) => t.projectId === selectedId) : tasks),
+    [tasks, selectedId]
+  );
+
+  async function onMove(task: Task, to: Status) {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: to } : t)));
+    try {
+      await api.updateTask(task.id, { status: to });
+      api.getPulse(selectedId ?? undefined).then(setPulse);
+    } catch {
+      loadBase();
+    }
+  }
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+    <div className="flex flex-col gap-5 pt-1 lg:flex-row">
+      {/* Projects stack */}
+      <aside className="lg:w-56 lg:shrink-0">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h1 className="text-lg font-bold tracking-tight">
             <Trans>Projects</Trans>
           </h1>
-          <p className="text-sm text-zinc-500">
-            <Trans>House renovation</Trans>
-          </p>
+          <CreateProjectDialog
+            onCreated={(p) => {
+              setProjects((prev) => [p, ...prev]);
+              select(p.id);
+            }}
+          />
         </div>
-        <CreateProjectDialog onCreated={(p) => setProjects((prev) => [p, ...prev])} />
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
-        </div>
-      ) : projects.length === 0 ? (
-        <Card className="py-12 text-center text-zinc-500">
-          <Trans>No projects yet. Create your first one to get started.</Trans>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+          <ProjectTile
+            label={<Trans>All</Trans>}
+            count={tasks.length}
+            active={selectedId === null}
+            onClick={() => select(null)}
+          />
           {projects.map((p) => (
-            <Link key={p.id} to={`/projects/${p.id}`} className="group">
-              <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
-                <div className="ds-placeholder aspect-[4/3] w-full" />
-                <div className="space-y-1 p-3">
-                  <h3 className="font-semibold leading-tight">{p.name}</h3>
-                  {p.description && <p className="line-clamp-2 text-xs text-zinc-500">{p.description}</p>}
-                  <p className="pt-1 text-xs text-zinc-500">
-                    <Plural value={p.taskCount} one="# task" other="# tasks" />
-                  </p>
-                </div>
-              </Card>
-            </Link>
+            <ProjectTile
+              key={p.id}
+              label={p.name}
+              count={p.taskCount}
+              active={selectedId === p.id}
+              onClick={() => select(p.id)}
+            />
           ))}
         </div>
-      )}
+      </aside>
+
+      {/* Main content: pulse + board, scoped to the selection */}
+      <div className="min-w-0 flex-1 space-y-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl font-bold tracking-tight">
+              {selectedProject ? selectedProject.name : <Trans>All projects</Trans>}
+            </h2>
+            {selectedProject?.description && (
+              <p className="mt-1 text-sm text-zinc-500">{selectedProject.description}</p>
+            )}
+          </div>
+          <Button onClick={() => setFormOpen(true)} className="shrink-0">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">
+              <Trans>Add task</Trans>
+            </span>
+          </Button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+          </div>
+        ) : (
+          <>
+            {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}
+            <KanbanBoard
+              tasks={visibleTasks}
+              usersById={usersById}
+              onCardClick={(taskId) => navigate(`/tasks/${taskId}`)}
+              onMove={onMove}
+            />
+          </>
+        )}
+      </div>
+
+      <TaskFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        projectId={selectedId ?? undefined}
+        projects={projects}
+        users={users}
+        tags={tags}
+        onSaved={() => loadBase()}
+      />
     </div>
   );
 }

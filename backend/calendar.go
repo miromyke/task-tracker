@@ -130,19 +130,31 @@ type PulseDay struct {
 	Attachments int    `json:"attachments"`
 }
 
+// handleProjectPulse serves the pulse for one project (path id).
 func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+	s.writePulse(w, id)
+}
+
+// handlePulse serves the pulse across all projects, or one via ?project=<id>.
+func (s *Server) handlePulse(w http.ResponseWriter, r *http.Request) {
+	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
+	s.writePulse(w, projectID)
+}
+
+// writePulse builds and writes the activity pulse; projectID == 0 spans all projects.
+func (s *Server) writePulse(w http.ResponseWriter, projectID int64) {
 	loc := s.cfg.Location
 	now := time.Now().In(loc)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	const window = 180 // days returned; the frontend slices to the selected span
 	start := today.AddDate(0, 0, -(window - 1))
 
-	rows, err := s.store.ProjectLogsSince(id, start.UTC().Format(time.RFC3339))
+	rows, err := s.store.ProjectLogsSince(projectID, start.UTC().Format(time.RFC3339))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -231,11 +243,17 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error)
 	return out, rows.Err()
 }
 
+// ProjectLogsSince returns log rows since startUTC; projectID == 0 spans all projects.
 func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRow, error) {
-	rows, err := s.db.Query(
-		`SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li
+	q := `SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li
 		 JOIN tasks t ON t.id = li.task_id
-		 WHERE t.project_id = ? AND li.created_at >= ?`, projectID, startUTC)
+		 WHERE li.created_at >= ?`
+	args := []any{startUTC}
+	if projectID != 0 {
+		q += " AND t.project_id = ?"
+		args = append(args, projectID)
+	}
+	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
