@@ -28,7 +28,7 @@ msgstr "облишив"
 
 #: src/lib/constants.ts
 msgid "Abandoned"
-msgstr "Закинуто"
+msgstr "Відмінено"
 
 #: src/pages/Task.tsx
 msgid "abandoned this task"
