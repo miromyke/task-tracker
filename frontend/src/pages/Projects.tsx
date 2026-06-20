@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, Plus } from "lucide-react";
+import { CalendarDays, FolderKanban, Loader2, Plus } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { PulseCard } from "@/components/PulseCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { CalendarView } from "@/components/CalendarView";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -19,6 +21,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
+const ALL = "__all__";
 
 function CreateProjectDialog({ onCreated }: { onCreated: (p: Project) => void }) {
   const { t } = useLingui();
@@ -121,6 +125,8 @@ export function ProjectsPage() {
   const [pulse, setPulse] = useState<Pulse | null>(null);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [tag, setTag] = useState<string>(ALL);
+  const [view, setView] = useState<"board" | "calendar">("board");
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -157,8 +163,11 @@ export function ProjectsPage() {
 
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const visibleTasks = useMemo(
-    () => (selectedId ? tasks.filter((t) => t.projectId === selectedId) : tasks),
-    [tasks, selectedId]
+    () =>
+      tasks.filter(
+        (t) => (!selectedId || t.projectId === selectedId) && (tag === ALL || t.tag === tag)
+      ),
+    [tasks, selectedId, tag]
   );
 
   async function onMove(task: Task, to: Status) {
@@ -172,10 +181,10 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 pt-1 lg:flex-row">
+    <div className="flex flex-col gap-5 pt-1 lg:flex-row lg:gap-12">
       {/* Projects stack */}
       <aside className="lg:w-56 lg:shrink-0">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-5 flex items-center justify-between gap-2">
           <h1 className="text-lg font-bold tracking-tight">
             <Trans>Projects</Trans>
           </h1>
@@ -186,7 +195,7 @@ export function ProjectsPage() {
             }}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-3 lg:overflow-visible lg:pb-0">
           <ProjectTile
             label={<Trans>All</Trans>}
             count={tasks.length}
@@ -203,9 +212,30 @@ export function ProjectsPage() {
             />
           ))}
         </div>
+
+        <div className="mt-6">
+          <h2 className="mb-5 text-lg font-bold tracking-tight">
+            <Trans>Tags</Trans>
+          </h2>
+          <Select value={tag} onValueChange={setTag}>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>
+                <Trans>All tags</Trans>
+              </SelectItem>
+              {tags.map((t) => (
+                <SelectItem key={t} value={t}>
+                  #{t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </aside>
 
-      {/* Main content: pulse + board, scoped to the selection */}
+      {/* Main content: board or calendar, scoped to the selection */}
       <div className="min-w-0 flex-1 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -216,18 +246,44 @@ export function ProjectsPage() {
               <p className="mt-1 text-sm text-zinc-500">{selectedProject.description}</p>
             )}
           </div>
-          <Button onClick={() => setFormOpen(true)} className="shrink-0">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">
-              <Trans>Add task</Trans>
-            </span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Tasks / Calendar view switch */}
+            <div className="inline-flex rounded-md border p-0.5">
+              {(
+                [
+                  { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
+                  { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
+                ] as const
+              ).map(({ key, icon: Icon, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setView(key)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-sm font-medium transition-colors",
+                    view === key ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+            </div>
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                <Trans>Add task</Trans>
+              </span>
+            </Button>
+          </div>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
           </div>
+        ) : view === "calendar" ? (
+          <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
         ) : (
           <>
             {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}

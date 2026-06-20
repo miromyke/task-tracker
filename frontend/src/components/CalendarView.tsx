@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Plural, Trans, useLingui } from "@lingui/react/macro";
+import { Trans, useLingui } from "@lingui/react/macro";
 import { plural } from "@lingui/core/macro";
 import { api, type CalendarDay } from "@/lib/api";
 import { DayCarousel } from "@/components/DayCarousel";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-const ALL = "__all__";
-const ZOOMS = [1, 2, 3, 6];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (y: number, m0: number, d: number) => `${y}-${pad(m0 + 1)}-${pad(d)}`;
@@ -108,15 +105,14 @@ function MonthGrid({
   );
 }
 
-export function CalendarPage() {
+// Calendar timeline scoped by the shared project/tag selectors. The visible span
+// is fixed (2 months on desktop, 1 on mobile) and oriented into the past.
+export function CalendarView({ projectId, tag }: { projectId?: number; tag?: string }) {
   const { i18n } = useLingui();
-  const [zoom, setZoom] = useState<number>(() =>
-    typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches ? 2 : 1
-  );
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const zoom = isDesktop ? 2 : 1;
   const now = new Date();
   const [anchor, setAnchor] = useState({ year: now.getFullYear(), month0: now.getMonth() });
-  const [tag, setTag] = useState<string>(ALL);
-  const [tags, setTags] = useState<string[]>([]);
   const [days, setDays] = useState<CalendarDay[]>([]);
 
   const [carouselOpen, setCarouselOpen] = useState(false);
@@ -133,70 +129,41 @@ export function CalendarPage() {
   const mLong = (m0: number) => monthLong.format(new Date(2000, m0, 1));
   const mShort = (m0: number) => monthShort.format(new Date(2000, m0, 1));
 
-  useEffect(() => {
-    api.listTags().then(setTags);
-  }, []);
+  // The anchor is the newest (rightmost) month; the window extends into the past.
+  const first = addMonths(anchor.year, anchor.month0, -(zoom - 1));
+  const from = ymd(first.year, first.month0, 1);
+  const to = ymd(anchor.year, anchor.month0, daysInMonth(anchor.year, anchor.month0));
+  // Don't page into the future past the current month.
+  const atPresent =
+    anchor.year > now.getFullYear() ||
+    (anchor.year === now.getFullYear() && anchor.month0 >= now.getMonth());
 
-  const last = addMonths(anchor.year, anchor.month0, zoom - 1);
-  const from = ymd(anchor.year, anchor.month0, 1);
-  const to = ymd(last.year, last.month0, daysInMonth(last.year, last.month0));
-
   useEffect(() => {
-    api.getCalendar(from, to, tag === ALL ? undefined : tag).then(setDays);
-  }, [from, to, tag]);
+    api.getCalendar(from, to, tag, projectId).then(setDays);
+  }, [from, to, tag, projectId]);
 
   const data = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
   const activeDates = useMemo(() => days.map((d) => d.date).sort(), [days]);
 
-  const months = Array.from({ length: zoom }, (_, i) => addMonths(anchor.year, anchor.month0, i));
+  const months = Array.from({ length: zoom }, (_, i) => addMonths(anchor.year, anchor.month0, -(zoom - 1) + i));
   const rangeLabel =
     zoom === 1
       ? `${mLong(anchor.month0)} ${anchor.year}`
-      : `${mShort(anchor.month0)} ${anchor.year} – ${mShort(last.month0)} ${last.year}`;
+      : `${mShort(first.month0)} ${first.year} – ${mShort(anchor.month0)} ${anchor.year}`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">
-          <Trans>Timeline</Trans>
-        </h1>
-        <div className="flex items-center gap-2">
-          <Select value={tag} onValueChange={setTag}>
-            <SelectTrigger className="h-9 w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>
-                <Trans>All tags</Trans>
-              </SelectItem>
-              {tags.map((t) => (
-                <SelectItem key={t} value={t}>
-                  #{t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={String(zoom)} onValueChange={(v) => setZoom(Number(v))}>
-            <SelectTrigger className="h-9 w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ZOOMS.map((z) => (
-                <SelectItem key={z} value={String(z)}>
-                  <Plural value={z} one="# month" other="# months" />
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <Button variant="outline" size="icon" onClick={() => setAnchor(addMonths(anchor.year, anchor.month0, -zoom))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="text-sm font-medium capitalize">{rangeLabel}</div>
-        <Button variant="outline" size="icon" onClick={() => setAnchor(addMonths(anchor.year, anchor.month0, zoom))}>
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={atPresent}
+          onClick={() => setAnchor(addMonths(anchor.year, anchor.month0, zoom))}
+        >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -239,7 +206,8 @@ export function CalendarPage() {
         onOpenChange={setCarouselOpen}
         initialDate={pickedDate}
         activeDates={activeDates}
-        tag={tag === ALL ? undefined : tag}
+        tag={tag}
+        projectId={projectId}
       />
     </div>
   );

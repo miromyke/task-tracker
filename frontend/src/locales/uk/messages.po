@@ -15,15 +15,15 @@ msgstr ""
 
 #. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# вкладення} few {# вкладення} many {# вкладень} other {# вкладення}}"
 
 #. placeholder {0}: d.count
 #. placeholder {0}: day.count
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# запис} few {# записи} many {# записів} other {# запису}}"
 
@@ -34,14 +34,18 @@ msgstr "{0, plural, one {# запис} few {# записи} many {# записі
 
 #. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
+#: src/components/KanbanBoard.tsx
+msgid "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
+msgstr "{overdueDays, plural, one {Прострочено на # день} few {Прострочено на # дні} many {Прострочено на # днів} other {Прострочено на # днів}}"
+
 #: src/pages/Calendar.tsx
-msgid "{z, plural, one {# month} other {# months}}"
-msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
+#~ msgid "{z, plural, one {# month} other {# months}}"
+#~ msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
 
 #: src/components/PulseCard.tsx
 msgid "1 month"
@@ -69,7 +73,7 @@ msgstr "облишено"
 
 #: src/lib/constants.ts
 msgid "Abandoned"
-msgstr "Відмінено"
+msgstr "Полишено"
 
 #: src/pages/Task.tsx
 msgid "abandoned this task"
@@ -79,7 +83,7 @@ msgstr "облишено це завдання"
 msgid "Account"
 msgstr "Обліковий запис"
 
-#: src/pages/Calendar.tsx
+#: src/components/CalendarView.tsx
 msgid "Activity"
 msgstr "Активність"
 
@@ -107,7 +111,7 @@ msgstr "Усі"
 msgid "All projects"
 msgstr "Усі проєкти"
 
-#: src/pages/Calendar.tsx
+#: src/pages/Projects.tsx
 msgid "All tags"
 msgstr "Усі теги"
 
@@ -137,7 +141,7 @@ msgstr "Назад до дошки"
 msgid "by {0}"
 msgstr "автор: {0}"
 
-#: src/components/AppLayout.tsx
+#: src/pages/Projects.tsx
 msgid "Calendar"
 msgstr "Календар"
 
@@ -165,6 +169,10 @@ msgstr "завершено"
 #~ msgctxt "count"
 #~ msgid "completed"
 #~ msgstr "виконано"
+
+#: src/components/KanbanBoard.tsx
+msgid "Completed on time"
+msgstr "Виконано вчасно"
 
 #: src/pages/Task.tsx
 msgid "completed this task"
@@ -229,7 +237,7 @@ msgstr "Редагувати завдання"
 msgid "edited this task"
 msgstr "відредаговано завдання"
 
-#: src/pages/Calendar.tsx
+#: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "З вкладенням"
 
@@ -360,7 +368,6 @@ msgstr "Проєкт"
 #~ msgid "Project not found."
 #~ msgstr "Проєкт не знайдено."
 
-#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Проєкти"
@@ -403,7 +410,15 @@ msgstr "Тег"
 msgid "Tag is required"
 msgstr "Тег обовʼязковий"
 
-#: src/pages/Calendar.tsx
+#: src/pages/Projects.tsx
+msgid "Tags"
+msgstr "Теги"
+
+#: src/components/DayCarousel.tsx
+msgid "Task"
+msgstr "Завдання"
+
+#: src/components/CalendarView.tsx
 msgid "Task completed"
 msgstr "Завдання завершено"
 
@@ -411,9 +426,13 @@ msgstr "Завдання завершено"
 msgid "Task not found."
 msgstr "Завдання не знайдено."
 
+#: src/pages/Projects.tsx
+msgid "Tasks"
+msgstr "Задачі"
+
 #: src/pages/Calendar.tsx
-msgid "Timeline"
-msgstr "Хронологія"
+#~ msgid "Timeline"
+#~ msgstr "Хронологія"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Title"

@@ -10,15 +10,14 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CalendarClock } from "lucide-react";
-import { Trans, useLingui } from "@lingui/react/macro";
+import { CalendarClock, CheckCircle2 } from "lucide-react";
+import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import type { Status, Task, User } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { formatShortDate, isPast } from "@/lib/format";
+import { daysOverdue, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface BoardProps {
@@ -30,18 +29,44 @@ interface BoardProps {
 
 function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User> }) {
   const assignee = task.assigneeId ? usersById.get(task.assigneeId) : undefined;
-  const overdue = task.dueDate && isPast(task.dueDate) && task.status !== "done" && task.status !== "abandoned";
+  const done = task.status === "done";
+  const closed = done || task.status === "abandoned";
+  const overdueDays = task.dueDate ? daysOverdue(task.dueDate) : 0;
+  // Open + overdue is urgent (red); closed (done/abandoned) + overdue is just
+  // historical (neutral); done + met the due date is a win (green).
+  const openOverdue = overdueDays > 0 && !closed;
+  const closedOverdue = overdueDays > 0 && closed;
+  const doneOnTime = done && !!task.dueDate && overdueDays === 0;
   return (
     <>
       <div className="mb-2 text-sm font-medium leading-snug">{task.title}</div>
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="border-transparent bg-zinc-200 text-zinc-800">#{task.tag}</Badge>
-        {task.dueDate && (
-          <span className={cn("inline-flex items-center gap-1 text-xs", overdue ? "text-red-600" : "text-zinc-500")}>
-            <CalendarClock className="h-3.5 w-3.5" />
-            {formatShortDate(task.dueDate)}
-          </span>
-        )}
+        {task.dueDate &&
+          (openOverdue || closedOverdue ? (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
+                closedOverdue
+                  ? "bg-zinc-200 text-zinc-700"
+                  : overdueDays > 7
+                    ? "bg-red-600 text-white"
+                    : "bg-red-200 text-red-900"
+              )}
+            >
+              <CalendarClock className="h-3.5 w-3.5" />
+              <Plural value={overdueDays} one="Overdue by # day" other="Overdue by # days" />
+            </span>
+          ) : doneOnTime ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-green-100 px-1.5 py-0.5 text-xs text-green-800">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <Trans>Completed on time</Trans>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+              <CalendarClock className="h-3.5 w-3.5" />
+              {formatShortDate(task.dueDate)}
+            </span>
+          ))}
         {assignee && (
           <div className="ml-auto">
             <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-6 w-6 text-[10px]" />
@@ -155,7 +180,7 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 
 function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
   const { i18n } = useLingui();
-  const [active, setActive] = useState<Status>("todo");
+  const [active, setActive] = useState<Status>("in_progress");
   const colTasks = tasks.filter((t) => t.status === active);
   const activeLabel = i18n._(STATUS_LABEL[active]);
 

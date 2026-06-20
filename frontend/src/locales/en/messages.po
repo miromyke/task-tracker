@@ -15,15 +15,15 @@ msgstr ""
 
 #. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# attachment} other {# attachments}}"
 
 #. placeholder {0}: d.count
 #. placeholder {0}: day.count
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# log} other {# logs}}"
 
@@ -34,14 +34,18 @@ msgstr "{0, plural, one {# log} other {# logs}}"
 
 #. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
+#: src/components/CalendarView.tsx
 #: src/components/PulseCard.tsx
-#: src/pages/Calendar.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
+#: src/components/KanbanBoard.tsx
+msgid "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
+msgstr "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
+
 #: src/pages/Calendar.tsx
-msgid "{z, plural, one {# month} other {# months}}"
-msgstr "{z, plural, one {# month} other {# months}}"
+#~ msgid "{z, plural, one {# month} other {# months}}"
+#~ msgstr "{z, plural, one {# month} other {# months}}"
 
 #: src/components/PulseCard.tsx
 msgid "1 month"
@@ -79,7 +83,7 @@ msgstr "abandoned this task"
 msgid "Account"
 msgstr "Account"
 
-#: src/pages/Calendar.tsx
+#: src/components/CalendarView.tsx
 msgid "Activity"
 msgstr "Activity"
 
@@ -107,7 +111,7 @@ msgstr "All"
 msgid "All projects"
 msgstr "All projects"
 
-#: src/pages/Calendar.tsx
+#: src/pages/Projects.tsx
 msgid "All tags"
 msgstr "All tags"
 
@@ -137,7 +141,7 @@ msgstr "Back to board"
 msgid "by {0}"
 msgstr "by {0}"
 
-#: src/components/AppLayout.tsx
+#: src/pages/Projects.tsx
 msgid "Calendar"
 msgstr "Calendar"
 
@@ -165,6 +169,10 @@ msgstr "completed"
 #~ msgctxt "count"
 #~ msgid "completed"
 #~ msgstr "completed"
+
+#: src/components/KanbanBoard.tsx
+msgid "Completed on time"
+msgstr "Completed on time"
 
 #: src/pages/Task.tsx
 msgid "completed this task"
@@ -229,7 +237,7 @@ msgstr "Edit task"
 msgid "edited this task"
 msgstr "edited this task"
 
-#: src/pages/Calendar.tsx
+#: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "Has attachment"
 
@@ -360,7 +368,6 @@ msgstr "Project"
 #~ msgid "Project not found."
 #~ msgstr "Project not found."
 
-#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Projects"
@@ -403,7 +410,15 @@ msgstr "Tag"
 msgid "Tag is required"
 msgstr "Tag is required"
 
-#: src/pages/Calendar.tsx
+#: src/pages/Projects.tsx
+msgid "Tags"
+msgstr "Tags"
+
+#: src/components/DayCarousel.tsx
+msgid "Task"
+msgstr "Task"
+
+#: src/components/CalendarView.tsx
 msgid "Task completed"
 msgstr "Task completed"
 
@@ -411,9 +426,13 @@ msgstr "Task completed"
 msgid "Task not found."
 msgstr "Task not found."
 
+#: src/pages/Projects.tsx
+msgid "Tasks"
+msgstr "Tasks"
+
 #: src/pages/Calendar.tsx
-msgid "Timeline"
-msgstr "Timeline"
+#~ msgid "Timeline"
+#~ msgstr "Timeline"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Title"

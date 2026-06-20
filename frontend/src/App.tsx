@@ -5,7 +5,6 @@ import { AppLayout } from "@/components/AppLayout";
 import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
 import { TaskPage } from "@/pages/Task";
-import { CalendarPage } from "@/pages/Calendar";
 
 // Old per-project routes now map onto the overview's project filter.
 function ProjectRedirect() {
@@ -40,7 +39,6 @@ export default function App() {
           <Route path="/projects/:id" element={<ProjectRedirect />} />
           <Route path="/projects/:id/board" element={<ProjectRedirect />} />
           <Route path="/tasks/:id" element={<TaskPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { CalendarDays, FolderKanban, LogOut, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
+import { LogOut, Upload } from "lucide-react";
+import { Acorn } from "@phosphor-icons/react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
 import { api } from "@/lib/api";
@@ -16,7 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 function AccountDialog() {
   const { user, setUser, logout } = useAuth();
@@ -92,43 +92,16 @@ function AccountDialog() {
 }
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  const onProjects = pathname === "/" || pathname.startsWith("/projects") || pathname.startsWith("/tasks");
-  const onCalendar = pathname.startsWith("/calendar");
-
   return (
     <div className="flex h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/95 px-4 backdrop-blur">
         <Link to="/" className="flex items-center gap-2 font-semibold">
-          <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
+          <Acorn weight="fill" className="h-8 w-8 text-zinc-900" />
         </Link>
         <AccountDialog />
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 overflow-y-auto p-4 pb-24">{children}</main>
-
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t bg-white/95 backdrop-blur">
-        <Link
-          to="/"
-          className={cn(
-            "flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
-            onProjects ? "text-zinc-900" : "text-zinc-500"
-          )}
-        >
-          <FolderKanban className="h-5 w-5" />
-          <Trans>Projects</Trans>
-        </Link>
-        <Link
-          to="/calendar"
-          className={cn(
-            "flex flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
-            onCalendar ? "text-zinc-900" : "text-zinc-500"
-          )}
-        >
-          <CalendarDays className="h-5 w-5" />
-          <Trans>Calendar</Trans>
-        </Link>
-      </nav>
+      <main className="mx-auto w-full max-w-[96rem] flex-1 overflow-y-auto p-4">{children}</main>
     </div>
   );
 }

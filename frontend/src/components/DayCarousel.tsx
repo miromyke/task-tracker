@@ -81,10 +81,13 @@ function EventLine({ event }: { event: DayEvent }) {
       <UserAvatar name={event.user.name} avatarPath={event.user.avatarPath} className="mt-0.5 h-9 w-9 text-[11px]" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] leading-snug">
-          <span className="font-semibold">{event.user.name}:</span> <span className="text-white/70">{action}</span>{" "}
-          <span className="font-medium">«{event.task.title}»</span>
+          <span className="font-semibold">{event.user.name}:</span>{" "}
+          <span className="text-white/70">
+            <Trans>Task</Trans> <span className="font-medium text-white">«{event.task.title}»</span>{" "}
+            <span className="font-semibold text-lime-300">{action}</span>
+          </span>
         </p>
-        <p className="mt-0.5 text-xs text-white/50">
+        <p className="mt-2 text-xs text-white/50">
           {event.task.projectName} · #{event.task.tag} · {formatTime(event.createdAt)}
         </p>
       </div>

@@ -69,3 +69,13 @@ export function isPast(date: string): boolean {
   today.setHours(0, 0, 0, 0);
   return due < today;
 }
+
+// Whole days a due date is past (0 if it is today or in the future).
+export function daysOverdue(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  const due = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const ms = today.getTime() - due.getTime();
+  return ms > 0 ? Math.floor(ms / 86_400_000) : 0;
+}

@@ -184,8 +184,10 @@ export const api = {
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),
-  getCalendar: (from: string, to: string, tag?: string) =>
-    req<CalendarDay[]>(`/calendar${qs({ from, to, tag })}`),
+  getCalendar: (from: string, to: string, tag?: string, projectId?: number) =>
+    req<CalendarDay[]>(
+      `/calendar${qs({ from, to, tag, project: projectId ? String(projectId) : undefined })}`
+    ),
   getCalendarDay: (date: string, tag?: string, projectId?: number) =>
     req<{ date: string; events: DayEvent[] }>(
       `/calendar/day/${date}${qs({ tag, project: projectId ? String(projectId) : undefined })}`

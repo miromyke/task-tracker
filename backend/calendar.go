@@ -43,6 +43,7 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from, to := q.Get("from"), q.Get("to")
 	tag := q.Get("tag")
+	projectID, _ := strconv.ParseInt(q.Get("project"), 10, 64) // 0 = all projects
 	if from == "" || to == "" {
 		writeErr(w, http.StatusBadRequest, "from and to are required (YYYY-MM-DD)")
 		return
@@ -61,7 +62,7 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	startUTC := fromT.UTC().Format(time.RFC3339)
 	endUTC := toT.AddDate(0, 0, 1).UTC().Format(time.RFC3339) // exclusive end
 
-	rows, err := s.store.LogsInRange(startUTC, endUTC, tag)
+	rows, err := s.store.LogsInRange(startUTC, endUTC, tag, projectID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -213,10 +214,11 @@ type LogRangeRow struct {
 	Image     *string
 }
 
-func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error) {
+// LogsInRange returns log rows in [startUTC, endUTC); projectID == 0 spans all projects.
+func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]LogRangeRow, error) {
 	q := "SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li"
 	args := []any{}
-	if tag != "" {
+	if tag != "" || projectID != 0 {
 		q += " JOIN tasks t ON t.id = li.task_id"
 	}
 	q += " WHERE li.created_at >= ? AND li.created_at < ?"
@@ -224,6 +226,10 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error)
 	if tag != "" {
 		q += " AND t.tag = ?"
 		args = append(args, tag)
+	}
+	if projectID != 0 {
+		q += " AND t.project_id = ?"
+		args = append(args, projectID)
 	}
 	rows, err := s.db.Query(q, args...)
 	if err != nil {

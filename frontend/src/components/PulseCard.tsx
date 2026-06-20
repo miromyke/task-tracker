@@ -5,6 +5,7 @@ import type { Pulse } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DayCarousel } from "@/components/DayCarousel";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ function barColor(count: number, gold: boolean, attachments: number): string {
   return "bg-lime-200"; // normal activity → pale lime
 }
 
-const FULL = 60; // chart height in px
+const FULL = 96; // chart height in px
 const MIN = 14; // min bar height for an active day
 
 const SPANS = [7, 14, 30, 90, 180] as const;
@@ -31,7 +32,8 @@ const SPAN_LABEL: Record<Span, React.ReactNode> = {
 
 export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: number }) {
   const { t } = useLingui();
-  const [span, setSpan] = useState<Span>(30);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [span, setSpan] = useState<Span>(isDesktop ? 30 : 14);
   const [open, setOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState("");
 
