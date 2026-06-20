@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarDays, FolderKanban, Images, Loader2, Plus } from "lucide-react";
+import { CalendarDays, FolderKanban, Images, Loader2, Plus, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
+import { api, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { PulseCard } from "@/components/PulseCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { CalendarView } from "@/components/CalendarView";
@@ -117,6 +117,7 @@ function ProjectTile({
 
 export function ProjectsPage() {
   const navigate = useNavigate();
+  const { t } = useLingui();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("project") ? Number(searchParams.get("project")) : null;
 
@@ -129,6 +130,7 @@ export function ProjectsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [tag, setTag] = useState<string>(ALL);
   const [view, setView] = useState<"board" | "calendar" | "files">("board");
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -173,6 +175,12 @@ export function ProjectsPage() {
   );
 
   async function onMove(task: Task, to: Status) {
+    // Guard the done-gate up front so the card never visibly jumps and snaps back.
+    if (to === "done" && !criteriaMet(task)) {
+      setMoveError(t`"${task.title}" still has unchecked success criteria — open it to finish them first.`);
+      return;
+    }
+    setMoveError(null);
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: to } : t)));
     try {
       await api.updateTask(task.id, { status: to });
@@ -339,6 +347,19 @@ export function ProjectsPage() {
           <FilesView projectId={selectedId ?? undefined} projects={projects} />
         ) : (
           <>
+            {moveError && (
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <span>{moveError}</span>
+                <button
+                  type="button"
+                  onClick={() => setMoveError(null)}
+                  className="shrink-0 text-amber-500 hover:text-amber-900"
+                  aria-label={t`Dismiss`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}
             <KanbanBoard
               tasks={visibleTasks}

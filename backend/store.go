@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,6 +10,10 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+// errCriteriaUnmet is returned when a task is moved to "done" while some of its
+// success criteria are still unchecked. Handlers map this to a 400.
+var errCriteriaUnmet = errors.New("all success criteria must be checked before marking as done")
 
 // ---- Models ----
 
@@ -29,19 +34,43 @@ type Project struct {
 }
 
 type Task struct {
-	ID          int64    `json:"id"`
-	ProjectID   int64    `json:"projectId"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Tags        []string `json:"tags"`
-	AssigneeID  *int64   `json:"assigneeId"`
-	DueDate     *string  `json:"dueDate"`
-	Status      string   `json:"status"`
+	ID          int64       `json:"id"`
+	ProjectID   int64       `json:"projectId"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Tags        []string    `json:"tags"`
+	Criteria    []Criterion `json:"criteria"`
+	AssigneeID  *int64      `json:"assigneeId"`
+	DueDate     *string     `json:"dueDate"`
+	Status      string      `json:"status"`
 	// PostponeCount is how many times the due date was pushed to a later date.
 	PostponeCount int    `json:"postponeCount"`
 	CreatedBy     int64  `json:"createdBy"`
 	CreatedAt     string `json:"createdAt"`
 	UpdatedAt     string `json:"updatedAt"`
+}
+
+// Criterion is one item on a task's success-criteria checklist (its definition
+// of done). Every non-abandoned criterion must be done before the task may move
+// to "done". Criteria are immutable once created: their text never changes, and
+// they are never deleted — only abandoned (mirroring how tasks work).
+type Criterion struct {
+	ID        int64  `json:"id"`
+	TaskID    int64  `json:"taskId"`
+	Text      string `json:"text"`
+	Done      bool   `json:"done"`
+	Abandoned bool   `json:"abandoned"`
+	Position  int    `json:"position"`
+}
+
+// CriterionInput is one item in a checklist edit. ID is nil for a new item;
+// existing items carry their ID. The form can add new items or abandon/restore
+// existing ones — it never changes an existing item's text (the store ignores
+// text on items that already exist).
+type CriterionInput struct {
+	ID        *int64 `json:"id"`
+	Text      string `json:"text"`
+	Abandoned bool   `json:"abandoned"`
 }
 
 type LogItem struct {
@@ -82,7 +111,8 @@ type Asset struct {
 type TaskChanges struct {
 	Title       *string
 	Description *string
-	Tags        *[]string // non-nil replaces the full tag set
+	Tags        *[]string         // non-nil replaces the full tag set
+	Criteria    *[]CriterionInput // non-nil replaces the full criteria set
 	SetAssignee bool
 	AssigneeID  *int64 // nil with SetAssignee=true clears the assignee
 	SetDueDate  bool
@@ -143,6 +173,15 @@ CREATE TABLE IF NOT EXISTS task_tags (
   tag     TEXT NOT NULL,
   PRIMARY KEY (task_id, tag)
 );
+CREATE TABLE IF NOT EXISTS task_criteria (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id    INTEGER NOT NULL REFERENCES tasks(id),
+  text       TEXT NOT NULL,
+  done       INTEGER NOT NULL DEFAULT 0,
+  abandoned  INTEGER NOT NULL DEFAULT 0,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS log_items (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   task_id     INTEGER NOT NULL REFERENCES tasks(id),
@@ -176,6 +215,7 @@ CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
 CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_criteria_task ON task_criteria(task_id);
 `
 
 func (s *Store) Migrate() error {
@@ -185,7 +225,10 @@ func (s *Store) Migrate() error {
 	if err := s.migrateTaskTags(); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("tasks", "postpone_count", "INTEGER NOT NULL DEFAULT 0")
+	if err := s.addColumnIfMissing("tasks", "postpone_count", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("task_criteria", "abandoned", "INTEGER NOT NULL DEFAULT 0")
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -400,6 +443,7 @@ func scanTask(sc scanner) (*Task, error) {
 		return nil, err
 	}
 	t.Tags = []string{}
+	t.Criteria = []Criterion{}
 	if assignee.Valid {
 		v := assignee.Int64
 		t.AssigneeID = &v
@@ -451,9 +495,16 @@ func (s *Store) ListTasks(projectID int64, status, tag string) ([]Task, error) {
 	if err != nil {
 		return nil, err
 	}
+	crByTask, err := s.criteriaByTaskIDs(ids)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
 		if tg := byTask[out[i].ID]; tg != nil {
 			out[i].Tags = tg
+		}
+		if cr := crByTask[out[i].ID]; cr != nil {
+			out[i].Criteria = cr
 		}
 	}
 	return out, nil
@@ -473,6 +524,11 @@ func (s *Store) GetTask(id int64) (*Task, error) {
 		return nil, err
 	}
 	t.Tags = tags
+	criteria, err := s.taskCriteria(id)
+	if err != nil {
+		return nil, err
+	}
+	t.Criteria = criteria
 	return t, nil
 }
 
@@ -519,6 +575,143 @@ func (s *Store) tagsByTaskIDs(ids []int64) (map[int64][]string, error) {
 		out[id] = append(out[id], tag)
 	}
 	return out, rows.Err()
+}
+
+// taskCriteria returns one task's checklist in display order.
+func (s *Store) taskCriteria(taskID int64) ([]Criterion, error) {
+	rows, err := s.db.Query(
+		"SELECT id, task_id, text, done, abandoned, position FROM task_criteria WHERE task_id=? ORDER BY position, id", taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanCriteria(rows)
+}
+
+// criteriaByTaskIDs returns checklists grouped by task_id, each in display order.
+func (s *Store) criteriaByTaskIDs(ids []int64) (map[int64][]Criterion, error) {
+	out := map[int64][]Criterion{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	ph := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.db.Query(
+		"SELECT id, task_id, text, done, abandoned, position FROM task_criteria WHERE task_id IN ("+ph+") ORDER BY position, id", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	list, err := scanCriteria(rows)
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range list {
+		out[c.TaskID] = append(out[c.TaskID], c)
+	}
+	return out, nil
+}
+
+// scanCriteria reads Criterion rows from a query selecting
+// (id, task_id, text, done, abandoned, position).
+func scanCriteria(rows *sql.Rows) ([]Criterion, error) {
+	out := []Criterion{}
+	for rows.Next() {
+		var c Criterion
+		if err := rows.Scan(&c.ID, &c.TaskID, &c.Text, &c.Done, &c.Abandoned, &c.Position); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// txTaskCriteria returns a task's checklist (display order) within a transaction.
+func txTaskCriteria(tx *sql.Tx, taskID int64) ([]Criterion, error) {
+	rows, err := tx.Query(
+		"SELECT id, task_id, text, done, abandoned, position FROM task_criteria WHERE task_id=? ORDER BY position, id", taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanCriteria(rows)
+}
+
+// reconcileCriteria applies a checklist edit inside a tx. Criteria are immutable
+// and never deleted: items carrying an existing ID may only have their abandoned
+// flag (and display position) changed — their text and done state are left
+// untouched. Items without an ID are appended as new. Blank new items are
+// dropped. Returns the resulting checklist in display order.
+func reconcileCriteria(tx *sql.Tx, taskID int64, inputs []CriterionInput, now string) ([]Criterion, error) {
+	existing := map[int64]bool{}
+	rows, err := tx.Query("SELECT id FROM task_criteria WHERE task_id=?", taskID)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		existing[id] = true
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	pos := 0
+	for _, in := range inputs {
+		if in.ID != nil && existing[*in.ID] {
+			// Existing item: only abandon/restore (and reposition). Text & done stay.
+			if _, err := tx.Exec("UPDATE task_criteria SET abandoned=?, position=? WHERE id=? AND task_id=?",
+				in.Abandoned, pos, *in.ID, taskID); err != nil {
+				return nil, err
+			}
+		} else {
+			text := strings.TrimSpace(in.Text)
+			if text == "" {
+				continue
+			}
+			if _, err := tx.Exec(
+				"INSERT INTO task_criteria (task_id, text, done, abandoned, position, created_at) VALUES (?,?,0,?,?,?)",
+				taskID, text, in.Abandoned, pos, now); err != nil {
+				return nil, err
+			}
+		}
+		pos++
+	}
+	return txTaskCriteria(tx, taskID)
+}
+
+// allCriteriaMet reports whether every non-abandoned item on a checklist is
+// done. Abandoned items are ignored; an empty (or all-abandoned) checklist is
+// vacuously met, so such tasks are never blocked from "done".
+func allCriteriaMet(cs []Criterion) bool {
+	for _, c := range cs {
+		if !c.Abandoned && !c.Done {
+			return false
+		}
+	}
+	return true
+}
+
+// sameCriteria reports whether two checklists match in order, text, done, and
+// abandoned state — used to decide whether an edit changed the checklist.
+func sameCriteria(a, b []Criterion) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Text != b[i].Text || a[i].Done != b[i].Done || a[i].Abandoned != b[i].Abandoned {
+			return false
+		}
+	}
+	return true
 }
 
 // txTaskTags returns a task's tags (alphabetical) within a transaction.
@@ -586,7 +779,7 @@ func setTaskTags(tx *sql.Tx, taskID int64, tags []string) error {
 	return nil
 }
 
-func (s *Store) CreateTask(projectID int64, title, desc string, tags []string, assignee *int64, due *string, status string, by int64) (*Task, error) {
+func (s *Store) CreateTask(projectID int64, title, desc string, tags, criteria []string, assignee *int64, due *string, status string, by int64) (*Task, error) {
 	now := nowUTC()
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -605,6 +798,20 @@ func (s *Store) CreateTask(projectID int64, title, desc string, tags []string, a
 
 	if err := setTaskTags(tx, id, tags); err != nil {
 		return nil, err
+	}
+
+	pos := 0
+	for _, text := range criteria {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			continue
+		}
+		if _, err := tx.Exec(
+			"INSERT INTO task_criteria (task_id, text, done, position, created_at) VALUES (?,?,0,?,?)",
+			id, text, pos, now); err != nil {
+			return nil, err
+		}
+		pos++
 	}
 
 	if _, err := tx.Exec(
@@ -639,6 +846,11 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		return nil, nil, err
 	}
 	cur.Tags = curTags
+	curCriteria, err := txTaskCriteria(tx, taskID)
+	if err != nil {
+		return nil, nil, err
+	}
+	cur.Criteria = curCriteria
 
 	nt := *cur
 	var edits []string
@@ -687,6 +899,25 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	}
 
 	now := nowUTC()
+
+	// Reconcile the checklist (if the edit carries one) before the done-gate, so
+	// the gate sees the final set the caller intends.
+	if ch.Criteria != nil {
+		reconciled, err := reconcileCriteria(tx, taskID, *ch.Criteria, now)
+		if err != nil {
+			return nil, nil, err
+		}
+		nt.Criteria = reconciled
+		if !sameCriteria(curCriteria, reconciled) {
+			edits = append(edits, "checklist")
+		}
+	}
+
+	// Block the move into "done" unless every success criterion is checked.
+	if nt.Status == "done" && cur.Status != "done" && !allCriteriaMet(nt.Criteria) {
+		return nil, nil, errCriteriaUnmet
+	}
+
 	nt.UpdatedAt = now
 	if _, err := tx.Exec(
 		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, postpone_count=?, updated_at=? WHERE id=?`,
@@ -710,7 +941,7 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		}
 		id, _ := res.LastInsertId()
 		logs = append(logs, LogItem{ID: id, TaskID: taskID, UserID: actor, Type: typ, Text: text,
-			FromStatus: from, ToStatus: to, CreatedAt: now})
+			FromStatus: from, ToStatus: to, Attachments: []Asset{}, CreatedAt: now})
 		return nil
 	}
 
@@ -734,6 +965,35 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		return nil, nil, err
 	}
 	return &nt, logs, nil
+}
+
+// SetCriterion updates a single checklist item's done and/or abandoned flags
+// (whichever are non-nil) and returns the updated task. Text is immutable, so it
+// is never touched here. Returns (nil, nil) if the criterion doesn't belong to
+// the task.
+func (s *Store) SetCriterion(taskID, criterionID int64, done, abandoned *bool) (*Task, error) {
+	sets := []string{}
+	args := []any{}
+	if done != nil {
+		sets = append(sets, "done=?")
+		args = append(args, *done)
+	}
+	if abandoned != nil {
+		sets = append(sets, "abandoned=?")
+		args = append(args, *abandoned)
+	}
+	if len(sets) == 0 {
+		return s.GetTask(taskID)
+	}
+	args = append(args, criterionID, taskID)
+	res, err := s.db.Exec("UPDATE task_criteria SET "+strings.Join(sets, ", ")+" WHERE id=? AND task_id=?", args...)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, nil
+	}
+	return s.GetTask(taskID)
 }
 
 // ---- Logs ----

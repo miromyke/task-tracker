@@ -18,12 +18,22 @@ export interface Project {
   taskCount: number;
 }
 
+export interface Criterion {
+  id: number;
+  taskId: number;
+  text: string;
+  done: boolean;
+  abandoned: boolean;
+  position: number;
+}
+
 export interface Task {
   id: number;
   projectId: number;
   title: string;
   description: string;
   tags: string[];
+  criteria: Criterion[];
   assigneeId: number | null;
   dueDate: string | null;
   status: Status;
@@ -31,6 +41,23 @@ export interface Task {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// CriterionInput is a checklist item in a task edit. Existing items keep their
+// id (their text and done state are immutable; only `abandoned` can change);
+// new items omit the id. Criteria are never deleted — dropping one means
+// abandoning it.
+export interface CriterionInput {
+  id?: number;
+  text: string;
+  abandoned: boolean;
+}
+
+// criteriaMet reports whether every non-abandoned success criterion on a task is
+// checked. Abandoned items are ignored; a task with no live criteria is
+// vacuously met (never blocked from "done").
+export function criteriaMet(task: Task): boolean {
+  return (task.criteria ?? []).filter((c) => !c.abandoned).every((c) => c.done);
 }
 
 export type AssetKind = "image" | "video" | "document" | "other";
@@ -105,6 +132,7 @@ export interface TaskUpdate {
   title?: string;
   description?: string;
   tags?: string[];
+  criteria?: CriterionInput[];
   assigneeId?: number | null;
   dueDate?: string | null;
   status?: Status;
@@ -188,6 +216,7 @@ export const api = {
       title: string;
       description: string;
       tags: string[];
+      criteria: string[];
       assigneeId: number | null;
       dueDate: string | null;
       status: Status;
@@ -196,6 +225,8 @@ export const api = {
   getTask: (id: number) => req<{ task: Task; logs: LogItem[] }>(`/tasks/${id}`),
   updateTask: (id: number, patch: TaskUpdate) =>
     req<{ task: Task; newLogs: LogItem[] }>(`/tasks/${id}`, jsonBody("PATCH", patch)),
+  setCriterion: (taskId: number, criterionId: number, patch: { done?: boolean; abandoned?: boolean }) =>
+    req<{ task: Task }>(`/tasks/${taskId}/criteria/${criterionId}`, jsonBody("PATCH", patch)),
   addLog: (taskId: number, text: string, files: File[]) => {
     const fd = new FormData();
     fd.append("text", text);

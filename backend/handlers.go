@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"mime"
@@ -44,6 +45,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListAllTasks))
 	mux.HandleFunc("GET /api/tasks/{id}", s.requireAuth(s.handleGetTask))
 	mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
+	mux.HandleFunc("PATCH /api/tasks/{id}/criteria/{cid}", s.requireAuth(s.handleSetCriterion))
 	mux.HandleFunc("POST /api/tasks/{id}/log", s.requireAuth(s.handleAddLog))
 
 	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
@@ -341,6 +343,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		Title       string   `json:"title"`
 		Description string   `json:"description"`
 		Tags        []string `json:"tags"`
+		Criteria    []string `json:"criteria"`
 		AssigneeID  *int64   `json:"assigneeId"`
 		DueDate     *string  `json:"dueDate"`
 		Status      string   `json:"status"`
@@ -355,10 +358,6 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "title is required")
 		return
 	}
-	if len(tags) == 0 {
-		writeErr(w, http.StatusBadRequest, "at least one tag is required")
-		return
-	}
 	if req.Status == "" {
 		req.Status = "todo"
 	}
@@ -366,7 +365,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid status")
 		return
 	}
-	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), tags,
+	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), tags, req.Criteria,
 		req.AssigneeID, req.DueDate, req.Status, currentUser(r).ID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -432,11 +431,13 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		var list []string
 		if json.Unmarshal(v, &list) == nil {
 			tags := normalizeTags(list)
-			if len(tags) == 0 {
-				writeErr(w, http.StatusBadRequest, "at least one tag is required")
-				return
-			}
 			ch.Tags = &tags
+		}
+	}
+	if v, ok := raw["criteria"]; ok {
+		var list []CriterionInput
+		if json.Unmarshal(v, &list) == nil {
+			ch.Criteria = &list
 		}
 	}
 	if v, ok := raw["assigneeId"]; ok {
@@ -469,6 +470,10 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t, logs, err := s.store.UpdateTask(id, currentUser(r).ID, ch)
+	if errors.Is(err, errCriteriaUnmet) {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -478,6 +483,35 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"task": t, "newLogs": logs})
+}
+
+// handleSetCriterion checks/unchecks or abandons/restores one success-criterion
+// on a task. Only the supplied flags are changed; the text is immutable.
+func (s *Server) handleSetCriterion(w http.ResponseWriter, r *http.Request) {
+	taskID, ok := pathInt(r, "id")
+	cid, ok2 := pathInt(r, "cid")
+	if !ok || !ok2 {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req struct {
+		Done      *bool `json:"done"`
+		Abandoned *bool `json:"abandoned"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	t, err := s.store.SetCriterion(taskID, cid, req.Done, req.Abandoned)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if t == nil {
+		writeErr(w, http.StatusNotFound, "criterion not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"task": t})
 }
 
 func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {

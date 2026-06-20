@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Plus, X } from "lucide-react";
+import { Ban, Loader2, Plus, RotateCcw, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, type Project, type Status, type Task, type User } from "@/lib/api";
+import { api, type CriterionInput, type Project, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
   const editing = !!task;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [criteria, setCriteria] = useState<CriterionInput[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [tagOpen, setTagOpen] = useState(false);
@@ -53,6 +54,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     if (!open) return;
     setTitle(task?.title ?? "");
     setDescription(task?.description ?? "");
+    setCriteria(task?.criteria?.map((c) => ({ id: c.id, text: c.text, abandoned: c.abandoned })) ?? []);
     setSelectedTags(task?.tags ?? []);
     setTagInput("");
     setAssignee(task?.assigneeId ? String(task.assigneeId) : NONE);
@@ -83,6 +85,21 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     setSelectedTags((prev) => prev.filter((x) => x !== tg));
   }
 
+  function addCriterion() {
+    setCriteria((prev) => [...prev, { text: "", abandoned: false }]);
+  }
+  function setCriterionText(i: number, text: string) {
+    setCriteria((prev) => prev.map((c, j) => (j === i ? { ...c, text } : c)));
+  }
+  // New (unsaved) items can be removed outright; existing ones are immutable and
+  // can only be abandoned/restored.
+  function removeNewCriterion(i: number) {
+    setCriteria((prev) => prev.filter((_, j) => j !== i));
+  }
+  function toggleAbandon(i: number) {
+    setCriteria((prev) => prev.map((c, j) => (j === i ? { ...c, abandoned: !c.abandoned } : c)));
+  }
+
   function onTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -109,12 +126,17 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     const finalTags = tagInput.trim() && !selectedTags.includes(tagInput.trim())
       ? [...selectedTags, tagInput.trim()]
       : selectedTags;
-    if (finalTags.length === 0) return setError(t`At least one tag is required`);
     const targetProject = projectId || Number(project);
     if (!editing && !targetProject) return setError(t`Pick a project`);
+    // Keep existing items (always have text); drop only blank new ones.
+    const finalCriteria = criteria
+      .map((c) => ({ ...c, text: c.text.trim() }))
+      .filter((c) => c.id != null || c.text);
+    // A task needs at least one live (non-abandoned) success criterion.
+    if (finalCriteria.every((c) => c.abandoned)) return setError(t`Add at least one success criterion`);
     setBusy(true);
     setError(null);
-    const payload = {
+    const base = {
       title: title.trim(),
       description: description.trim(),
       tags: finalTags,
@@ -125,9 +147,14 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     try {
       let saved: Task;
       if (editing && task) {
-        saved = (await api.updateTask(task.id, payload)).task;
+        saved = (
+          await api.updateTask(task.id, {
+            ...base,
+            criteria: finalCriteria.map((c) => ({ id: c.id, text: c.text, abandoned: c.abandoned })),
+          })
+        ).task;
       } else {
-        saved = await api.createTask(targetProject, payload);
+        saved = await api.createTask(targetProject, { ...base, criteria: finalCriteria.map((c) => c.text) });
       }
       onSaved(saved);
       onOpenChange(false);
@@ -174,9 +201,71 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
 
           <div className="space-y-2">
             <Label htmlFor="description">
-              <Trans>Description</Trans>
+              <Trans>Description</Trans> <span className="font-normal text-zinc-400"><Trans>(optional)</Trans></span>
             </Label>
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              <Trans>Success criteria</Trans>
+            </Label>
+            <div className="space-y-2">
+              {criteria.map((c, i) =>
+                c.id != null ? (
+                  // Existing criterion: immutable text, can only be abandoned/restored.
+                  <div key={c.id} className="flex items-center gap-2">
+                    <Input
+                      value={c.text}
+                      disabled
+                      className={c.abandoned ? "line-through text-zinc-400" : "text-zinc-700"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleAbandon(i)}
+                      className="shrink-0 text-zinc-400 hover:text-zinc-900"
+                      aria-label={c.abandoned ? t`Restore criterion` : t`Abandon criterion`}
+                      title={c.abandoned ? t`Restore criterion` : t`Abandon criterion`}
+                    >
+                      {c.abandoned ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                    </button>
+                  </div>
+                ) : (
+                  // New, unsaved criterion: editable and removable.
+                  <div key={`new-${i}`} className="flex items-center gap-2">
+                    <Input
+                      value={c.text}
+                      placeholder={t`e.g. Tiles grouted and sealed`}
+                      onChange={(e) => setCriterionText(i, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (i === criteria.length - 1 && c.text.trim()) addCriterion();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeNewCriterion(i)}
+                      className="shrink-0 text-zinc-400 hover:text-zinc-900"
+                      aria-label={t`Remove criterion`}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={addCriterion} className="px-2">
+              <Plus className="h-4 w-4" />
+              <Trans>Add criterion</Trans>
+            </Button>
+            <p className="text-xs text-zinc-500">
+              <Trans>
+                Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a
+                task can be marked done.
+              </Trans>
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

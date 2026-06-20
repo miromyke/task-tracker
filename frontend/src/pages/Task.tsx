@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, Download, FileText, Loader2, Paperclip, Pencil, Send, X } from "lucide-react";
+import {
+  Ban,
+  CheckSquare,
+  ChevronLeft,
+  Download,
+  FileText,
+  Loader2,
+  Paperclip,
+  Pencil,
+  RotateCcw,
+  Send,
+  Square,
+  X,
+} from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
-import { api, type Asset, type LogItem, type Status, type Task, type User } from "@/lib/api";
+import { api, criteriaMet, type Asset, type Criterion, type LogItem, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -79,7 +92,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
           <span className="ml-2 text-xs text-zinc-500">{formatDateTime(log.createdAt)}</span>
         </div>
         {log.type === "note" && log.text && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
-        {log.attachments.length > 0 && (
+        {(log.attachments ?? []).length > 0 && (
           <div className="mt-2 flex flex-col items-start gap-2">
             {log.attachments.map((a) => (
               <AttachmentView key={a.id} asset={a} />
@@ -111,6 +124,7 @@ export function TaskPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [noteText, setNoteText] = useState("");
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
@@ -135,9 +149,28 @@ export function TaskPage() {
 
   async function changeStatus(to: Status) {
     if (!task || task.status === to) return;
+    if (to === "done" && !criteriaMet(task)) {
+      setStatusError(t`Check off all success criteria before marking this done.`);
+      return;
+    }
+    setStatusError(null);
     const res = await api.updateTask(task.id, { status: to });
     setTask(res.task);
     setLogs((prev) => [...prev, ...res.newLogs]);
+  }
+
+  async function toggleCriterion(c: Criterion) {
+    if (!task || c.abandoned) return;
+    const res = await api.setCriterion(task.id, c.id, { done: !c.done });
+    setTask(res.task);
+    setStatusError(null);
+  }
+
+  async function abandonCriterion(c: Criterion) {
+    if (!task) return;
+    const res = await api.setCriterion(task.id, c.id, { abandoned: !c.abandoned });
+    setTask(res.task);
+    setStatusError(null);
   }
 
   async function postNote(e: React.FormEvent) {
@@ -180,15 +213,15 @@ export function TaskPage() {
   const overdue = task.dueDate && isPast(task.dueDate) && task.status !== "done" && task.status !== "abandoned";
 
   return (
-    <div className="space-y-5">
+    <div className="flex h-full flex-col gap-5">
       <Link
         to={`/?project=${task.projectId}`}
-        className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900"
+        className="inline-flex shrink-0 items-center text-sm text-zinc-500 hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
 
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex shrink-0 items-start justify-between gap-3">
         <h1 className="text-xl font-bold leading-tight">{task.title}</h1>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
           <Pencil className="h-4 w-4" />
@@ -196,9 +229,9 @@ export function TaskPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[1fr_280px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row">
         {/* Properties rail */}
-        <Card className="order-1 space-y-4 p-4 md:order-2 md:self-start">
+        <Card className="order-1 shrink-0 space-y-4 p-4 md:order-2 md:w-[280px] md:self-start">
           <MetaRow label={<Trans>Status</Trans>}>
             <Select value={task.status} onValueChange={(v) => changeStatus(v as Status)}>
               <SelectTrigger className="h-9">
@@ -212,6 +245,7 @@ export function TaskPage() {
                 ))}
               </SelectContent>
             </Select>
+            {statusError && <p className="mt-1 text-xs text-red-600">{statusError}</p>}
           </MetaRow>
           <MetaRow label={<Trans>Tags</Trans>}>
             <span className="flex flex-wrap gap-1">
@@ -252,9 +286,73 @@ export function TaskPage() {
           </MetaRow>
         </Card>
 
-        {/* Main column */}
-        <div className="order-2 space-y-5 md:order-1">
+        {/* Main column: content scrolls within the available height; the note
+            input below stays put. */}
+        <div className="order-2 flex min-h-0 flex-1 flex-col md:order-1">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           {task.description && <p className="whitespace-pre-wrap text-sm text-zinc-500">{task.description}</p>}
+
+          {(task.criteria ?? []).length > 0 &&
+            (() => {
+              const live = task.criteria.filter((c) => !c.abandoned);
+              const abandoned = task.criteria.filter((c) => c.abandoned);
+              return (
+                <Card className="space-y-3 p-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <Trans>Success criteria</Trans>{" "}
+                    <span className="text-zinc-400">
+                      {live.filter((c) => c.done).length}/{live.length}
+                    </span>
+                  </h2>
+                  <ul className="space-y-1.5">
+                    {live.map((c) => (
+                      <li key={c.id} className="group flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleCriterion(c)}
+                          className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm hover:text-zinc-900"
+                        >
+                          {c.done ? (
+                            <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                          ) : (
+                            <Square className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+                          )}
+                          <span className={cn(c.done && "text-zinc-400 line-through")}>{c.text}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => abandonCriterion(c)}
+                          className="mt-0.5 shrink-0 text-zinc-300 hover:text-zinc-700 group-hover:text-zinc-400"
+                          aria-label={t`Abandon criterion`}
+                          title={t`Abandon criterion`}
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {abandoned.length > 0 && (
+                    <ul className="space-y-1.5 border-t pt-2">
+                      {abandoned.map((c) => (
+                        <li key={c.id} className="flex items-start gap-2 text-sm text-zinc-400">
+                          <Ban className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span className="min-w-0 flex-1 line-through">{c.text}</span>
+                          <button
+                            type="button"
+                            onClick={() => abandonCriterion(c)}
+                            className="mt-0.5 shrink-0 text-zinc-400 hover:text-zinc-700"
+                            aria-label={t`Restore criterion`}
+                            title={t`Restore criterion`}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+              );
+            })()}
 
           <div className="space-y-4">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -264,8 +362,9 @@ export function TaskPage() {
               <LogEntry key={log.id} log={log} user={usersById.get(log.userId)} />
             ))}
           </div>
+          </div>
 
-          <Card className="sticky bottom-20 p-3">
+          <Card className="mt-4 shrink-0 border-0 p-0 pr-1 shadow-none">
             <form onSubmit={postNote} className="space-y-2">
               <Textarea
                 placeholder={t`Log an update…`}

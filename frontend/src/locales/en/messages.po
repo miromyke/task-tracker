@@ -13,6 +13,15 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#. placeholder {0}: task.title
+#: src/pages/Projects.tsx
+msgid "\"{0}\" still has unchecked success criteria — open it to finish them first."
+msgstr "\"{0}\" still has unchecked success criteria — open it to finish them first."
+
+#: src/components/TaskFormDialog.tsx
+msgid "(optional)"
+msgstr "(optional)"
+
 #. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
 #: src/components/CalendarView.tsx
@@ -72,6 +81,11 @@ msgstr "3 months"
 msgid "6 months"
 msgstr "6 months"
 
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Abandon criterion"
+msgstr "Abandon criterion"
+
 #: src/components/DayCarousel.tsx
 msgid "abandoned"
 msgstr "abandoned"
@@ -100,6 +114,14 @@ msgstr "Activity"
 msgid "Activity log"
 msgstr "Activity log"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Add at least one success criterion"
+msgstr "Add at least one success criterion"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Add criterion"
+msgstr "Add criterion"
+
 #: src/components/FilesView.tsx
 msgid "Add files"
 msgstr "Add files"
@@ -120,6 +142,10 @@ msgstr "added a file"
 #: src/pages/Projects.tsx
 msgid "All"
 msgstr "All"
+
+#: src/components/TaskFormDialog.tsx
+#~ msgid "All criteria must be checked before a task can be marked done."
+#~ msgstr "All criteria must be checked before a task can be marked done."
 
 #: src/pages/Projects.tsx
 msgid "All events"
@@ -147,8 +173,8 @@ msgid "Assignee"
 msgstr "Assignee"
 
 #: src/components/TaskFormDialog.tsx
-msgid "At least one tag is required"
-msgstr "At least one tag is required"
+#~ msgid "At least one tag is required"
+#~ msgstr "At least one tag is required"
 
 #: src/pages/Task.tsx
 msgid "Attach"
@@ -199,6 +225,10 @@ msgstr "changed the due date"
 #: src/pages/Task.tsx
 msgid "changed the status"
 msgstr "changed the status"
+
+#: src/pages/Task.tsx
+msgid "Check off all success criteria before marking this done."
+msgstr "Check off all success criteria before marking this done."
 
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
@@ -255,9 +285,17 @@ msgid "created this task"
 msgstr "created this task"
 
 #: src/components/TaskFormDialog.tsx
+msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
+msgstr "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
+
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/pages/Projects.tsx
+msgid "Dismiss"
+msgstr "Dismiss"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -287,6 +325,10 @@ msgstr "e.g. Kitchen Remodel"
 #: src/components/TaskFormDialog.tsx
 msgid "e.g. roof"
 msgstr "e.g. roof"
+
+#: src/components/TaskFormDialog.tsx
+msgid "e.g. Tiles grouted and sealed"
+msgstr "e.g. Tiles grouted and sealed"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -474,8 +516,17 @@ msgstr "Projects"
 #~ msgstr "Pulse"
 
 #: src/components/TaskFormDialog.tsx
+msgid "Remove criterion"
+msgstr "Remove criterion"
+
+#: src/components/TaskFormDialog.tsx
 msgid "Remove tag"
 msgstr "Remove tag"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Restore criterion"
+msgstr "Restore criterion"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -502,6 +553,12 @@ msgstr "started working on this"
 #: src/pages/Task.tsx
 msgid "Status"
 msgstr "Status"
+
+#: src/components/KanbanBoard.tsx
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Success criteria"
+msgstr "Success criteria"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx

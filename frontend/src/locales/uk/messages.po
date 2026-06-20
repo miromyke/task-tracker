@@ -13,6 +13,15 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#. placeholder {0}: task.title
+#: src/pages/Projects.tsx
+msgid "\"{0}\" still has unchecked success criteria — open it to finish them first."
+msgstr "\"{0}\" має невиконані критерії успіху — відкрийте задачу, щоб спершу їх завершити."
+
+#: src/components/TaskFormDialog.tsx
+msgid "(optional)"
+msgstr "(необов'язково)"
+
 #. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
 #: src/components/CalendarView.tsx
@@ -72,6 +81,11 @@ msgstr "3 місяці"
 msgid "6 months"
 msgstr "6 місяців"
 
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Abandon criterion"
+msgstr "Облишити критерій"
+
 #: src/components/DayCarousel.tsx
 msgid "abandoned"
 msgstr "облишено"
@@ -100,6 +114,14 @@ msgstr "Активність"
 msgid "Activity log"
 msgstr "Журнал дій"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Add at least one success criterion"
+msgstr "Додайте принаймні один критерій успіху"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Add criterion"
+msgstr "Додати критерій"
+
 #: src/components/FilesView.tsx
 msgid "Add files"
 msgstr "Додати файли"
@@ -120,6 +142,10 @@ msgstr "додано файл"
 #: src/pages/Projects.tsx
 msgid "All"
 msgstr "Усі"
+
+#: src/components/TaskFormDialog.tsx
+#~ msgid "All criteria must be checked before a task can be marked done."
+#~ msgstr ""
 
 #: src/pages/Projects.tsx
 msgid "All events"
@@ -147,8 +173,8 @@ msgid "Assignee"
 msgstr "Виконавець"
 
 #: src/components/TaskFormDialog.tsx
-msgid "At least one tag is required"
-msgstr "Потрібен принаймні один тег"
+#~ msgid "At least one tag is required"
+#~ msgstr "Потрібен принаймні один тег"
 
 #: src/pages/Task.tsx
 msgid "Attach"
@@ -199,6 +225,10 @@ msgstr "змінено термін"
 #: src/pages/Task.tsx
 msgid "changed the status"
 msgstr "змінено статус"
+
+#: src/pages/Task.tsx
+msgid "Check off all success criteria before marking this done."
+msgstr "Виконайте всі критерії успіху, перш ніж позначати задачу готовою."
 
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
@@ -255,9 +285,17 @@ msgid "created this task"
 msgstr "створено цю задачу"
 
 #: src/components/TaskFormDialog.tsx
+msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
+msgstr "Критерії не можна редагувати після додавання — лише облишити. Усі решта критеріїв мають бути виконані, перш ніж задачу можна позначити готовою."
+
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
 msgstr "Опис"
+
+#: src/pages/Projects.tsx
+msgid "Dismiss"
+msgstr "Закрити"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -287,6 +325,10 @@ msgstr "напр. Ремонт кухні"
 #: src/components/TaskFormDialog.tsx
 msgid "e.g. roof"
 msgstr "напр. дах"
+
+#: src/components/TaskFormDialog.tsx
+msgid "e.g. Tiles grouted and sealed"
+msgstr "напр. Плитку затерто й загерметизовано"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -474,8 +516,17 @@ msgstr "Проєкти"
 #~ msgstr "Пульс"
 
 #: src/components/TaskFormDialog.tsx
+msgid "Remove criterion"
+msgstr "Видалити критерій"
+
+#: src/components/TaskFormDialog.tsx
 msgid "Remove tag"
 msgstr "Видалити тег"
+
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Restore criterion"
+msgstr "Відновити критерій"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -502,6 +553,12 @@ msgstr "розпочато роботу"
 #: src/pages/Task.tsx
 msgid "Status"
 msgstr "Статус"
+
+#: src/components/KanbanBoard.tsx
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Success criteria"
+msgstr "Критерії успіху"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx

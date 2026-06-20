@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CalendarClock, CheckCircle2, RotateCcw } from "lucide-react";
+import { CalendarClock, CheckCircle2, ListChecks, RotateCcw } from "lucide-react";
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import type { Status, Task, User } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
@@ -38,6 +38,9 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
   const openOverdue = overdueDays > 0 && !closed;
   const closedOverdue = overdueDays > 0 && closed;
   const doneOnTime = done && !!task.dueDate && overdueDays === 0;
+  const criteria = (task.criteria ?? []).filter((c) => !c.abandoned);
+  const criteriaDone = criteria.filter((c) => c.done).length;
+  const criteriaAllDone = criteria.length > 0 && criteriaDone === criteria.length;
   return (
     <>
       <div className="mb-2 text-sm font-medium leading-snug">{task.title}</div>
@@ -68,6 +71,18 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
               {formatShortDate(task.dueDate)}
             </span>
           ))}
+        {criteria.length > 0 && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
+              criteriaAllDone ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-600"
+            )}
+            title={t`Success criteria`}
+          >
+            <ListChecks className="h-3.5 w-3.5" />
+            {criteriaDone}/{criteria.length}
+          </span>
+        )}
         {task.postponeCount > 0 && (
           <span
             className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800"
