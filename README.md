@@ -39,13 +39,23 @@ GitHub-style activity calendar with a per-day report carousel.
 
 ## Deploy on a VM
 
+Point your domain's DNS **A record** at the VM's public IP, and open ports
+**80** and **443** in the firewall / cloud security group. Then:
+
 ```sh
-cp .env.example .env   # edit APP_USERS and APP_SECRET
+cp .env.example .env   # edit APP_USERS, APP_SECRET, DOMAIN, ACME_EMAIL
 docker compose up -d --build
 ```
 
-The app is served on `http://<vm>:8080`. Data (DB + uploads) persists in the
-`reno_data` Docker volume; back it up by copying that volume.
+Caddy fetches a Let's Encrypt certificate on first start and redirects
+HTTP→HTTPS, so the app is served on `https://<domain>`. The Go app itself is
+not exposed to the host — only Caddy faces the internet.
+
+Port 80 must stay reachable from the internet: Let's Encrypt uses it to
+validate the domain and to renew the cert automatically.
+
+Data (DB + uploads) persists in the `reno_data` Docker volume; TLS certs live
+in `caddy_data`. Back up by copying those volumes.
 
 ## Local development
 

@@ -2,8 +2,6 @@ services:
   app:
     build: .
     image: reno-planner
-    ports:
-      - "${APP_PORT:-8080}:8080"
     environment:
       # Comma-separated "username:Display Name" pairs (display name optional).
       APP_USERS: ${APP_USERS:-mykhailo:Mykhailo,anna:Anna}
@@ -14,6 +12,29 @@ services:
     volumes:
       - reno_data:/data
     restart: unless-stopped
+    # Not published to the host — only Caddy reaches it over the internal network.
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Domain the app is served on (A record must point at this VM).
+      DOMAIN: ${DOMAIN}
+      # Email Let's Encrypt uses for expiry notices.
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
 
 volumes:
   reno_data:
+  caddy_data:
+  caddy_config:
