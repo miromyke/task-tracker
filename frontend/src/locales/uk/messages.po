@@ -113,6 +113,14 @@ msgid "All"
 msgstr "Усі"
 
 #: src/pages/Projects.tsx
+msgid "All events"
+msgstr "Усі події"
+
+#: src/pages/Projects.tsx
+msgid "All files"
+msgstr "Усі файли"
+
+#: src/pages/Projects.tsx
 msgid "All projects"
 msgstr "Усі проєкти"
 
@@ -120,10 +128,18 @@ msgstr "Усі проєкти"
 msgid "All tags"
 msgstr "Усі теги"
 
+#: src/pages/Projects.tsx
+msgid "All tasks"
+msgstr "Усі задачі"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Assignee"
 msgstr "Виконавець"
+
+#: src/components/TaskFormDialog.tsx
+msgid "At least one tag is required"
+msgstr "Потрібен принаймні один тег"
 
 #: src/pages/Task.tsx
 msgid "Attach"
@@ -203,6 +219,7 @@ msgstr "Не вдалося увійти"
 msgid "Could not save task"
 msgstr "Не вдалося зберегти завдання"
 
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Create"
 msgstr "Створити"
@@ -258,9 +275,19 @@ msgstr "Редагувати завдання"
 msgid "edited this task"
 msgstr "відредаговано завдання"
 
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Events for {0}"
+msgstr "Події для {0}"
+
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Файли"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Files for {0}"
+msgstr "Файли для {0}"
 
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
@@ -392,6 +419,10 @@ msgstr "Цього дня нічого не записано."
 msgid "Pick a project"
 msgstr "Оберіть проєкт"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Pick an existing tag or type a new one and press Enter."
+msgstr "Виберіть наявний тег або введіть новий і натисніть Enter."
+
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Надіслати"
@@ -412,6 +443,10 @@ msgstr "Проєкти"
 #: src/components/PulseCard.tsx
 #~ msgid "Pulse"
 #~ msgstr "Пульс"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Remove tag"
+msgstr "Видалити тег"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -440,14 +475,16 @@ msgstr "Статус"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
-msgid "Tag"
-msgstr "Тег"
+#~ msgid "Tag"
+#~ msgstr "Тег"
 
 #: src/components/TaskFormDialog.tsx
-msgid "Tag is required"
-msgstr "Тег обовʼязковий"
+#~ msgid "Tag is required"
+#~ msgstr "Тег обовʼязковий"
 
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
+#: src/pages/Task.tsx
 msgid "Tags"
 msgstr "Теги"
 
@@ -466,6 +503,11 @@ msgstr "Завдання не знайдено."
 #: src/pages/Projects.tsx
 msgid "Tasks"
 msgstr "Задачі"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Tasks for {0}"
+msgstr "Задачі для {0}"
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"

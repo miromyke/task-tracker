@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -184,28 +185,39 @@ export function ProjectsPage() {
   // The view switch (Tasks/Calendar/Files): shown in a desktop top strip over the
   // content column, or inline in the mobile header.
   const viewTabs = (
-    <div className="inline-flex rounded-md border p-0.5">
-      {(
-        [
-          { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
-          { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
-          { key: "files", icon: Images, label: <Trans>Files</Trans> },
-        ] as const
-      ).map(({ key, icon: Icon, label }) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => setView(key)}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-sm font-medium transition-colors",
-            view === key ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
-          )}
-        >
-          <Icon className="h-4 w-4" />
-          <span className="hidden sm:inline">{label}</span>
-        </button>
-      ))}
-    </div>
+    <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+      <TabsList>
+        {(
+          [
+            { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
+            { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
+            { key: "files", icon: Images, label: <Trans>Files</Trans> },
+          ] as const
+        ).map(({ key, icon: Icon, label }) => (
+          <TabsTrigger key={key} value={key} className="gap-1.5">
+            <Icon className="h-4 w-4" />
+            <span className="hidden sm:inline">{label}</span>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+
+  // Heading reflects the active tab and whether a project is selected.
+  const heading = selectedProject ? (
+    view === "calendar" ? (
+      <Trans>Events for {selectedProject.name}</Trans>
+    ) : view === "files" ? (
+      <Trans>Files for {selectedProject.name}</Trans>
+    ) : (
+      <Trans>Tasks for {selectedProject.name}</Trans>
+    )
+  ) : view === "calendar" ? (
+    <Trans>All events</Trans>
+  ) : view === "files" ? (
+    <Trans>All files</Trans>
+  ) : (
+    <Trans>All tasks</Trans>
   );
 
   return (
@@ -270,35 +282,35 @@ export function ProjectsPage() {
           ))}
         </div>
 
-        <div className="mt-4 lg:mt-6">
-          <h2 className="mb-2 text-lg font-bold tracking-tight lg:mb-5">
-            <Trans>Tags</Trans>
-          </h2>
-          <Select value={tag} onValueChange={setTag}>
-            <SelectTrigger className="h-9 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>
-                <Trans>All tags</Trans>
-              </SelectItem>
-              {tags.map((t) => (
-                <SelectItem key={t} value={t}>
-                  #{t}
+        {view !== "files" && (
+          <div className="mt-4 lg:mt-6">
+            <h2 className="mb-2 text-lg font-bold tracking-tight lg:mb-5">
+              <Trans>Tags</Trans>
+            </h2>
+            <Select value={tag} onValueChange={setTag}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>
+                  <Trans>All tags</Trans>
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+                {tags.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    #{t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </aside>
 
       {/* Main content: board or calendar, scoped to the selection */}
       <div className="min-w-0 flex-1 space-y-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="truncate text-2xl font-bold tracking-tight">
-              {selectedProject ? selectedProject.name : <Trans>All projects</Trans>}
-            </h2>
+            <h2 className="truncate text-2xl font-bold tracking-tight">{heading}</h2>
             {selectedProject?.description && (
               <p className="mt-1 text-sm text-zinc-500">{selectedProject.description}</p>
             )}
@@ -306,12 +318,14 @@ export function ProjectsPage() {
           <div className="flex shrink-0 items-center gap-2">
             {/* Tasks / Calendar / Files — desktop shows these in the top strip above. */}
             <div className="lg:hidden">{viewTabs}</div>
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                <Trans>Add task</Trans>
-              </span>
-            </Button>
+            {view === "board" && (
+              <Button onClick={() => setFormOpen(true)}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  <Trans>Add task</Trans>
+                </span>
+              </Button>
+            )}
           </div>
         </div>
 

@@ -113,6 +113,14 @@ msgid "All"
 msgstr "All"
 
 #: src/pages/Projects.tsx
+msgid "All events"
+msgstr "All events"
+
+#: src/pages/Projects.tsx
+msgid "All files"
+msgstr "All files"
+
+#: src/pages/Projects.tsx
 msgid "All projects"
 msgstr "All projects"
 
@@ -120,10 +128,18 @@ msgstr "All projects"
 msgid "All tags"
 msgstr "All tags"
 
+#: src/pages/Projects.tsx
+msgid "All tasks"
+msgstr "All tasks"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Assignee"
 msgstr "Assignee"
+
+#: src/components/TaskFormDialog.tsx
+msgid "At least one tag is required"
+msgstr "At least one tag is required"
 
 #: src/pages/Task.tsx
 msgid "Attach"
@@ -203,6 +219,7 @@ msgstr "Could not log in"
 msgid "Could not save task"
 msgstr "Could not save task"
 
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Create"
 msgstr "Create"
@@ -258,9 +275,19 @@ msgstr "Edit task"
 msgid "edited this task"
 msgstr "edited this task"
 
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Events for {0}"
+msgstr "Events for {0}"
+
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Files"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Files for {0}"
+msgstr "Files for {0}"
 
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
@@ -392,6 +419,10 @@ msgstr "Nothing logged on this day."
 msgid "Pick a project"
 msgstr "Pick a project"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Pick an existing tag or type a new one and press Enter."
+msgstr "Pick an existing tag or type a new one and press Enter."
+
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Post"
@@ -412,6 +443,10 @@ msgstr "Projects"
 #: src/components/PulseCard.tsx
 #~ msgid "Pulse"
 #~ msgstr "Pulse"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Remove tag"
+msgstr "Remove tag"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -440,14 +475,16 @@ msgstr "Status"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
-msgid "Tag"
-msgstr "Tag"
+#~ msgid "Tag"
+#~ msgstr "Tag"
 
 #: src/components/TaskFormDialog.tsx
-msgid "Tag is required"
-msgstr "Tag is required"
+#~ msgid "Tag is required"
+#~ msgstr "Tag is required"
 
+#: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
+#: src/pages/Task.tsx
 msgid "Tags"
 msgstr "Tags"
 
@@ -466,6 +503,11 @@ msgstr "Task not found."
 #: src/pages/Projects.tsx
 msgid "Tasks"
 msgstr "Tasks"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+msgid "Tasks for {0}"
+msgstr "Tasks for {0}"
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"
