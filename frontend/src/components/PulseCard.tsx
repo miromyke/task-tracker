@@ -6,12 +6,9 @@ import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function barColor(count: number, gold: boolean): string {
-  if (count === 0) return "bg-muted";
-  if (gold) return "bg-gold";
-  if (count === 1) return "bg-green1";
-  if (count <= 3) return "bg-green2";
-  if (count <= 6) return "bg-green3";
-  return "bg-green4";
+  if (count === 0) return "bg-muted"; // no activity
+  if (gold) return "bg-green4"; // completion day → saturated green
+  return "bg-green2"; // normal activity → pale green
 }
 
 const FULL = 60; // chart height in px
@@ -67,7 +64,7 @@ export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Stat
           </span>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-gold" />
+            <span className="h-3 w-3 rounded-sm bg-green4" />
             <span className="font-semibold text-foreground">{pulse.completedThisWeek}</span>{" "}
             <Trans context="count">completed</Trans>
           </span>
