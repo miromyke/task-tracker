@@ -100,9 +100,14 @@ msgid "Add task"
 msgstr "Додати завдання"
 
 #: src/components/DayCarousel.tsx
-msgid "added a photo"
-msgstr "додано фото"
+msgid "added a file"
+msgstr "додано файл"
 
+#: src/components/DayCarousel.tsx
+#~ msgid "added a photo"
+#~ msgstr "додано фото"
+
+#: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "All"
 msgstr "Усі"
@@ -121,8 +126,16 @@ msgid "Assignee"
 msgstr "Виконавець"
 
 #: src/pages/Task.tsx
-msgid "attached an image"
-msgstr "додано зображення"
+msgid "Attach"
+msgstr "Прикріпити"
+
+#: src/pages/Task.tsx
+msgid "attached a file"
+msgstr "прикріплено файл"
+
+#: src/pages/Task.tsx
+#~ msgid "attached an image"
+#~ msgstr "додано зображення"
 
 #: src/pages/Task.tsx
 msgid "Back"
@@ -211,9 +224,17 @@ msgstr "створено це завдання"
 msgid "Description"
 msgstr "Опис"
 
+#: src/components/FilesView.tsx
+msgid "Docs"
+msgstr "Документи"
+
 #: src/lib/constants.ts
 msgid "Done"
 msgstr "Готово"
+
+#: src/components/FilesView.tsx
+msgid "Download file"
+msgstr "Завантажити файл"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -237,6 +258,10 @@ msgstr "Редагувати завдання"
 msgid "edited this task"
 msgstr "відредаговано завдання"
 
+#: src/pages/Projects.tsx
+msgid "Files"
+msgstr "Файли"
+
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "З вкладенням"
@@ -244,6 +269,10 @@ msgstr "З вкладенням"
 #: src/pages/Projects.tsx
 #~ msgid "House renovation"
 #~ msgstr "Ремонт будинку"
+
+#: src/components/FilesView.tsx
+msgid "Images"
+msgstr "Зображення"
 
 #: src/lib/constants.ts
 msgid "In progress"
@@ -261,6 +290,10 @@ msgstr "Мова"
 #: src/pages/Calendar.tsx
 #~ msgid "Less"
 #~ msgstr "Менше"
+
+#: src/components/FilesView.tsx
+msgid "Load more"
+msgstr "Завантажити ще"
 
 #: src/pages/Task.tsx
 msgid "Log an update…"
@@ -319,6 +352,10 @@ msgstr "Нове завдання"
 #~ msgid "Next due"
 #~ msgstr "Найближчий термін"
 
+#: src/components/FilesView.tsx
+msgid "No files yet."
+msgstr "Файлів ще немає."
+
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
 #~ msgstr "Ще немає проєктів. Створіть перший, щоб почати."
@@ -348,8 +385,8 @@ msgstr "Цього дня нічого не записано."
 #~ msgstr "за 14 днів"
 
 #: src/pages/Task.tsx
-msgid "Photo"
-msgstr "Фото"
+#~ msgid "Photo"
+#~ msgstr "Фото"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Pick a project"
@@ -474,3 +511,7 @@ msgstr "Завантаження…"
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Імʼя користувача"
+
+#: src/components/FilesView.tsx
+msgid "Videos"
+msgstr "Відео"

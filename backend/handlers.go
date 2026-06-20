@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -44,6 +45,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/tasks/{id}", s.requireAuth(s.handleGetTask))
 	mux.HandleFunc("PATCH /api/tasks/{id}", s.requireAuth(s.handleUpdateTask))
 	mux.HandleFunc("POST /api/tasks/{id}/log", s.requireAuth(s.handleAddLog))
+
+	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
 
 	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
@@ -109,7 +112,41 @@ func randHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-func (s *Server) saveUpload(file multipart.File, header *multipart.FileHeader) (string, error) {
+// maxUploadBytes caps a single multipart upload request (text + all files).
+const maxUploadBytes = 200 << 20 // 200 MiB
+
+// classifyKind buckets a MIME type for display/filtering. Any unknown type is
+// accepted and bucketed as "other" — classification never rejects an upload.
+func classifyKind(mimeType string) string {
+	switch {
+	case strings.HasPrefix(mimeType, "image/"):
+		return "image"
+	case strings.HasPrefix(mimeType, "video/"):
+		return "video"
+	case mimeType == "application/pdf",
+		mimeType == "text/csv",
+		mimeType == "text/plain",
+		mimeType == "application/msword",
+		mimeType == "application/vnd.ms-excel",
+		strings.Contains(mimeType, "spreadsheet"),
+		strings.Contains(mimeType, "wordprocessing"),
+		strings.Contains(mimeType, "presentation"):
+		return "document"
+	default:
+		return "other"
+	}
+}
+
+// inlineExt is the set of extensions safe to render inline in the app origin.
+// Everything else is served as an attachment to avoid stored-XSS via uploads.
+var inlineExt = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
+	".avif": true, ".heic": true, ".heif": true,
+	".mp4": true, ".mov": true, ".webm": true, ".m4v": true, ".ogv": true,
+	".pdf": true,
+}
+
+func (s *Server) saveUpload(file multipart.File, header *multipart.FileHeader) (*SavedFile, error) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext == "" {
 		ext = ".bin"
@@ -118,13 +155,27 @@ func (s *Server) saveUpload(file multipart.File, header *multipart.FileHeader) (
 	dst := filepath.Join(s.cfg.UploadsDir, name)
 	out, err := os.Create(dst)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer out.Close()
-	if _, err := io.Copy(out, file); err != nil {
-		return "", err
+	n, err := io.Copy(out, file)
+	if err != nil {
+		return nil, err
 	}
-	return "/api/uploads/" + name, nil
+	mimeType := header.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = mime.TypeByExtension(ext)
+	}
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	return &SavedFile{
+		Path:     "/api/uploads/" + name,
+		Filename: header.Filename,
+		Mime:     mimeType,
+		Kind:     classifyKind(mimeType),
+		Size:     n,
+	}, nil
 }
 
 // ---- auth handlers ----
@@ -180,13 +231,13 @@ func (s *Server) handleAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-	path, err := s.saveUpload(file, header)
+	sf, err := s.saveUpload(file, header)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not save image")
 		return
 	}
 	u := currentUser(r)
-	if err := s.store.SetAvatar(u.ID, path); err != nil {
+	if err := s.store.SetAvatar(u.ID, sf.Path); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -444,34 +495,68 @@ func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cap the total upload so a huge video can't exhaust disk/memory.
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		writeErr(w, http.StatusBadRequest, "invalid form")
+		writeErr(w, http.StatusBadRequest, "upload too large or invalid form")
 		return
 	}
 	text := strings.TrimSpace(r.FormValue("text"))
 
-	var imagePath *string
-	if file, header, err := r.FormFile("image"); err == nil {
-		defer file.Close()
-		path, err := s.saveUpload(file, header)
-		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "could not save image")
-			return
+	var saved []SavedFile
+	if r.MultipartForm != nil {
+		for _, header := range r.MultipartForm.File["files"] {
+			file, err := header.Open()
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "could not read upload")
+				return
+			}
+			sf, err := s.saveUpload(file, header)
+			file.Close()
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, "could not save file")
+				return
+			}
+			saved = append(saved, *sf)
 		}
-		imagePath = &path
 	}
 
-	if text == "" && imagePath == nil {
-		writeErr(w, http.StatusBadRequest, "text or image is required")
+	if text == "" && len(saved) == 0 {
+		writeErr(w, http.StatusBadRequest, "text or a file is required")
 		return
 	}
 
-	logItem, err := s.store.AddNote(id, currentUser(r).ID, text, imagePath)
+	logItem, err := s.store.AddNote(id, currentUser(r).ID, t.ProjectID, text, saved)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, logItem)
+}
+
+// handleListAssets powers the Files page: a paginated, newest-first list of
+// uploads, optionally scoped by project, kind, and tag.
+func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	projectID, _ := strconv.ParseInt(q.Get("project"), 10, 64) // 0 = all projects
+	kind := q.Get("kind")                                      // image|video|document|other or ""
+	tag := q.Get("tag")
+	page, _ := strconv.Atoi(q.Get("page")) // 0-based
+	if page < 0 {
+		page = 0
+	}
+	const pageSize = 60
+	// Fetch one extra row to detect whether another page exists.
+	assets, err := s.store.ListAssets(projectID, kind, tag, pageSize+1, page*pageSize)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	hasMore := len(assets) > pageSize
+	if hasMore {
+		assets = assets[:pageSize]
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"assets": assets, "hasMore": hasMore})
 }
 
 func (s *Server) handleListTags(w http.ResponseWriter, r *http.Request) {
@@ -490,6 +575,13 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if name == "." || name == "/" || name == "" {
 		writeErr(w, http.StatusNotFound, "not found")
 		return
+	}
+	// Never let the browser sniff a different type than the extension implies,
+	// and force a download for anything not on the safe inline-render list.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	ext := strings.ToLower(filepath.Ext(name))
+	if !inlineExt[ext] || r.URL.Query().Get("download") == "1" {
+		w.Header().Set("Content-Disposition", "attachment")
 	}
 	http.ServeFile(w, r, filepath.Join(s.cfg.UploadsDir, name))
 }

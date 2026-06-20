@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, ImagePlus, Loader2, Pencil, Send, X } from "lucide-react";
+import { ChevronLeft, Download, FileText, Loader2, Paperclip, Pencil, Send, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
-import { api, type LogItem, type Status, type Task, type User } from "@/lib/api";
+import { api, type Asset, type LogItem, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -23,7 +23,7 @@ function describeMsg(log: LogItem): MessageDescriptor {
     case "created":
       return msg`created this task`;
     case "note":
-      return log.text ? msg`logged a note` : msg`attached an image`;
+      return log.text ? msg`logged a note` : msg`attached a file`;
     case "status_change": {
       const to = log.toStatus as Status | null;
       if (to === "done") return msg`completed this task`;
@@ -41,6 +41,31 @@ function describeMsg(log: LogItem): MessageDescriptor {
   }
 }
 
+// AttachmentView renders one uploaded asset by kind: images inline, video in a
+// native player, everything else (documents/other) as a download chip.
+function AttachmentView({ asset }: { asset: Asset }) {
+  if (asset.kind === "image") {
+    return (
+      <a href={asset.path} target="_blank" rel="noreferrer">
+        <img src={asset.path} alt={asset.filename} className="max-h-64 rounded-lg border object-cover" />
+      </a>
+    );
+  }
+  if (asset.kind === "video") {
+    return <video src={asset.path} controls preload="metadata" className="max-h-64 rounded-lg border" />;
+  }
+  return (
+    <a
+      href={`${asset.path}?download=1`}
+      className="inline-flex max-w-full items-center gap-2 rounded-lg border bg-zinc-50 px-3 py-2 text-sm hover:bg-zinc-100"
+    >
+      <FileText className="h-4 w-4 shrink-0 text-zinc-500" />
+      <span className="truncate">{asset.filename}</span>
+      <Download className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+    </a>
+  );
+}
+
 function LogEntry({ log, user }: { log: LogItem; user?: User }) {
   const { i18n } = useLingui();
   const name = user?.name ?? i18n._(msg`Someone`);
@@ -54,10 +79,12 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
           <span className="ml-2 text-xs text-zinc-500">{formatDateTime(log.createdAt)}</span>
         </div>
         {log.type === "note" && log.text && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
-        {log.imagePath && (
-          <a href={log.imagePath} target="_blank" rel="noreferrer">
-            <img src={log.imagePath} alt="attachment" className="mt-2 max-h-64 rounded-lg border object-cover" />
-          </a>
+        {log.attachments.length > 0 && (
+          <div className="mt-2 flex flex-col items-start gap-2">
+            {log.attachments.map((a) => (
+              <AttachmentView key={a.id} asset={a} />
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -86,7 +113,7 @@ export function TaskPage() {
   const [editOpen, setEditOpen] = useState(false);
 
   const [noteText, setNoteText] = useState("");
-  const [noteImage, setNoteImage] = useState<File | null>(null);
+  const [noteFiles, setNoteFiles] = useState<File[]>([]);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -115,13 +142,13 @@ export function TaskPage() {
 
   async function postNote(e: React.FormEvent) {
     e.preventDefault();
-    if (!noteText.trim() && !noteImage) return;
+    if (!noteText.trim() && noteFiles.length === 0) return;
     setPosting(true);
     try {
-      const log = await api.addLog(taskId, noteText.trim(), noteImage);
+      const log = await api.addLog(taskId, noteText.trim(), noteFiles);
       setLogs((prev) => [...prev, log]);
       setNoteText("");
-      setNoteImage(null);
+      setNoteFiles([]);
       if (fileRef.current) fileRef.current.value = "";
     } finally {
       setPosting(false);
@@ -240,27 +267,40 @@ export function TaskPage() {
                 onChange={(e) => setNoteText(e.target.value)}
                 className="min-h-[60px]"
               />
-              {noteImage && (
-                <div className="flex items-center gap-2 text-xs text-zinc-500">
-                  <span className="truncate">{noteImage.name}</span>
-                  <button type="button" onClick={() => setNoteImage(null)} className="text-red-600">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+              {noteFiles.length > 0 && (
+                <div className="space-y-1">
+                  {noteFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setNoteFiles((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-red-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="flex items-center justify-between">
                 <input
                   ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  multiple
                   hidden
-                  onChange={(e) => setNoteImage(e.target.files?.[0] ?? null)}
+                  onChange={(e) => {
+                    const sel = e.target.files ? Array.from(e.target.files) : [];
+                    if (sel.length) setNoteFiles((prev) => [...prev, ...sel]);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
                 />
                 <Button type="button" variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
-                  <ImagePlus className="h-4 w-4" />
-                  <Trans>Photo</Trans>
+                  <Paperclip className="h-4 w-4" />
+                  <Trans>Attach</Trans>
                 </Button>
-                <Button type="submit" size="sm" disabled={posting || (!noteText.trim() && !noteImage)}>
+                <Button type="submit" size="sm" disabled={posting || (!noteText.trim() && noteFiles.length === 0)}>
                   {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   <Trans>Post</Trans>
                 </Button>

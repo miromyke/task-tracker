@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
-import { api, type DayEvent } from "@/lib/api";
+import { api, type Asset, type DayEvent } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatDayHeading, formatTime } from "@/lib/format";
@@ -18,7 +18,7 @@ interface Props {
   projectId?: number; // scope the day report to one project
 }
 
-type Slide = { kind: "media"; event: DayEvent } | { kind: "items"; events: DayEvent[] };
+type Slide = { kind: "media"; event: DayEvent; asset: Asset } | { kind: "items"; events: DayEvent[] };
 
 function buildSlides(events: DayEvent[]): Slide[] {
   const slides: Slide[] = [];
@@ -30,9 +30,12 @@ function buildSlides(events: DayEvent[]): Slide[] {
     }
   };
   for (const e of events) {
-    if (e.imagePath) {
+    // Each image/video attachment gets its own dedicated, full-bleed slide;
+    // documents/other stay in the text item groups.
+    const media = e.attachments.filter((a) => a.kind === "image" || a.kind === "video");
+    if (media.length) {
       flush();
-      slides.push({ kind: "media", event: e });
+      for (const asset of media) slides.push({ kind: "media", event: e, asset });
     } else {
       cur.push(e);
       if (cur.length === 3) flush();
@@ -74,7 +77,7 @@ function EventLine({ event }: { event: DayEvent }) {
     event.type === "note"
       ? event.text
         ? `“${event.text}”`
-        : i18n._(msg`added a photo`)
+        : i18n._(msg`added a file`)
       : i18n._(statusActionMsg(event.toStatus));
   return (
     <div className="flex gap-3">
@@ -225,12 +228,23 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
               </div>
             ) : slide.kind === "media" ? (
               <div className="absolute inset-0">
-                <img
-                  src={slide.event.imagePath!}
-                  alt="attachment"
-                  className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
+                {slide.asset.kind === "video" ? (
+                  <video
+                    src={slide.asset.path}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 z-10 m-auto max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <img
+                    src={slide.asset.path}
+                    alt={slide.asset.filename}
+                    className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+                  />
+                )}
+                {/* caption overlay; pointer-events-none so it never blocks video controls */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
                   <EventLine event={slide.event} />
                 </div>
               </div>

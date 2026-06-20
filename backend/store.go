@@ -42,15 +42,37 @@ type Task struct {
 }
 
 type LogItem struct {
-	ID         int64   `json:"id"`
-	TaskID     int64   `json:"taskId"`
-	UserID     int64   `json:"userId"`
-	Type       string  `json:"type"` // created | note | status_change | due_date_change | edit
-	Text       string  `json:"text"`
-	FromStatus *string `json:"fromStatus"`
-	ToStatus   *string `json:"toStatus"`
-	ImagePath  *string `json:"imagePath"`
-	CreatedAt  string  `json:"createdAt"`
+	ID          int64   `json:"id"`
+	TaskID      int64   `json:"taskId"`
+	UserID      int64   `json:"userId"`
+	Type        string  `json:"type"` // created | note | status_change | due_date_change | edit
+	Text        string  `json:"text"`
+	FromStatus  *string `json:"fromStatus"`
+	ToStatus    *string `json:"toStatus"`
+	Attachments []Asset `json:"attachments"`
+	CreatedAt   string  `json:"createdAt"`
+}
+
+// Asset is an uploaded file (image, video, document, or other). Bytes live on
+// the uploads volume; this row holds the metadata. project_id is denormalized so
+// the Files page can filter without walking tasks/logs. thumb_path/width/height/
+// duration are reserved (e.g. for future video posters) and may be null.
+type Asset struct {
+	ID         int64    `json:"id"`
+	ProjectID  int64    `json:"projectId"`
+	TaskID     *int64   `json:"taskId"`
+	LogID      *int64   `json:"logId"`
+	UploadedBy int64    `json:"uploadedBy"`
+	Kind       string   `json:"kind"` // image | video | document | other
+	Mime       string   `json:"mime"`
+	Filename   string   `json:"filename"` // original name, for display + download
+	Path       string   `json:"path"`     // /api/uploads/<random>
+	ThumbPath  *string  `json:"thumbPath"`
+	Size       int64    `json:"size"`
+	Width      *int     `json:"width"`
+	Height     *int     `json:"height"`
+	Duration   *float64 `json:"duration"`
+	CreatedAt  string   `json:"createdAt"`
 }
 
 // TaskChanges describes a partial update; only fields that are set are applied.
@@ -121,12 +143,30 @@ CREATE TABLE IF NOT EXISTS log_items (
   text        TEXT NOT NULL DEFAULT '',
   from_status TEXT,
   to_status   TEXT,
-  image_path  TEXT,
+  created_at  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS assets (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id  INTEGER NOT NULL REFERENCES projects(id),
+  task_id     INTEGER REFERENCES tasks(id),
+  log_id      INTEGER REFERENCES log_items(id),
+  uploaded_by INTEGER NOT NULL REFERENCES users(id),
+  kind        TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  filename    TEXT NOT NULL,
+  path        TEXT NOT NULL,
+  thumb_path  TEXT,
+  size        INTEGER NOT NULL DEFAULT 0,
+  width       INTEGER,
+  height      INTEGER,
+  duration    REAL,
   created_at  TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_logs_task ON log_items(task_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
+CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
 `
 
 func (s *Store) Migrate() error {
@@ -482,12 +522,12 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 
 // ---- Logs ----
 
-const logCols = "id, task_id, user_id, type, text, from_status, to_status, image_path, created_at"
+const logCols = "id, task_id, user_id, type, text, from_status, to_status, created_at"
 
 func scanLog(sc scanner) (*LogItem, error) {
 	var l LogItem
-	var from, to, img sql.NullString
-	if err := sc.Scan(&l.ID, &l.TaskID, &l.UserID, &l.Type, &l.Text, &from, &to, &img, &l.CreatedAt); err != nil {
+	var from, to sql.NullString
+	if err := sc.Scan(&l.ID, &l.TaskID, &l.UserID, &l.Type, &l.Text, &from, &to, &l.CreatedAt); err != nil {
 		return nil, err
 	}
 	if from.Valid {
@@ -498,23 +538,60 @@ func scanLog(sc scanner) (*LogItem, error) {
 		v := to.String
 		l.ToStatus = &v
 	}
-	if img.Valid {
-		v := img.String
-		l.ImagePath = &v
-	}
+	l.Attachments = []Asset{}
 	return &l, nil
 }
 
-func (s *Store) AddNote(taskID, userID int64, text string, image *string) (*LogItem, error) {
+// SavedFile is the metadata for a file already written to the uploads volume,
+// ready to be recorded as an asset row.
+type SavedFile struct {
+	Path     string
+	Filename string
+	Mime     string
+	Kind     string
+	Size     int64
+}
+
+// AddNote appends a manual note plus any attached files, recording each file as
+// an asset linked to the new log entry. Runs in one transaction.
+func (s *Store) AddNote(taskID, userID, projectID int64, text string, files []SavedFile) (*LogItem, error) {
 	now := nowUTC()
-	res, err := s.db.Exec(
-		`INSERT INTO log_items (task_id, user_id, type, text, image_path, created_at) VALUES (?,?,?,?,?,?)`,
-		taskID, userID, "note", text, nullStr(image), now)
+	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	id, _ := res.LastInsertId()
-	return &LogItem{ID: id, TaskID: taskID, UserID: userID, Type: "note", Text: text, ImagePath: image, CreatedAt: now}, nil
+	defer tx.Rollback()
+
+	res, err := tx.Exec(
+		`INSERT INTO log_items (task_id, user_id, type, text, created_at) VALUES (?,?,?,?,?)`,
+		taskID, userID, "note", text, now)
+	if err != nil {
+		return nil, err
+	}
+	logID, _ := res.LastInsertId()
+
+	li := &LogItem{ID: logID, TaskID: taskID, UserID: userID, Type: "note", Text: text,
+		Attachments: []Asset{}, CreatedAt: now}
+	for _, f := range files {
+		ar, err := tx.Exec(
+			`INSERT INTO assets (project_id, task_id, log_id, uploaded_by, kind, mime, filename, path, size, created_at)
+			 VALUES (?,?,?,?,?,?,?,?,?,?)`,
+			projectID, taskID, logID, userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
+		if err != nil {
+			return nil, err
+		}
+		aid, _ := ar.LastInsertId()
+		tid, lid := taskID, logID
+		li.Attachments = append(li.Attachments, Asset{
+			ID: aid, ProjectID: projectID, TaskID: &tid, LogID: &lid, UploadedBy: userID,
+			Kind: f.Kind, Mime: f.Mime, Filename: f.Filename, Path: f.Path, Size: f.Size, CreatedAt: now,
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return li, nil
 }
 
 func (s *Store) ListLogs(taskID int64) ([]LogItem, error) {
@@ -524,12 +601,136 @@ func (s *Store) ListLogs(taskID int64) ([]LogItem, error) {
 	}
 	defer rows.Close()
 	out := []LogItem{}
+	ids := []int64{}
 	for rows.Next() {
 		l, err := scanLog(rows)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, *l)
+		ids = append(ids, l.ID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	byLog, err := s.assetsByLogIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if a := byLog[out[i].ID]; a != nil {
+			out[i].Attachments = a
+		}
+	}
+	return out, nil
+}
+
+// ---- Assets ----
+
+const assetCols = "id, project_id, task_id, log_id, uploaded_by, kind, mime, filename, path, thumb_path, size, width, height, duration, created_at"
+
+func scanAsset(sc scanner) (*Asset, error) {
+	var a Asset
+	var taskID, logID sql.NullInt64
+	var thumb sql.NullString
+	var width, height sql.NullInt64
+	var duration sql.NullFloat64
+	if err := sc.Scan(&a.ID, &a.ProjectID, &taskID, &logID, &a.UploadedBy, &a.Kind, &a.Mime,
+		&a.Filename, &a.Path, &thumb, &a.Size, &width, &height, &duration, &a.CreatedAt); err != nil {
+		return nil, err
+	}
+	if taskID.Valid {
+		a.TaskID = &taskID.Int64
+	}
+	if logID.Valid {
+		a.LogID = &logID.Int64
+	}
+	if thumb.Valid {
+		a.ThumbPath = &thumb.String
+	}
+	if width.Valid {
+		v := int(width.Int64)
+		a.Width = &v
+	}
+	if height.Valid {
+		v := int(height.Int64)
+		a.Height = &v
+	}
+	if duration.Valid {
+		a.Duration = &duration.Float64
+	}
+	return &a, nil
+}
+
+// assetColsQ is assetCols with the assets table aliased as `a`, for queries that
+// join other tables (column names like id/project_id would otherwise be ambiguous).
+const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at"
+
+// ListAssets returns uploaded files newest-first, optionally scoped by project,
+// kind, and task tag. projectID == 0 means all projects; empty kind/tag skip that
+// filter. limit/offset paginate.
+func (s *Store) ListAssets(projectID int64, kind, tag string, limit, offset int) ([]Asset, error) {
+	q := "SELECT " + assetColsQ + " FROM assets a"
+	args := []any{}
+	if tag != "" {
+		q += " JOIN tasks t ON t.id = a.task_id"
+	}
+	q += " WHERE 1=1"
+	if projectID != 0 {
+		q += " AND a.project_id = ?"
+		args = append(args, projectID)
+	}
+	if kind != "" {
+		q += " AND a.kind = ?"
+		args = append(args, kind)
+	}
+	if tag != "" {
+		q += " AND t.tag = ?"
+		args = append(args, tag)
+	}
+	q += " ORDER BY a.created_at DESC, a.id DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Asset{}
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *a)
+	}
+	return out, rows.Err()
+}
+
+// assetsByLogIDs returns the assets for the given log entries, grouped by log_id.
+func (s *Store) assetsByLogIDs(ids []int64) (map[int64][]Asset, error) {
+	out := map[int64][]Asset{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	ph := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.db.Query("SELECT "+assetCols+" FROM assets WHERE log_id IN ("+ph+") ORDER BY id", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		a, err := scanAsset(rows)
+		if err != nil {
+			return nil, err
+		}
+		if a.LogID != nil {
+			out[*a.LogID] = append(out[*a.LogID], *a)
+		}
 	}
 	return out, rows.Err()
 }

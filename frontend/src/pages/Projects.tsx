@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarDays, FolderKanban, Loader2, Plus } from "lucide-react";
+import { CalendarDays, FolderKanban, Images, Loader2, Plus } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { PulseCard } from "@/components/PulseCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { CalendarView } from "@/components/CalendarView";
+import { FilesView } from "@/components/FilesView";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +127,7 @@ export function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [tag, setTag] = useState<string>(ALL);
-  const [view, setView] = useState<"board" | "calendar">("board");
+  const [view, setView] = useState<"board" | "calendar" | "files">("board");
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -253,6 +254,7 @@ export function ProjectsPage() {
                 [
                   { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
                   { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
+                  { key: "files", icon: Images, label: <Trans>Files</Trans> },
                 ] as const
               ).map(({ key, icon: Icon, label }) => (
                 <button
@@ -284,6 +286,8 @@ export function ProjectsPage() {
           </div>
         ) : view === "calendar" ? (
           <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
+        ) : view === "files" ? (
+          <FilesView projectId={selectedId ?? undefined} />
         ) : (
           <>
             {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}

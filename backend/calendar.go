@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"sort"
 	"strconv"
@@ -28,15 +29,15 @@ type DayEventTask struct {
 
 // DayEvent is one entry in a day's carousel report.
 type DayEvent struct {
-	ID         int64        `json:"id"`
-	Type       string       `json:"type"` // note | status_change
-	Text       string       `json:"text"`
-	FromStatus *string      `json:"fromStatus"`
-	ToStatus   *string      `json:"toStatus"`
-	ImagePath  *string      `json:"imagePath"`
-	CreatedAt  string       `json:"createdAt"`
-	User       User         `json:"user"`
-	Task       DayEventTask `json:"task"`
+	ID          int64        `json:"id"`
+	Type        string       `json:"type"` // note | status_change
+	Text        string       `json:"text"`
+	FromStatus  *string      `json:"fromStatus"`
+	ToStatus    *string      `json:"toStatus"`
+	Attachments []Asset      `json:"attachments"`
+	CreatedAt   string       `json:"createdAt"`
+	User        User         `json:"user"`
+	Task        DayEventTask `json:"task"`
 }
 
 func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +90,7 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 		if lr.Type == "status_change" && lr.ToStatus != nil && *lr.ToStatus == "done" {
 			a.gold = true
 		}
-		if lr.Image != nil && *lr.Image != "" {
+		if lr.Attachments > 0 {
 			a.attachments++
 		}
 	}
@@ -182,7 +183,7 @@ func (s *Server) writePulse(w http.ResponseWriter, projectID int64) {
 		if lr.Type == "status_change" && lr.ToStatus != nil && *lr.ToStatus == "done" {
 			a.gold = true
 		}
-		if lr.Image != nil && *lr.Image != "" {
+		if lr.Attachments > 0 {
 			a.attachments++
 		}
 	}
@@ -207,16 +208,30 @@ func (s *Server) writePulse(w http.ResponseWriter, projectID int64) {
 // ---- store queries for the calendar ----
 
 // LogRangeRow is a lightweight row used to build the calendar rollup.
+// Attachments is the number of assets attached to the log entry.
 type LogRangeRow struct {
-	CreatedAt string
-	Type      string
-	ToStatus  *string
-	Image     *string
+	CreatedAt   string
+	Type        string
+	ToStatus    *string
+	Attachments int
+}
+
+// logRangeCols selects the rollup fields plus a per-log attachment count.
+const logRangeCols = "li.created_at, li.type, li.to_status, (SELECT COUNT(*) FROM assets a WHERE a.log_id = li.id)"
+
+func scanLogRange(rows *sql.Rows) (LogRangeRow, error) {
+	var lr LogRangeRow
+	var to *string
+	if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to, &lr.Attachments); err != nil {
+		return lr, err
+	}
+	lr.ToStatus = to
+	return lr, nil
 }
 
 // LogsInRange returns log rows in [startUTC, endUTC); projectID == 0 spans all projects.
 func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]LogRangeRow, error) {
-	q := "SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li"
+	q := "SELECT " + logRangeCols + " FROM log_items li"
 	args := []any{}
 	if tag != "" || projectID != 0 {
 		q += " JOIN tasks t ON t.id = li.task_id"
@@ -238,12 +253,10 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]Lo
 	defer rows.Close()
 	out := []LogRangeRow{}
 	for rows.Next() {
-		var lr LogRangeRow
-		var to, img *string
-		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to, &img); err != nil {
+		lr, err := scanLogRange(rows)
+		if err != nil {
 			return nil, err
 		}
-		lr.ToStatus, lr.Image = to, img
 		out = append(out, lr)
 	}
 	return out, rows.Err()
@@ -251,7 +264,7 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]Lo
 
 // ProjectLogsSince returns log rows since startUTC; projectID == 0 spans all projects.
 func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRow, error) {
-	q := `SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li
+	q := "SELECT " + logRangeCols + ` FROM log_items li
 		 JOIN tasks t ON t.id = li.task_id
 		 WHERE li.created_at >= ?`
 	args := []any{startUTC}
@@ -266,12 +279,10 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRo
 	defer rows.Close()
 	out := []LogRangeRow{}
 	for rows.Next() {
-		var lr LogRangeRow
-		var to, img *string
-		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to, &img); err != nil {
+		lr, err := scanLogRange(rows)
+		if err != nil {
 			return nil, err
 		}
-		lr.ToStatus, lr.Image = to, img
 		out = append(out, lr)
 	}
 	return out, rows.Err()
@@ -281,7 +292,7 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRo
 // task/project context, ordered chronologically for the carousel report.
 func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayEvent, error) {
 	q := `
-		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.image_path, li.created_at,
+		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.created_at,
 		       u.id, u.username, u.name, u.avatar_path,
 		       t.id, t.title, t.project_id, p.name, t.tag
 		FROM log_items li
@@ -308,19 +319,35 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 	defer rows.Close()
 
 	out := []DayEvent{}
+	ids := []int64{}
 	for rows.Next() {
 		var e DayEvent
-		var from, to, img, avatar *string
+		var from, to, avatar *string
 		if err := rows.Scan(
-			&e.ID, &e.Type, &e.Text, &from, &to, &img, &e.CreatedAt,
+			&e.ID, &e.Type, &e.Text, &from, &to, &e.CreatedAt,
 			&e.User.ID, &e.User.Username, &e.User.Name, &avatar,
 			&e.Task.ID, &e.Task.Title, &e.Task.ProjectID, &e.Task.ProjectName, &e.Task.Tag,
 		); err != nil {
 			return nil, err
 		}
-		e.FromStatus, e.ToStatus, e.ImagePath = from, to, img
+		e.FromStatus, e.ToStatus = from, to
 		e.User.AvatarPath = avatar
+		e.Attachments = []Asset{}
 		out = append(out, e)
+		ids = append(ids, e.ID)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	byLog, err := s.assetsByLogIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if a := byLog[out[i].ID]; a != nil {
+			out[i].Attachments = a
+		}
+	}
+	return out, nil
 }

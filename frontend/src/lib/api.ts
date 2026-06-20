@@ -32,6 +32,26 @@ export interface Task {
   updatedAt: string;
 }
 
+export type AssetKind = "image" | "video" | "document" | "other";
+
+export interface Asset {
+  id: number;
+  projectId: number;
+  taskId: number | null;
+  logId: number | null;
+  uploadedBy: number;
+  kind: AssetKind;
+  mime: string;
+  filename: string;
+  path: string;
+  thumbPath: string | null;
+  size: number;
+  width: number | null;
+  height: number | null;
+  duration: number | null;
+  createdAt: string;
+}
+
 export interface LogItem {
   id: number;
   taskId: number;
@@ -40,7 +60,7 @@ export interface LogItem {
   text: string;
   fromStatus: string | null;
   toStatus: string | null;
-  imagePath: string | null;
+  attachments: Asset[];
   createdAt: string;
 }
 
@@ -57,7 +77,7 @@ export interface DayEvent {
   text: string;
   fromStatus: string | null;
   toStatus: string | null;
-  imagePath: string | null;
+  attachments: Asset[];
   createdAt: string;
   user: User;
   task: {
@@ -175,12 +195,23 @@ export const api = {
   getTask: (id: number) => req<{ task: Task; logs: LogItem[] }>(`/tasks/${id}`),
   updateTask: (id: number, patch: TaskUpdate) =>
     req<{ task: Task; newLogs: LogItem[] }>(`/tasks/${id}`, jsonBody("PATCH", patch)),
-  addLog: (taskId: number, text: string, image: File | null) => {
+  addLog: (taskId: number, text: string, files: File[]) => {
     const fd = new FormData();
     fd.append("text", text);
-    if (image) fd.append("image", image);
+    for (const f of files) fd.append("files", f);
     return req<LogItem>(`/tasks/${taskId}/log`, { method: "POST", body: fd });
   },
+
+  // assets (Files page)
+  listAssets: (opts: { projectId?: number; kind?: string; tag?: string; page?: number } = {}) =>
+    req<{ assets: Asset[]; hasMore: boolean }>(
+      `/assets${qs({
+        project: opts.projectId ? String(opts.projectId) : undefined,
+        kind: opts.kind,
+        tag: opts.tag,
+        page: opts.page ? String(opts.page) : undefined,
+      })}`
+    ),
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),

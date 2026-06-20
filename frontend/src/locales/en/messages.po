@@ -100,9 +100,14 @@ msgid "Add task"
 msgstr "Add task"
 
 #: src/components/DayCarousel.tsx
-msgid "added a photo"
-msgstr "added a photo"
+msgid "added a file"
+msgstr "added a file"
 
+#: src/components/DayCarousel.tsx
+#~ msgid "added a photo"
+#~ msgstr "added a photo"
+
+#: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "All"
 msgstr "All"
@@ -121,8 +126,16 @@ msgid "Assignee"
 msgstr "Assignee"
 
 #: src/pages/Task.tsx
-msgid "attached an image"
-msgstr "attached an image"
+msgid "Attach"
+msgstr "Attach"
+
+#: src/pages/Task.tsx
+msgid "attached a file"
+msgstr "attached a file"
+
+#: src/pages/Task.tsx
+#~ msgid "attached an image"
+#~ msgstr "attached an image"
 
 #: src/pages/Task.tsx
 msgid "Back"
@@ -211,9 +224,17 @@ msgstr "created this task"
 msgid "Description"
 msgstr "Description"
 
+#: src/components/FilesView.tsx
+msgid "Docs"
+msgstr "Docs"
+
 #: src/lib/constants.ts
 msgid "Done"
 msgstr "Done"
+
+#: src/components/FilesView.tsx
+msgid "Download file"
+msgstr "Download file"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -237,6 +258,10 @@ msgstr "Edit task"
 msgid "edited this task"
 msgstr "edited this task"
 
+#: src/pages/Projects.tsx
+msgid "Files"
+msgstr "Files"
+
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "Has attachment"
@@ -244,6 +269,10 @@ msgstr "Has attachment"
 #: src/pages/Projects.tsx
 #~ msgid "House renovation"
 #~ msgstr "House renovation"
+
+#: src/components/FilesView.tsx
+msgid "Images"
+msgstr "Images"
 
 #: src/lib/constants.ts
 msgid "In progress"
@@ -261,6 +290,10 @@ msgstr "Language"
 #: src/pages/Calendar.tsx
 #~ msgid "Less"
 #~ msgstr "Less"
+
+#: src/components/FilesView.tsx
+msgid "Load more"
+msgstr "Load more"
 
 #: src/pages/Task.tsx
 msgid "Log an update…"
@@ -319,6 +352,10 @@ msgstr "New task"
 #~ msgid "Next due"
 #~ msgstr "Next due"
 
+#: src/components/FilesView.tsx
+msgid "No files yet."
+msgstr "No files yet."
+
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
 #~ msgstr "No projects yet. Create your first one to get started."
@@ -348,8 +385,8 @@ msgstr "Nothing logged on this day."
 #~ msgstr "past 14 days"
 
 #: src/pages/Task.tsx
-msgid "Photo"
-msgstr "Photo"
+#~ msgid "Photo"
+#~ msgstr "Photo"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Pick a project"
@@ -474,3 +511,7 @@ msgstr "Uploading…"
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Username"
+
+#: src/components/FilesView.tsx
+msgid "Videos"
+msgstr "Videos"
