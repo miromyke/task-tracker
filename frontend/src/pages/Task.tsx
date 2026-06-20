@@ -49,7 +49,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
       <UserAvatar name={name} avatarPath={user?.avatarPath} className="mt-0.5 h-8 w-8 text-[10px]" />
       <div className="min-w-0 flex-1">
         <div className="text-sm">
-          <span className="font-medium">{name}</span>{" "}
+          <span className="font-medium">{name}:</span>{" "}
           <span className="text-zinc-500">{i18n._(describeMsg(log))}</span>
           <span className="ml-2 text-xs text-zinc-500">{formatDateTime(log.createdAt)}</span>
         </div>

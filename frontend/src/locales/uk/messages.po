@@ -14,12 +14,16 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. placeholder {0}: d.attachments
+#. placeholder {0}: day.attachments
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# вкладення} few {# вкладення} many {# вкладень} other {# вкладення}}"
 
 #. placeholder {0}: d.count
+#. placeholder {0}: day.count
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# запис} few {# записи} many {# записів} other {# запису}}"
 
@@ -29,7 +33,9 @@ msgid "{0, plural, one {# task} other {# tasks}}"
 msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
 
 #. placeholder {0}: formatShortDate(d.date)
+#. placeholder {0}: formatShortDate(date)
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
@@ -59,7 +65,7 @@ msgstr "6 місяців"
 
 #: src/components/DayCarousel.tsx
 msgid "abandoned"
-msgstr "облишив"
+msgstr "облишено"
 
 #: src/lib/constants.ts
 msgid "Abandoned"
@@ -67,11 +73,15 @@ msgstr "Відмінено"
 
 #: src/pages/Task.tsx
 msgid "abandoned this task"
-msgstr "облишив це завдання"
+msgstr "облишено це завдання"
 
 #: src/components/AppLayout.tsx
 msgid "Account"
 msgstr "Обліковий запис"
+
+#: src/pages/Calendar.tsx
+msgid "Activity"
+msgstr ""
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Activity calendar"
@@ -87,7 +97,7 @@ msgstr "Додати завдання"
 
 #: src/components/DayCarousel.tsx
 msgid "added a photo"
-msgstr "додав фото"
+msgstr "додано фото"
 
 #: src/pages/Calendar.tsx
 #: src/pages/ProjectBoard.tsx
@@ -101,7 +111,7 @@ msgstr "Виконавець"
 
 #: src/pages/Task.tsx
 msgid "attached an image"
-msgstr "додав зображення"
+msgstr "додано зображення"
 
 #: src/pages/Task.tsx
 msgid "Back"
@@ -134,15 +144,15 @@ msgstr "Змінити аватар"
 
 #: src/pages/Task.tsx
 msgid "changed the due date"
-msgstr "змінив термін"
+msgstr "змінено термін"
 
 #: src/pages/Task.tsx
 msgid "changed the status"
-msgstr "змінив статус"
+msgstr "змінено статус"
 
 #: src/components/DayCarousel.tsx
 msgid "completed"
-msgstr "завершив"
+msgstr "завершено"
 
 #: src/components/PulseCard.tsx
 #~ msgctxt "count"
@@ -151,7 +161,7 @@ msgstr "завершив"
 
 #: src/pages/Task.tsx
 msgid "completed this task"
-msgstr "завершив це завдання"
+msgstr "завершено це завдання"
 
 #: src/pages/Login.tsx
 msgid "Continue"
@@ -173,14 +183,13 @@ msgstr "Створити"
 msgid "Create task"
 msgstr "Створити завдання"
 
-#: src/pages/ProjectOverview.tsx
 #: src/pages/Task.tsx
 msgid "Created"
 msgstr "Створено"
 
 #: src/pages/Task.tsx
 msgid "created this task"
-msgstr "створив це завдання"
+msgstr "створено це завдання"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
@@ -211,7 +220,11 @@ msgstr "Редагувати завдання"
 
 #: src/pages/Task.tsx
 msgid "edited this task"
-msgstr "відредагував завдання"
+msgstr "відредаговано завдання"
+
+#: src/pages/Calendar.tsx
+msgid "Has attachment"
+msgstr ""
 
 #: src/pages/Projects.tsx
 msgid "House renovation"
@@ -231,8 +244,8 @@ msgstr "Мова"
 #~ msgstr "остання активність {0}"
 
 #: src/pages/Calendar.tsx
-msgid "Less"
-msgstr "Менше"
+#~ msgid "Less"
+#~ msgstr "Менше"
 
 #: src/pages/Task.tsx
 msgid "Log an update…"
@@ -244,20 +257,20 @@ msgstr "Вийти"
 
 #. placeholder {0}: event.text
 #: src/components/DayCarousel.tsx
-msgid "logged “{0}”"
-msgstr "занотував: “{0}”"
+#~ msgid "logged “{0}”"
+#~ msgstr "занотував: “{0}”"
 
 #: src/pages/Task.tsx
 msgid "logged a note"
-msgstr "залишив нотатку"
+msgstr "залишено нотатку"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Members"
-msgstr "Учасники"
+#~ msgid "Members"
+#~ msgstr "Учасники"
 
 #: src/pages/Calendar.tsx
-msgid "More"
-msgstr "Більше"
+#~ msgid "More"
+#~ msgstr "Більше"
 
 #: src/components/KanbanBoard.tsx
 msgid "Move:"
@@ -265,11 +278,11 @@ msgstr "Перемістити:"
 
 #: src/pages/Task.tsx
 msgid "moved this back to To do"
-msgstr "повернув у «Зробити»"
+msgstr "повернено у «Зробити»"
 
 #: src/components/DayCarousel.tsx
 msgid "moved to To do"
-msgstr "повернув у «Зробити»"
+msgstr "повернено у «Зробити»"
 
 #: src/pages/Projects.tsx
 msgid "Name"
@@ -284,8 +297,8 @@ msgid "New task"
 msgstr "Нове завдання"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Next due"
-msgstr "Найближчий термін"
+#~ msgid "Next due"
+#~ msgstr "Найближчий термін"
 
 #: src/pages/Projects.tsx
 msgid "No projects yet. Create your first one to get started."
@@ -304,12 +317,12 @@ msgid "Nothing logged on this day."
 msgstr "Цього дня нічого не записано."
 
 #: src/pages/ProjectOverview.tsx
-msgid "Nothing open — nice work."
-msgstr "Немає відкритих завдань — чудова робота."
+#~ msgid "Nothing open — nice work."
+#~ msgstr "Немає відкритих завдань — чудова робота."
 
 #: src/pages/ProjectOverview.tsx
-msgid "Open board"
-msgstr "Відкрити дошку"
+#~ msgid "Open board"
+#~ msgstr "Відкрити дошку"
 
 #: src/components/PulseCard.tsx
 #~ msgid "past 14 days"
@@ -349,11 +362,11 @@ msgstr "Хтось"
 
 #: src/components/DayCarousel.tsx
 msgid "started"
-msgstr "розпочав"
+msgstr "розпочато"
 
 #: src/pages/Task.tsx
 msgid "started working on this"
-msgstr "взявся за роботу"
+msgstr "розпочато роботу"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -399,16 +412,16 @@ msgid "Unassigned"
 msgstr "Без виконавця"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Up next"
-msgstr "На черзі"
+#~ msgid "Up next"
+#~ msgstr "На черзі"
 
 #: src/components/DayCarousel.tsx
 msgid "updated"
-msgstr "оновив"
+msgstr "оновлено"
 
 #: src/pages/Task.tsx
 msgid "updated this task"
-msgstr "оновив завдання"
+msgstr "оновлено завдання"
 
 #: src/components/PulseCard.tsx
 #~ msgid "updates this week"

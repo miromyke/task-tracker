@@ -69,11 +69,11 @@ function adjacentDate(dates: string[], current: string, dir: 1 | -1): string | n
 }
 
 function EventLine({ event }: { event: DayEvent }) {
-  const { t, i18n } = useLingui();
+  const { i18n } = useLingui();
   const action =
     event.type === "note"
       ? event.text
-        ? t`logged “${event.text}”`
+        ? `“${event.text}”`
         : i18n._(msg`added a photo`)
       : i18n._(statusActionMsg(event.toStatus));
   return (
@@ -81,7 +81,7 @@ function EventLine({ event }: { event: DayEvent }) {
       <UserAvatar name={event.user.name} avatarPath={event.user.avatarPath} className="mt-0.5 h-9 w-9 text-[11px]" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] leading-snug">
-          <span className="font-semibold">{event.user.name}</span> <span className="text-white/70">{action}</span>{" "}
+          <span className="font-semibold">{event.user.name}:</span> <span className="text-white/70">{action}</span>{" "}
           <span className="font-medium">«{event.task.title}»</span>
         </p>
         <p className="mt-0.5 text-xs text-white/50">
@@ -181,7 +181,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
           // mobile: immersive fullscreen
           "left-0 top-0 h-full w-full max-w-none translate-x-0 translate-y-0 rounded-none",
           // desktop: centered, phone-sized story card on the dimmed backdrop
-          "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[88vh] sm:max-h-[800px] sm:w-[26rem] sm:max-w-[26rem] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-white/10 sm:shadow-2xl"
+          "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[90vh] sm:max-h-[920px] sm:w-[30rem] sm:max-w-[30rem] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-white/10 sm:shadow-2xl"
         )}
       >
         {/* card surface — clips media/progress to the rounded corners; the desktop

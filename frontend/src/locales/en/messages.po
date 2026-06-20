@@ -14,12 +14,16 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. placeholder {0}: d.attachments
+#. placeholder {0}: day.attachments
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# attachment} other {# attachments}}"
 
 #. placeholder {0}: d.count
+#. placeholder {0}: day.count
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# log} other {# logs}}"
 
@@ -29,7 +33,9 @@ msgid "{0, plural, one {# task} other {# tasks}}"
 msgstr "{0, plural, one {# task} other {# tasks}}"
 
 #. placeholder {0}: formatShortDate(d.date)
+#. placeholder {0}: formatShortDate(date)
 #: src/components/PulseCard.tsx
+#: src/pages/Calendar.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
@@ -72,6 +78,10 @@ msgstr "abandoned this task"
 #: src/components/AppLayout.tsx
 msgid "Account"
 msgstr "Account"
+
+#: src/pages/Calendar.tsx
+msgid "Activity"
+msgstr "Activity"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Activity calendar"
@@ -173,7 +183,6 @@ msgstr "Create"
 msgid "Create task"
 msgstr "Create task"
 
-#: src/pages/ProjectOverview.tsx
 #: src/pages/Task.tsx
 msgid "Created"
 msgstr "Created"
@@ -213,6 +222,10 @@ msgstr "Edit task"
 msgid "edited this task"
 msgstr "edited this task"
 
+#: src/pages/Calendar.tsx
+msgid "Has attachment"
+msgstr "Has attachment"
+
 #: src/pages/Projects.tsx
 msgid "House renovation"
 msgstr "House renovation"
@@ -231,8 +244,8 @@ msgstr "Language"
 #~ msgstr "last activity {0}"
 
 #: src/pages/Calendar.tsx
-msgid "Less"
-msgstr "Less"
+#~ msgid "Less"
+#~ msgstr "Less"
 
 #: src/pages/Task.tsx
 msgid "Log an update…"
@@ -244,20 +257,20 @@ msgstr "Log out"
 
 #. placeholder {0}: event.text
 #: src/components/DayCarousel.tsx
-msgid "logged “{0}”"
-msgstr "logged “{0}”"
+#~ msgid "logged “{0}”"
+#~ msgstr "logged “{0}”"
 
 #: src/pages/Task.tsx
 msgid "logged a note"
 msgstr "logged a note"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Members"
-msgstr "Members"
+#~ msgid "Members"
+#~ msgstr "Members"
 
 #: src/pages/Calendar.tsx
-msgid "More"
-msgstr "More"
+#~ msgid "More"
+#~ msgstr "More"
 
 #: src/components/KanbanBoard.tsx
 msgid "Move:"
@@ -284,8 +297,8 @@ msgid "New task"
 msgstr "New task"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Next due"
-msgstr "Next due"
+#~ msgid "Next due"
+#~ msgstr "Next due"
 
 #: src/pages/Projects.tsx
 msgid "No projects yet. Create your first one to get started."
@@ -304,12 +317,12 @@ msgid "Nothing logged on this day."
 msgstr "Nothing logged on this day."
 
 #: src/pages/ProjectOverview.tsx
-msgid "Nothing open — nice work."
-msgstr "Nothing open — nice work."
+#~ msgid "Nothing open — nice work."
+#~ msgstr "Nothing open — nice work."
 
 #: src/pages/ProjectOverview.tsx
-msgid "Open board"
-msgstr "Open board"
+#~ msgid "Open board"
+#~ msgstr "Open board"
 
 #: src/components/PulseCard.tsx
 #~ msgid "past 14 days"
@@ -399,8 +412,8 @@ msgid "Unassigned"
 msgstr "Unassigned"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Up next"
-msgstr "Up next"
+#~ msgid "Up next"
+#~ msgstr "Up next"
 
 #: src/components/DayCarousel.tsx
 msgid "updated"
