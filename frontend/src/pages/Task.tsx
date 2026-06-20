@@ -213,8 +213,14 @@ export function TaskPage() {
               </SelectContent>
             </Select>
           </MetaRow>
-          <MetaRow label={<Trans>Tag</Trans>}>
-            <Badge className="border-transparent bg-zinc-200 text-zinc-800">#{task.tag}</Badge>
+          <MetaRow label={<Trans>Tags</Trans>}>
+            <span className="flex flex-wrap gap-1">
+              {task.tags.map((tg) => (
+                <Badge key={tg} className="border-transparent bg-zinc-200 text-zinc-800">
+                  #{tg}
+                </Badge>
+              ))}
+            </span>
           </MetaRow>
           <MetaRow label={<Trans>Assignee</Trans>}>
             {assignee ? (

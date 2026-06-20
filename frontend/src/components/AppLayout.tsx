@@ -93,15 +93,16 @@ function AccountDialog() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/95 px-4 backdrop-blur">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
+    <div className="flex h-full flex-col sm:flex-row">
+      {/* Mobile: top bar. Desktop (sm+): left rail. */}
+      <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-white/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
+        <Link to="/" className="flex items-center font-semibold">
           <Acorn weight="fill" className="h-8 w-8 text-zinc-900" />
         </Link>
         <AccountDialog />
-      </header>
+      </nav>
 
-      <main className="mx-auto w-full max-w-[96rem] flex-1 overflow-y-auto p-4">{children}</main>
+      <main className="mx-auto h-full w-full max-w-[96rem] flex-1 overflow-y-auto p-4">{children}</main>
     </div>
   );
 }

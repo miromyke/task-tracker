@@ -337,25 +337,25 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Title       string  `json:"title"`
-		Description string  `json:"description"`
-		Tag         string  `json:"tag"`
-		AssigneeID  *int64  `json:"assigneeId"`
-		DueDate     *string `json:"dueDate"`
-		Status      string  `json:"status"`
+		Title       string   `json:"title"`
+		Description string   `json:"description"`
+		Tags        []string `json:"tags"`
+		AssigneeID  *int64   `json:"assigneeId"`
+		DueDate     *string  `json:"dueDate"`
+		Status      string   `json:"status"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 	req.Title = strings.TrimSpace(req.Title)
-	req.Tag = strings.TrimSpace(req.Tag)
+	tags := normalizeTags(req.Tags)
 	if req.Title == "" {
 		writeErr(w, http.StatusBadRequest, "title is required")
 		return
 	}
-	if req.Tag == "" {
-		writeErr(w, http.StatusBadRequest, "tag is required")
+	if len(tags) == 0 {
+		writeErr(w, http.StatusBadRequest, "at least one tag is required")
 		return
 	}
 	if req.Status == "" {
@@ -365,7 +365,7 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid status")
 		return
 	}
-	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), req.Tag,
+	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), tags,
 		req.AssigneeID, req.DueDate, req.Status, currentUser(r).ID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -427,15 +427,15 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			ch.Description = &str
 		}
 	}
-	if v, ok := raw["tag"]; ok {
-		var str string
-		if json.Unmarshal(v, &str) == nil {
-			str = strings.TrimSpace(str)
-			if str == "" {
-				writeErr(w, http.StatusBadRequest, "tag cannot be empty")
+	if v, ok := raw["tags"]; ok {
+		var list []string
+		if json.Unmarshal(v, &list) == nil {
+			tags := normalizeTags(list)
+			if len(tags) == 0 {
+				writeErr(w, http.StatusBadRequest, "at least one tag is required")
 				return
 			}
-			ch.Tag = &str
+			ch.Tags = &tags
 		}
 	}
 	if v, ok := raw["assigneeId"]; ok {

@@ -166,7 +166,7 @@ export function ProjectsPage() {
   const visibleTasks = useMemo(
     () =>
       tasks.filter(
-        (t) => (!selectedId || t.projectId === selectedId) && (tag === ALL || t.tag === tag)
+        (t) => (!selectedId || t.projectId === selectedId) && (tag === ALL || t.tags.includes(tag))
       ),
     [tasks, selectedId, tag]
   );
@@ -181,11 +181,45 @@ export function ProjectsPage() {
     }
   }
 
+  // The view switch (Tasks/Calendar/Files): shown in a desktop top strip over the
+  // content column, or inline in the mobile header.
+  const viewTabs = (
+    <div className="inline-flex rounded-md border p-0.5">
+      {(
+        [
+          { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
+          { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
+          { key: "files", icon: Images, label: <Trans>Files</Trans> },
+        ] as const
+      ).map(({ key, icon: Icon, label }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => setView(key)}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-sm font-medium transition-colors",
+            view === key ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-5 pt-1 lg:flex-row lg:gap-12">
-      {/* Projects stack */}
-      <aside className="lg:w-56 lg:shrink-0">
-        <div className="mb-5 flex items-center justify-between gap-2">
+    <div className="flex flex-col gap-5 pt-1">
+      {/* Desktop: tabs in a top strip aligned over the content column. */}
+      <div className="hidden lg:flex lg:flex-row lg:gap-12">
+        <div className="lg:w-56 lg:shrink-0" aria-hidden />
+        <div className="min-w-0 flex-1">{viewTabs}</div>
+      </div>
+
+      <div className="flex flex-col gap-5 lg:flex-row lg:gap-12">
+        {/* Projects stack */}
+        <aside className="lg:w-56 lg:shrink-0">
+        <div className="mb-2 flex items-center justify-between gap-2 lg:mb-5">
           <h1 className="text-lg font-bold tracking-tight">
             <Trans>Projects</Trans>
           </h1>
@@ -196,7 +230,29 @@ export function ProjectsPage() {
             }}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-3 lg:overflow-visible lg:pb-0">
+        {/* Mobile: a compact dropdown; desktop keeps the tile list below. */}
+        <div className="lg:hidden">
+          <Select
+            value={selectedId ? String(selectedId) : ALL}
+            onValueChange={(v) => select(v === ALL ? null : Number(v))}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>
+                <Trans>All projects</Trans>
+              </SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="hidden lg:flex lg:flex-col lg:gap-3">
           <ProjectTile
             label={<Trans>All</Trans>}
             count={tasks.length}
@@ -214,8 +270,8 @@ export function ProjectsPage() {
           ))}
         </div>
 
-        <div className="mt-6">
-          <h2 className="mb-5 text-lg font-bold tracking-tight">
+        <div className="mt-4 lg:mt-6">
+          <h2 className="mb-2 text-lg font-bold tracking-tight lg:mb-5">
             <Trans>Tags</Trans>
           </h2>
           <Select value={tag} onValueChange={setTag}>
@@ -248,29 +304,8 @@ export function ProjectsPage() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {/* Tasks / Calendar view switch */}
-            <div className="inline-flex rounded-md border p-0.5">
-              {(
-                [
-                  { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
-                  { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
-                  { key: "files", icon: Images, label: <Trans>Files</Trans> },
-                ] as const
-              ).map(({ key, icon: Icon, label }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setView(key)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-sm font-medium transition-colors",
-                    view === key ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
+            {/* Tasks / Calendar / Files — desktop shows these in the top strip above. */}
+            <div className="lg:hidden">{viewTabs}</div>
             <Button onClick={() => setFormOpen(true)}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">
@@ -299,6 +334,7 @@ export function ProjectsPage() {
             />
           </>
         )}
+      </div>
       </div>
 
       <TaskFormDialog

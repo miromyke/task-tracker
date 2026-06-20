@@ -20,11 +20,11 @@ type CalendarDay struct {
 
 // DayEventTask is the task context embedded in a day-report event.
 type DayEventTask struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	ProjectID   int64  `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	Tag         string `json:"tag"`
+	ID          int64    `json:"id"`
+	Title       string   `json:"title"`
+	ProjectID   int64    `json:"projectId"`
+	ProjectName string   `json:"projectName"`
+	Tags        []string `json:"tags"`
 }
 
 // DayEvent is one entry in a day's carousel report.
@@ -233,13 +233,13 @@ func scanLogRange(rows *sql.Rows) (LogRangeRow, error) {
 func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]LogRangeRow, error) {
 	q := "SELECT " + logRangeCols + " FROM log_items li"
 	args := []any{}
-	if tag != "" || projectID != 0 {
+	if projectID != 0 {
 		q += " JOIN tasks t ON t.id = li.task_id"
 	}
 	q += " WHERE li.created_at >= ? AND li.created_at < ?"
 	args = append(args, startUTC, endUTC)
 	if tag != "" {
-		q += " AND t.tag = ?"
+		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = li.task_id AND tt.tag = ?)"
 		args = append(args, tag)
 	}
 	if projectID != 0 {
@@ -294,7 +294,7 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 	q := `
 		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.created_at,
 		       u.id, u.username, u.name, u.avatar_path,
-		       t.id, t.title, t.project_id, p.name, t.tag
+		       t.id, t.title, t.project_id, p.name
 		FROM log_items li
 		JOIN users u ON u.id = li.user_id
 		JOIN tasks t ON t.id = li.task_id
@@ -303,7 +303,7 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 		  AND li.type IN ('note', 'status_change')`
 	args := []any{startUTC, endUTC}
 	if tag != "" {
-		q += " AND t.tag = ?"
+		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = ?)"
 		args = append(args, tag)
 	}
 	if projectID > 0 {
@@ -320,21 +320,24 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 
 	out := []DayEvent{}
 	ids := []int64{}
+	taskIDs := []int64{}
 	for rows.Next() {
 		var e DayEvent
 		var from, to, avatar *string
 		if err := rows.Scan(
 			&e.ID, &e.Type, &e.Text, &from, &to, &e.CreatedAt,
 			&e.User.ID, &e.User.Username, &e.User.Name, &avatar,
-			&e.Task.ID, &e.Task.Title, &e.Task.ProjectID, &e.Task.ProjectName, &e.Task.Tag,
+			&e.Task.ID, &e.Task.Title, &e.Task.ProjectID, &e.Task.ProjectName,
 		); err != nil {
 			return nil, err
 		}
 		e.FromStatus, e.ToStatus = from, to
 		e.User.AvatarPath = avatar
 		e.Attachments = []Asset{}
+		e.Task.Tags = []string{}
 		out = append(out, e)
 		ids = append(ids, e.ID)
+		taskIDs = append(taskIDs, e.Task.ID)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -344,9 +347,16 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 	if err != nil {
 		return nil, err
 	}
+	tagsByTask, err := s.tagsByTaskIDs(taskIDs)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
 		if a := byLog[out[i].ID]; a != nil {
 			out[i].Attachments = a
+		}
+		if tg := tagsByTask[out[i].Task.ID]; tg != nil {
+			out[i].Task.Tags = tg
 		}
 	}
 	return out, nil

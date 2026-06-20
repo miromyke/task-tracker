@@ -26,11 +26,11 @@ mkproj '{"name":"Master Bath","description":"Re-tile, new vanity, fix the plumbi
 mkproj '{"name":"Living Room","description":"Paint, wall framing, built-in shelves."}' >/dev/null
 
 mktask() { curl -s -b "$J" -X POST "${BASE}/api/projects/${P}/tasks" -H 'Content-Type: application/json' -d "$1" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])"; }
-T1=$(mktask "{\"title\":\"Tile bathroom floor\",\"tag\":\"bathroom\",\"assigneeId\":${MY},\"dueDate\":\"2026-06-25\",\"status\":\"in_progress\"}")
-mktask "{\"title\":\"Order countertops\",\"tag\":\"kitchen\",\"assigneeId\":${AN},\"dueDate\":\"2026-06-22\"}" >/dev/null
-mktask "{\"title\":\"Rewire kitchen outlets\",\"tag\":\"electrical\",\"assigneeId\":${SO},\"dueDate\":\"2026-06-28\"}" >/dev/null
-T4=$(mktask "{\"title\":\"Pick paint colors\",\"tag\":\"paint\",\"assigneeId\":${MY}}")
-T5=$(mktask "{\"title\":\"Demo old cabinets\",\"tag\":\"kitchen\",\"assigneeId\":${AN}}")
+T1=$(mktask "{\"title\":\"Tile bathroom floor\",\"tags\":[\"bathroom\",\"tile\"],\"assigneeId\":${MY},\"dueDate\":\"2026-06-25\",\"status\":\"in_progress\"}")
+mktask "{\"title\":\"Order countertops\",\"tags\":[\"kitchen\"],\"assigneeId\":${AN},\"dueDate\":\"2026-06-22\"}" >/dev/null
+mktask "{\"title\":\"Rewire kitchen outlets\",\"tags\":[\"electrical\",\"kitchen\"],\"assigneeId\":${SO},\"dueDate\":\"2026-06-28\"}" >/dev/null
+T4=$(mktask "{\"title\":\"Pick paint colors\",\"tags\":[\"paint\"],\"assigneeId\":${MY}}")
+T5=$(mktask "{\"title\":\"Demo old cabinets\",\"tags\":[\"kitchen\",\"demo\"],\"assigneeId\":${AN}}")
 
 curl -s -b "$J" -X POST "${BASE}/api/tasks/${T1}/log" -F 'text=Floor prepped, mortar mixed. Starting the tile layout from the doorway.' >/dev/null
 curl -s -b "$J" -X POST "${BASE}/api/tasks/${T5}/log" -F 'text=Old cabinets out, walls patched.' >/dev/null

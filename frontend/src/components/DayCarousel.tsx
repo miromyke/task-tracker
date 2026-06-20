@@ -91,7 +91,9 @@ function EventLine({ event }: { event: DayEvent }) {
           </span>
         </p>
         <p className="mt-2 text-xs text-white/50">
-          {event.task.projectName} · #{event.task.tag} · {formatTime(event.createdAt)}
+          {event.task.projectName}
+          {event.task.tags.length ? ` · ${event.task.tags.map((tg) => `#${tg}`).join(" ")}` : ""} ·{" "}
+          {formatTime(event.createdAt)}
         </p>
       </div>
     </div>

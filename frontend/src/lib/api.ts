@@ -23,7 +23,7 @@ export interface Task {
   projectId: number;
   title: string;
   description: string;
-  tag: string;
+  tags: string[];
   assigneeId: number | null;
   dueDate: string | null;
   status: Status;
@@ -85,7 +85,7 @@ export interface DayEvent {
     title: string;
     projectId: number;
     projectName: string;
-    tag: string;
+    tags: string[];
   };
 }
 
@@ -103,7 +103,7 @@ export interface Pulse {
 export interface TaskUpdate {
   title?: string;
   description?: string;
-  tag?: string;
+  tags?: string[];
   assigneeId?: number | null;
   dueDate?: string | null;
   status?: Status;
@@ -186,7 +186,7 @@ export const api = {
     body: {
       title: string;
       description: string;
-      tag: string;
+      tags: string[];
       assigneeId: number | null;
       dueDate: string | null;
       status: Status;

@@ -59,15 +59,19 @@ def project(name, desc, created_days):
 
 
 def task(pid, title, tag, assignee, status, created_days, due_days, events):
-    """events: list of (days_ago, 'note'|'status', payload). payload=text or (from,to)."""
+    """events: list of (days_ago, 'note'|'status', payload). payload=text or (from,to).
+    tag may be a single string or a list of tags."""
     created_at = ts(created_days, 9)
     due = day(-due_days) if due_days is not None else None
     last = created_at
     cur.execute(
-        """INSERT INTO tasks (project_id,title,description,tag,assignee_id,due_date,status,created_by,created_at,updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-        (pid, title, "", tag, assignee, due, status, MY, created_at, created_at))
+        """INSERT INTO tasks (project_id,title,description,assignee_id,due_date,status,created_by,created_at,updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?)""",
+        (pid, title, "", assignee, due, status, MY, created_at, created_at))
     tid = cur.lastrowid
+    tags = [tag] if isinstance(tag, str) else tag
+    for tg in tags:
+        cur.execute("INSERT OR IGNORE INTO task_tags (task_id,tag) VALUES (?,?)", (tid, tg))
     cur.execute("INSERT INTO log_items (task_id,user_id,type,text,created_at) VALUES (?,?,?,?,?)",
                 (tid, MY, "created", "Created task", created_at))
     for days_ago, kind, payload in events:

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -28,17 +29,17 @@ type Project struct {
 }
 
 type Task struct {
-	ID          int64   `json:"id"`
-	ProjectID   int64   `json:"projectId"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Tag         string  `json:"tag"`
-	AssigneeID  *int64  `json:"assigneeId"`
-	DueDate     *string `json:"dueDate"`
-	Status      string  `json:"status"`
-	CreatedBy   int64   `json:"createdBy"`
-	CreatedAt   string  `json:"createdAt"`
-	UpdatedAt   string  `json:"updatedAt"`
+	ID          int64    `json:"id"`
+	ProjectID   int64    `json:"projectId"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
+	AssigneeID  *int64   `json:"assigneeId"`
+	DueDate     *string  `json:"dueDate"`
+	Status      string   `json:"status"`
+	CreatedBy   int64    `json:"createdBy"`
+	CreatedAt   string   `json:"createdAt"`
+	UpdatedAt   string   `json:"updatedAt"`
 }
 
 type LogItem struct {
@@ -79,7 +80,7 @@ type Asset struct {
 type TaskChanges struct {
 	Title       *string
 	Description *string
-	Tag         *string
+	Tags        *[]string // non-nil replaces the full tag set
 	SetAssignee bool
 	AssigneeID  *int64 // nil with SetAssignee=true clears the assignee
 	SetDueDate  bool
@@ -127,13 +128,17 @@ CREATE TABLE IF NOT EXISTS tasks (
   project_id  INTEGER NOT NULL REFERENCES projects(id),
   title       TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  tag         TEXT NOT NULL,
   assignee_id INTEGER REFERENCES users(id),
   due_date    TEXT,
   status      TEXT NOT NULL DEFAULT 'todo',
   created_by  INTEGER NOT NULL REFERENCES users(id),
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS task_tags (
+  task_id INTEGER NOT NULL REFERENCES tasks(id),
+  tag     TEXT NOT NULL,
+  PRIMARY KEY (task_id, tag)
 );
 CREATE TABLE IF NOT EXISTS log_items (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -167,11 +172,42 @@ CREATE INDEX IF NOT EXISTS idx_logs_task ON log_items(task_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
 CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
+CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 `
 
 func (s *Store) Migrate() error {
-	_, err := s.db.Exec(schema)
-	return err
+	if _, err := s.db.Exec(schema); err != nil {
+		return err
+	}
+	return s.migrateTaskTags()
+}
+
+// migrateTaskTags moves the legacy single tasks.tag column into the task_tags
+// table. Tasks used to carry exactly one tag; they can now carry many. This runs
+// once: the presence of the old column is the "not yet migrated" marker, so after
+// the backfill we drop it and subsequent startups become no-ops.
+func (s *Store) migrateTaskTags() error {
+	var hasCol int
+	if err := s.db.QueryRow(
+		"SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name = 'tag'").Scan(&hasCol); err != nil {
+		return err
+	}
+	if hasCol == 0 {
+		return nil // already migrated (or a fresh database)
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(
+		"INSERT OR IGNORE INTO task_tags (task_id, tag) SELECT id, tag FROM tasks WHERE tag <> ''"); err != nil {
+		return err
+	}
+	if _, err := tx.Exec("ALTER TABLE tasks DROP COLUMN tag"); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func nowUTC() string { return time.Now().UTC().Format(time.RFC3339) }
@@ -331,16 +367,17 @@ func (s *Store) CreateProject(name, desc string, by int64) (*Project, error) {
 
 // ---- Tasks ----
 
-const taskCols = "id, project_id, title, description, tag, assignee_id, due_date, status, created_by, created_at, updated_at"
+const taskCols = "id, project_id, title, description, assignee_id, due_date, status, created_by, created_at, updated_at"
 
 func scanTask(sc scanner) (*Task, error) {
 	var t Task
 	var assignee sql.NullInt64
 	var due sql.NullString
-	if err := sc.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Description, &t.Tag,
+	if err := sc.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Description,
 		&assignee, &due, &t.Status, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 		return nil, err
 	}
+	t.Tags = []string{}
 	if assignee.Valid {
 		v := assignee.Int64
 		t.AssigneeID = &v
@@ -365,7 +402,7 @@ func (s *Store) ListTasks(projectID int64, status, tag string) ([]Task, error) {
 		args = append(args, status)
 	}
 	if tag != "" {
-		q += " AND tag=?"
+		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = tasks.id AND tt.tag = ?)"
 		args = append(args, tag)
 	}
 	q += ` ORDER BY CASE status WHEN 'in_progress' THEN 0 WHEN 'todo' THEN 1 WHEN 'done' THEN 2 ELSE 3 END,
@@ -376,14 +413,28 @@ func (s *Store) ListTasks(projectID int64, status, tag string) ([]Task, error) {
 	}
 	defer rows.Close()
 	out := []Task{}
+	ids := []int64{}
 	for rows.Next() {
 		t, err := scanTask(rows)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, *t)
+		ids = append(ids, t.ID)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	byTask, err := s.tagsByTaskIDs(ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if tg := byTask[out[i].ID]; tg != nil {
+			out[i].Tags = tg
+		}
+	}
+	return out, nil
 }
 
 func (s *Store) GetTask(id int64) (*Task, error) {
@@ -392,10 +443,128 @@ func (s *Store) GetTask(id int64) (*Task, error) {
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	return t, err
+	if err != nil {
+		return nil, err
+	}
+	tags, err := s.taskTags(id)
+	if err != nil {
+		return nil, err
+	}
+	t.Tags = tags
+	return t, nil
 }
 
-func (s *Store) CreateTask(projectID int64, title, desc, tag string, assignee *int64, due *string, status string, by int64) (*Task, error) {
+// taskTags returns one task's tags in alphabetical order.
+func (s *Store) taskTags(taskID int64) ([]string, error) {
+	rows, err := s.db.Query("SELECT tag FROM task_tags WHERE task_id=? ORDER BY tag", taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// tagsByTaskIDs returns tags grouped by task_id, each group alphabetized.
+func (s *Store) tagsByTaskIDs(ids []int64) (map[int64][]string, error) {
+	out := map[int64][]string{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	ph := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.db.Query("SELECT task_id, tag FROM task_tags WHERE task_id IN ("+ph+") ORDER BY tag", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		var tag string
+		if err := rows.Scan(&id, &tag); err != nil {
+			return nil, err
+		}
+		out[id] = append(out[id], tag)
+	}
+	return out, rows.Err()
+}
+
+// txTaskTags returns a task's tags (alphabetical) within a transaction.
+func txTaskTags(tx *sql.Tx, taskID int64) ([]string, error) {
+	rows, err := tx.Query("SELECT tag FROM task_tags WHERE task_id=? ORDER BY tag", taskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// normalizeTags trims, drops blanks, de-duplicates, and sorts a tag list so it
+// can be compared against the stored (alphabetical) set.
+func normalizeTags(tags []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t == "" || seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func sameStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// setTaskTags replaces a task's tag set inside the given transaction. Blank tags
+// are skipped; duplicates collapse via the primary key.
+func setTaskTags(tx *sql.Tx, taskID int64, tags []string) error {
+	if _, err := tx.Exec("DELETE FROM task_tags WHERE task_id=?", taskID); err != nil {
+		return err
+	}
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		if _, err := tx.Exec("INSERT OR IGNORE INTO task_tags (task_id, tag) VALUES (?,?)", taskID, tag); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) CreateTask(projectID int64, title, desc string, tags []string, assignee *int64, due *string, status string, by int64) (*Task, error) {
 	now := nowUTC()
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -404,13 +573,17 @@ func (s *Store) CreateTask(projectID int64, title, desc, tag string, assignee *i
 	defer tx.Rollback()
 
 	res, err := tx.Exec(`INSERT INTO tasks
-		(project_id, title, description, tag, assignee_id, due_date, status, created_by, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?)`,
-		projectID, title, desc, tag, nullInt(assignee), nullStr(due), status, by, now, now)
+		(project_id, title, description, assignee_id, due_date, status, created_by, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?)`,
+		projectID, title, desc, nullInt(assignee), nullStr(due), status, by, now, now)
 	if err != nil {
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
+
+	if err := setTaskTags(tx, id, tags); err != nil {
+		return nil, err
+	}
 
 	if _, err := tx.Exec(
 		`INSERT INTO log_items (task_id, user_id, type, text, created_at) VALUES (?,?,?,?,?)`,
@@ -439,6 +612,11 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		}
 		return nil, nil, err
 	}
+	curTags, err := txTaskTags(tx, taskID)
+	if err != nil {
+		return nil, nil, err
+	}
+	cur.Tags = curTags
 
 	nt := *cur
 	var edits []string
@@ -450,9 +628,14 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		nt.Description = *ch.Description
 		edits = append(edits, "description")
 	}
-	if ch.Tag != nil && *ch.Tag != cur.Tag {
-		nt.Tag = *ch.Tag
-		edits = append(edits, "tag")
+	tagsChanged := false
+	if ch.Tags != nil {
+		newTags := normalizeTags(*ch.Tags)
+		if !sameStrings(newTags, cur.Tags) {
+			nt.Tags = newTags
+			tagsChanged = true
+			edits = append(edits, "tags")
+		}
 	}
 	if ch.SetAssignee && !eqInt64Ptr(ch.AssigneeID, cur.AssigneeID) {
 		nt.AssigneeID = ch.AssigneeID
@@ -478,9 +661,14 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	now := nowUTC()
 	nt.UpdatedAt = now
 	if _, err := tx.Exec(
-		`UPDATE tasks SET title=?, description=?, tag=?, assignee_id=?, due_date=?, status=?, updated_at=? WHERE id=?`,
-		nt.Title, nt.Description, nt.Tag, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, now, taskID); err != nil {
+		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, updated_at=? WHERE id=?`,
+		nt.Title, nt.Description, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, now, taskID); err != nil {
 		return nil, nil, err
+	}
+	if tagsChanged {
+		if err := setTaskTags(tx, taskID, nt.Tags); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	var logs []LogItem
@@ -670,12 +858,8 @@ const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.ki
 // kind, and task tag. projectID == 0 means all projects; empty kind/tag skip that
 // filter. limit/offset paginate.
 func (s *Store) ListAssets(projectID int64, kind, tag string, limit, offset int) ([]Asset, error) {
-	q := "SELECT " + assetColsQ + " FROM assets a"
+	q := "SELECT " + assetColsQ + " FROM assets a WHERE 1=1"
 	args := []any{}
-	if tag != "" {
-		q += " JOIN tasks t ON t.id = a.task_id"
-	}
-	q += " WHERE 1=1"
 	if projectID != 0 {
 		q += " AND a.project_id = ?"
 		args = append(args, projectID)
@@ -685,7 +869,7 @@ func (s *Store) ListAssets(projectID int64, kind, tag string, limit, offset int)
 		args = append(args, kind)
 	}
 	if tag != "" {
-		q += " AND t.tag = ?"
+		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = a.task_id AND tt.tag = ?)"
 		args = append(args, tag)
 	}
 	q += " ORDER BY a.created_at DESC, a.id DESC LIMIT ? OFFSET ?"
@@ -736,7 +920,7 @@ func (s *Store) assetsByLogIDs(ids []int64) (map[int64][]Asset, error) {
 }
 
 func (s *Store) ListTags() ([]string, error) {
-	rows, err := s.db.Query("SELECT DISTINCT tag FROM tasks WHERE tag <> '' ORDER BY tag")
+	rows, err := s.db.Query("SELECT DISTINCT tag FROM task_tags WHERE tag <> '' ORDER BY tag")
 	if err != nil {
 		return nil, err
 	}
