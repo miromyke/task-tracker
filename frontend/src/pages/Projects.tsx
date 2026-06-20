@@ -336,7 +336,7 @@ export function ProjectsPage() {
         ) : view === "calendar" ? (
           <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
         ) : view === "files" ? (
-          <FilesView projectId={selectedId ?? undefined} />
+          <FilesView projectId={selectedId ?? undefined} projects={projects} />
         ) : (
           <>
             {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}

@@ -47,6 +47,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/tasks/{id}/log", s.requireAuth(s.handleAddLog))
 
 	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
+	mux.HandleFunc("POST /api/projects/{id}/assets", s.requireAuth(s.handleUploadAssets))
 
 	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
@@ -557,6 +558,60 @@ func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 		assets = assets[:pageSize]
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"assets": assets, "hasMore": hasMore})
+}
+
+// handleUploadAssets stores one or more files directly on a project (no task or
+// log), powering the "Add files" action on the Files page.
+func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
+	projectID, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	proj, err := s.store.GetProject(projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if proj == nil {
+		writeErr(w, http.StatusNotFound, "project not found")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeErr(w, http.StatusBadRequest, "upload too large or invalid form")
+		return
+	}
+
+	var saved []SavedFile
+	if r.MultipartForm != nil {
+		for _, header := range r.MultipartForm.File["files"] {
+			file, err := header.Open()
+			if err != nil {
+				writeErr(w, http.StatusBadRequest, "could not read upload")
+				return
+			}
+			sf, err := s.saveUpload(file, header)
+			file.Close()
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, "could not save file")
+				return
+			}
+			saved = append(saved, *sf)
+		}
+	}
+	if len(saved) == 0 {
+		writeErr(w, http.StatusBadRequest, "at least one file is required")
+		return
+	}
+
+	assets, err := s.store.AddProjectAssets(projectID, currentUser(r).ID, saved)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, assets)
 }
 
 func (s *Server) handleListTags(w http.ResponseWriter, r *http.Request) {

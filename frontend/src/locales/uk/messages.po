@@ -20,6 +20,11 @@ msgstr ""
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# вкладення} few {# вкладення} many {# вкладень} other {# вкладення}}"
 
+#. placeholder {0}: files.length
+#: src/components/FilesView.tsx
+msgid "{0, plural, one {# file selected} other {# files selected}}"
+msgstr "{0, plural, one {вибрано # файл} few {вибрано # файли} many {вибрано # файлів} other {вибрано # файлів}}"
+
 #. placeholder {0}: d.count
 #. placeholder {0}: day.count
 #: src/components/CalendarView.tsx
@@ -94,6 +99,10 @@ msgstr "Активність"
 #: src/pages/Task.tsx
 msgid "Activity log"
 msgstr "Журнал дій"
+
+#: src/components/FilesView.tsx
+msgid "Add files"
+msgstr "Додати файли"
 
 #: src/pages/Projects.tsx
 msgid "Add task"
@@ -174,6 +183,7 @@ msgstr "автор: {0}"
 msgid "Calendar"
 msgstr "Календар"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Cancel"
 msgstr "Скасувати"
@@ -189,6 +199,10 @@ msgstr "змінено термін"
 #: src/pages/Task.tsx
 msgid "changed the status"
 msgstr "змінено статус"
+
+#: src/components/FilesView.tsx
+msgid "Choose at least one file"
+msgstr "Виберіть принаймні один файл"
 
 #: src/components/DayCarousel.tsx
 msgid "completed"
@@ -218,6 +232,10 @@ msgstr "Не вдалося увійти"
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
 msgstr "Не вдалося зберегти задачу"
+
+#: src/components/FilesView.tsx
+msgid "Could not upload files"
+msgstr "Не вдалося завантажити файли"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
@@ -280,6 +298,7 @@ msgstr "відредаговано задачу"
 msgid "Events for {0}"
 msgstr "Події для {0}"
 
+#: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Файли"
@@ -415,6 +434,7 @@ msgstr "Цього дня нічого не записано."
 #~ msgid "Photo"
 #~ msgstr "Фото"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Pick a project"
 msgstr "Оберіть проєкт"
@@ -427,6 +447,7 @@ msgstr "Виберіть наявний тег або введіть новий 
 msgid "Post"
 msgstr "Надіслати"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Project"
 msgstr "Проєкт"
@@ -452,6 +473,7 @@ msgstr "Видалити тег"
 msgid "Save changes"
 msgstr "Зберегти зміни"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Виберіть проєкт"
@@ -545,6 +567,10 @@ msgstr "оновлено задачу"
 #: src/components/PulseCard.tsx
 #~ msgid "updates this week"
 #~ msgstr "оновлень цього тижня"
+
+#: src/components/FilesView.tsx
+msgid "Upload"
+msgstr "Завантажити"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"

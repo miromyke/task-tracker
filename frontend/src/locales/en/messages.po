@@ -20,6 +20,11 @@ msgstr ""
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# attachment} other {# attachments}}"
 
+#. placeholder {0}: files.length
+#: src/components/FilesView.tsx
+msgid "{0, plural, one {# file selected} other {# files selected}}"
+msgstr "{0, plural, one {# file selected} other {# files selected}}"
+
 #. placeholder {0}: d.count
 #. placeholder {0}: day.count
 #: src/components/CalendarView.tsx
@@ -94,6 +99,10 @@ msgstr "Activity"
 #: src/pages/Task.tsx
 msgid "Activity log"
 msgstr "Activity log"
+
+#: src/components/FilesView.tsx
+msgid "Add files"
+msgstr "Add files"
 
 #: src/pages/Projects.tsx
 msgid "Add task"
@@ -174,6 +183,7 @@ msgstr "by {0}"
 msgid "Calendar"
 msgstr "Calendar"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Cancel"
 msgstr "Cancel"
@@ -189,6 +199,10 @@ msgstr "changed the due date"
 #: src/pages/Task.tsx
 msgid "changed the status"
 msgstr "changed the status"
+
+#: src/components/FilesView.tsx
+msgid "Choose at least one file"
+msgstr "Choose at least one file"
 
 #: src/components/DayCarousel.tsx
 msgid "completed"
@@ -218,6 +232,10 @@ msgstr "Could not log in"
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
 msgstr "Could not save task"
+
+#: src/components/FilesView.tsx
+msgid "Could not upload files"
+msgstr "Could not upload files"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
@@ -280,6 +298,7 @@ msgstr "edited this task"
 msgid "Events for {0}"
 msgstr "Events for {0}"
 
+#: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Files"
@@ -415,6 +434,7 @@ msgstr "Nothing logged on this day."
 #~ msgid "Photo"
 #~ msgstr "Photo"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Pick a project"
 msgstr "Pick a project"
@@ -427,6 +447,7 @@ msgstr "Pick an existing tag or type a new one and press Enter."
 msgid "Post"
 msgstr "Post"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Project"
 msgstr "Project"
@@ -452,6 +473,7 @@ msgstr "Remove tag"
 msgid "Save changes"
 msgstr "Save changes"
 
+#: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Select a project"
@@ -545,6 +567,10 @@ msgstr "updated this task"
 #: src/components/PulseCard.tsx
 #~ msgid "updates this week"
 #~ msgstr "updates this week"
+
+#: src/components/FilesView.tsx
+msgid "Upload"
+msgstr "Upload"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"

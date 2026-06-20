@@ -203,6 +203,11 @@ export const api = {
   },
 
   // assets (Files page)
+  uploadAssets: (projectId: number, files: File[]) => {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    return req<Asset[]>(`/projects/${projectId}/assets`, { method: "POST", body: fd });
+  },
   listAssets: (opts: { projectId?: number; kind?: string; tag?: string; page?: number } = {}) =>
     req<{ assets: Asset[]; hasMore: boolean }>(
       `/assets${qs({

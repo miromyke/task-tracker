@@ -782,6 +782,37 @@ func (s *Store) AddNote(taskID, userID, projectID int64, text string, files []Sa
 	return li, nil
 }
 
+// AddProjectAssets records files uploaded straight to a project (not tied to a
+// task or log entry) — e.g. from the Files page. Returns the created rows.
+func (s *Store) AddProjectAssets(projectID, userID int64, files []SavedFile) ([]Asset, error) {
+	now := nowUTC()
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	out := []Asset{}
+	for _, f := range files {
+		res, err := tx.Exec(
+			`INSERT INTO assets (project_id, uploaded_by, kind, mime, filename, path, size, created_at)
+			 VALUES (?,?,?,?,?,?,?,?)`,
+			projectID, userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
+		if err != nil {
+			return nil, err
+		}
+		id, _ := res.LastInsertId()
+		out = append(out, Asset{
+			ID: id, ProjectID: projectID, UploadedBy: userID, Kind: f.Kind, Mime: f.Mime,
+			Filename: f.Filename, Path: f.Path, Size: f.Size, CreatedAt: now,
+		})
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (s *Store) ListLogs(taskID int64) ([]LogItem, error) {
 	rows, err := s.db.Query("SELECT "+logCols+" FROM log_items WHERE task_id=? ORDER BY created_at, id", taskID)
 	if err != nil {
