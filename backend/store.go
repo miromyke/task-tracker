@@ -37,9 +37,11 @@ type Task struct {
 	AssigneeID  *int64   `json:"assigneeId"`
 	DueDate     *string  `json:"dueDate"`
 	Status      string   `json:"status"`
-	CreatedBy   int64    `json:"createdBy"`
-	CreatedAt   string   `json:"createdAt"`
-	UpdatedAt   string   `json:"updatedAt"`
+	// PostponeCount is how many times the due date was pushed to a later date.
+	PostponeCount int    `json:"postponeCount"`
+	CreatedBy     int64  `json:"createdBy"`
+	CreatedAt     string `json:"createdAt"`
+	UpdatedAt     string `json:"updatedAt"`
 }
 
 type LogItem struct {
@@ -131,6 +133,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_id INTEGER REFERENCES users(id),
   due_date    TEXT,
   status      TEXT NOT NULL DEFAULT 'todo',
+  postpone_count INTEGER NOT NULL DEFAULT 0,
   created_by  INTEGER NOT NULL REFERENCES users(id),
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
@@ -179,7 +182,26 @@ func (s *Store) Migrate() error {
 	if _, err := s.db.Exec(schema); err != nil {
 		return err
 	}
-	return s.migrateTaskTags()
+	if err := s.migrateTaskTags(); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("tasks", "postpone_count", "INTEGER NOT NULL DEFAULT 0")
+}
+
+// addColumnIfMissing adds a column to a table if it isn't there yet, so existing
+// databases pick up new fields. CREATE TABLE IF NOT EXISTS never alters an
+// existing table, so additive schema changes need this.
+func (s *Store) addColumnIfMissing(table, column, def string) error {
+	var has int
+	if err := s.db.QueryRow(
+		"SELECT COUNT(*) FROM pragma_table_info(?) WHERE name = ?", table, column).Scan(&has); err != nil {
+		return err
+	}
+	if has > 0 {
+		return nil
+	}
+	_, err := s.db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + def)
+	return err
 }
 
 // migrateTaskTags moves the legacy single tasks.tag column into the task_tags
@@ -367,14 +389,14 @@ func (s *Store) CreateProject(name, desc string, by int64) (*Project, error) {
 
 // ---- Tasks ----
 
-const taskCols = "id, project_id, title, description, assignee_id, due_date, status, created_by, created_at, updated_at"
+const taskCols = "id, project_id, title, description, assignee_id, due_date, status, postpone_count, created_by, created_at, updated_at"
 
 func scanTask(sc scanner) (*Task, error) {
 	var t Task
 	var assignee sql.NullInt64
 	var due sql.NullString
 	if err := sc.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Description,
-		&assignee, &due, &t.Status, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		&assignee, &due, &t.Status, &t.PostponeCount, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
 		return nil, err
 	}
 	t.Tags = []string{}
@@ -648,6 +670,12 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		oldDue, newDue = dueDisplay(cur.DueDate), dueDisplay(ch.DueDate)
 		nt.DueDate = ch.DueDate
 		dueChanged = true
+		// A move to a strictly later date is a postponement; dates are stored as
+		// YYYY-MM-DD so lexical comparison matches chronological order. Setting or
+		// clearing a date (no prior/new date) doesn't count.
+		if coalesce(cur.DueDate) != "" && coalesce(ch.DueDate) != "" && *ch.DueDate > *cur.DueDate {
+			nt.PostponeCount = cur.PostponeCount + 1
+		}
 	}
 
 	statusChanged := false
@@ -661,8 +689,8 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	now := nowUTC()
 	nt.UpdatedAt = now
 	if _, err := tx.Exec(
-		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, updated_at=? WHERE id=?`,
-		nt.Title, nt.Description, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, now, taskID); err != nil {
+		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, postpone_count=?, updated_at=? WHERE id=?`,
+		nt.Title, nt.Description, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, nt.PostponeCount, now, taskID); err != nil {
 		return nil, nil, err
 	}
 	if tagsChanged {

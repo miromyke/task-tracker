@@ -276,6 +276,10 @@ msgstr "Завантажити файл"
 msgid "Due date"
 msgstr "Термін"
 
+#: src/components/KanbanBoard.tsx
+msgid "Due date pushed back"
+msgstr "Термін перенесено на пізніше"
+
 #: src/pages/Projects.tsx
 msgid "e.g. Kitchen Remodel"
 msgstr "напр. Ремонт кухні"
@@ -446,6 +450,10 @@ msgstr "Виберіть наявний тег або введіть новий 
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Надіслати"
+
+#: src/components/KanbanBoard.tsx
+msgid "Postponed"
+msgstr "Відкладено"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx

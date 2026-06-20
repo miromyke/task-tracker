@@ -276,6 +276,10 @@ msgstr "Download file"
 msgid "Due date"
 msgstr "Due date"
 
+#: src/components/KanbanBoard.tsx
+msgid "Due date pushed back"
+msgstr "Due date pushed back"
+
 #: src/pages/Projects.tsx
 msgid "e.g. Kitchen Remodel"
 msgstr "e.g. Kitchen Remodel"
@@ -446,6 +450,10 @@ msgstr "Pick an existing tag or type a new one and press Enter."
 #: src/pages/Task.tsx
 msgid "Post"
 msgstr "Post"
+
+#: src/components/KanbanBoard.tsx
+msgid "Postponed"
+msgstr "Postponed"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx

@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CalendarClock, CheckCircle2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, RotateCcw } from "lucide-react";
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import type { Status, Task, User } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
@@ -28,6 +28,7 @@ interface BoardProps {
 }
 
 function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User> }) {
+  const { t } = useLingui();
   const assignee = task.assigneeId ? usersById.get(task.assigneeId) : undefined;
   const done = task.status === "done";
   const closed = done || task.status === "abandoned";
@@ -67,6 +68,16 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
               {formatShortDate(task.dueDate)}
             </span>
           ))}
+        {task.postponeCount > 0 && (
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800"
+            title={t`Due date pushed back`}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            <Trans>Postponed</Trans>
+            {task.postponeCount > 1 && <span className="font-semibold">×{task.postponeCount}</span>}
+          </span>
+        )}
         {assignee && (
           <div className="ml-auto">
             <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-6 w-6 text-[10px]" />

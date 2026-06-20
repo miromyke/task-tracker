@@ -27,6 +27,7 @@ export interface Task {
   assigneeId: number | null;
   dueDate: string | null;
   status: Status;
+  postponeCount: number;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
