@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Plus } from "lucide-react";
 import { Trans } from "@lingui/react/macro";
 import { api, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { PulseCard } from "@/components/PulseCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { TaskFormDialog } from "@/components/TaskFormDialog";
+import { Button } from "@/components/ui/button";
 
 export function ProjectOverviewPage() {
   const { id } = useParams();
@@ -15,19 +17,23 @@ export function ProjectOverviewPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [pulse, setPulse] = useState<Pulse | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
 
   async function load() {
-    const [p, t, u, pl] = await Promise.all([
+    const [p, t, u, pl, g] = await Promise.all([
       api.getProject(projectId),
       api.listTasks(projectId),
       api.listUsers(),
       api.getProjectPulse(projectId),
+      api.listTags(),
     ]);
     setProject(p);
     setTasks(t);
     setUsers(u);
     setPulse(pl);
+    setTags(g);
   }
 
   useEffect(() => {
@@ -73,9 +79,17 @@ export function ProjectOverviewPage() {
         <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
       </Link>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-        {project.description && <p className="mt-1 text-sm text-zinc-500">{project.description}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+          {project.description && <p className="mt-1 text-sm text-zinc-500">{project.description}</p>}
+        </div>
+        <Button onClick={() => setFormOpen(true)} className="shrink-0">
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            <Trans>Add task</Trans>
+          </span>
+        </Button>
       </div>
 
       {/* Pulse */}
@@ -87,6 +101,15 @@ export function ProjectOverviewPage() {
         usersById={usersById}
         onCardClick={(taskId) => navigate(`/tasks/${taskId}`)}
         onMove={onMove}
+      />
+
+      <TaskFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        projectId={projectId}
+        users={users}
+        tags={tags}
+        onSaved={() => load()}
       />
     </div>
   );
