@@ -8,8 +8,9 @@ const STORAGE_KEY = "locale";
 export function detectLocale(): Locale {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && saved in LOCALES) return saved as Locale;
-  const nav = (navigator.language || "en").toLowerCase();
-  return nav.startsWith("uk") ? "uk" : "en";
+  // Ukrainian is the default; an explicitly English browser still gets English.
+  const nav = (navigator.language || "uk").toLowerCase();
+  return nav.startsWith("en") ? "en" : "uk";
 }
 
 export async function activateLocale(locale: Locale) {
