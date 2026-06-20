@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
@@ -152,12 +152,20 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
   }
 
   const slide = slides[slideIndex];
+  const hasPrev = slideIndex > 0 || adjacentDate(activeDates, currentDate, -1) !== null;
+  const hasNext = slideIndex < slides.length - 1 || adjacentDate(activeDates, currentDate, 1) !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         hideClose
-        className="left-0 top-0 flex h-full w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-neutral-900 p-0 text-neutral-50 shadow-none sm:rounded-none"
+        className={cn(
+          "z-50 flex flex-col gap-0 overflow-hidden border-0 bg-neutral-900 p-0 text-neutral-50 shadow-none",
+          // mobile: immersive fullscreen
+          "left-0 top-0 h-full w-full max-w-none translate-x-0 translate-y-0 rounded-none",
+          // desktop: centered, phone-sized story card on the dimmed backdrop
+          "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[88vh] sm:max-h-[800px] sm:w-[26rem] sm:max-w-[26rem] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-white/10 sm:shadow-2xl"
+        )}
       >
         {/* segmented progress */}
         <div className="flex gap-1 px-3 pt-3">
@@ -204,16 +212,36 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
               </div>
             </div>
           ) : (
-            <div className="flex h-full flex-col justify-center gap-6 px-6">
+            <div className="flex h-full flex-col justify-center gap-6 px-6 sm:px-14">
               {slide.events.map((e) => (
                 <EventLine key={e.id} event={e} />
               ))}
             </div>
           )}
 
-          {/* tap zones: left third = back, right two-thirds = forward */}
-          <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default" />
-          <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default" />
+          {/* mobile: tap zones — left third = back, right two-thirds = forward */}
+          <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default sm:hidden" />
+          <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default sm:hidden" />
+
+          {/* desktop: arrow controls */}
+          <button
+            type="button"
+            aria-label="Previous"
+            onClick={prev}
+            disabled={!hasPrev}
+            className="absolute left-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white/90 transition hover:bg-black/60 disabled:opacity-0 sm:block"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={next}
+            disabled={!hasNext}
+            className="absolute right-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white/90 transition hover:bg-black/60 disabled:opacity-0 sm:block"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </DialogContent>
     </Dialog>
