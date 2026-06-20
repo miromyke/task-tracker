@@ -3,52 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Warm-grey paper surfaces (wireframe Section 07) */
-    --background: 45 22% 92%;
-    --foreground: 40 6% 14%;
-    --card: 40 30% 99%;
-    --card-foreground: 40 6% 14%;
-    --popover: 40 30% 99%;
-    --popover-foreground: 40 6% 14%;
-    --primary: 40 7% 12%;
-    --primary-foreground: 45 30% 96%;
-    --secondary: 45 16% 88%;
-    --secondary-foreground: 40 7% 18%;
-    --muted: 45 16% 89%;
-    --muted-foreground: 40 5% 44%;
-    --accent: 45 18% 86%;
-    --accent-foreground: 40 7% 18%;
-    --destructive: 2 63% 58%;
-    --destructive-foreground: 45 30% 96%;
-    --border: 44 16% 84%;
-    --input: 44 16% 84%;
-    --ring: 40 7% 25%;
-    --radius: 0.85rem;
-
-    /* Status palette (wireframe Section 07) */
-    --status-todo: 210 5% 63%; /* #9aa0a6 slate */
-    --status-progress: 218 80% 65%; /* #5b8def blue */
-    --status-done: 140 45% 45%; /* #3fa45b green */
-    --status-abandoned: 1 63% 58%; /* #d8504e red */
-
-    /* Activity calendar (green intensity → gold completion) */
-    --gold: 40 75% 53%; /* completion day */
-    --green-1: 122 33% 86%;
-    --green-2: 130 35% 70%;
-    --green-3: 138 42% 52%;
-    --green-4: 145 55% 34%;
-    /* Lime ramp — Pulse activity bars (pale → saturated) */
-    --lime-1: 80 60% 85%;
-    --lime-2: 82 55% 68%;
-    --lime-3: 92 50% 48%;
-    --lime-4: 100 50% 33%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    @apply border-zinc-200;
   }
   html,
   body,
@@ -56,7 +12,7 @@
     @apply h-full;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-zinc-100 text-zinc-900 antialiased;
     font-family: Helvetica, Arial, "Helvetica Neue", system-ui, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
@@ -71,13 +27,13 @@
   scrollbar-width: none;
 }
 
-/* Striped placeholder for cover/media drop zones (wireframe convention). */
+/* Striped placeholder for cover/media drop zones. */
 .ds-placeholder {
-  background-color: hsl(var(--muted));
+  background-color: theme("colors.zinc.200");
   background-image: repeating-linear-gradient(
     -45deg,
-    hsl(var(--border) / 0.7) 0,
-    hsl(var(--border) / 0.7) 1px,
+    theme("colors.zinc.300") 0,
+    theme("colors.zinc.300") 1px,
     transparent 1px,
     transparent 11px
   );

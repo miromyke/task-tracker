@@ -15,16 +15,16 @@ export const STATUS_LABEL: Record<Status, MessageDescriptor> = {
 
 // Tailwind classes for status badges (tinted chip + colored text).
 export const STATUS_STYLE: Record<Status, string> = {
-  todo: "bg-status-todo/15 text-status-todo border-status-todo/30",
-  in_progress: "bg-status-progress/15 text-status-progress border-status-progress/30",
-  done: "bg-status-done/15 text-status-done border-status-done/30",
-  abandoned: "bg-status-abandoned/15 text-status-abandoned border-status-abandoned/30",
+  todo: "bg-slate-100 text-slate-600 border-slate-200",
+  in_progress: "bg-blue-100 text-blue-700 border-blue-200",
+  done: "bg-green-100 text-green-700 border-green-200",
+  abandoned: "bg-red-100 text-red-700 border-red-200",
 };
 
 // Solid status color (dots, progress-bar segments, column accents).
 export const STATUS_DOT: Record<Status, string> = {
-  todo: "bg-status-todo",
-  in_progress: "bg-status-progress",
-  done: "bg-status-done",
-  abandoned: "bg-status-abandoned",
+  todo: "bg-slate-400",
+  in_progress: "bg-blue-500",
+  done: "bg-green-500",
+  abandoned: "bg-red-500",
 };

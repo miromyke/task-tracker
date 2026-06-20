@@ -162,7 +162,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, task, users, tag
             </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

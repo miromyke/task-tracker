@@ -54,7 +54,7 @@ export function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" className="w-full" disabled={busy || !username.trim()}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               <Trans>Continue</Trans>

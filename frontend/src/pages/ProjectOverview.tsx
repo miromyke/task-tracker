@@ -50,14 +50,14 @@ export function ProjectOverviewPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
       </div>
     );
   }
   if (!project) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/" className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900">
           <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
         </Link>
         <p>
@@ -69,13 +69,13 @@ export function ProjectOverviewPage() {
 
   return (
     <div className="space-y-5">
-      <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+      <Link to="/" className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900">
         <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
       </Link>
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
-        {project.description && <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>}
+        {project.description && <p className="mt-1 text-sm text-zinc-500">{project.description}</p>}
       </div>
 
       {/* Pulse */}
@@ -84,11 +84,11 @@ export function ProjectOverviewPage() {
       <div className="grid gap-4 md:grid-cols-[1fr_260px]">
         {/* Up next */}
         <Card className="p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
             <Trans>Up next</Trans>
           </h2>
           {next.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">
+            <p className="py-4 text-center text-sm text-zinc-500">
               <Trans>Nothing open — nice work.</Trans>
             </p>
           ) : (
@@ -102,7 +102,7 @@ export function ProjectOverviewPage() {
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">{t.title}</span>
                       <StatusBadge status={t.status} className="hidden sm:inline-flex" />
                       {t.dueDate && (
-                        <span className={cn("inline-flex items-center gap-1 text-xs", overdue ? "text-destructive" : "text-muted-foreground")}>
+                        <span className={cn("inline-flex items-center gap-1 text-xs", overdue ? "text-red-600" : "text-zinc-500")}>
                           <CalendarClock className="h-3.5 w-3.5" />
                           {formatShortDate(t.dueDate)}
                         </span>
@@ -118,7 +118,7 @@ export function ProjectOverviewPage() {
         {/* Meta rail */}
         <Card className="space-y-4 p-4">
           <div>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <Trans>Members</Trans>
             </h2>
             <div className="space-y-2">
@@ -132,13 +132,13 @@ export function ProjectOverviewPage() {
           </div>
           <div className="space-y-1 border-t pt-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">
+              <span className="text-zinc-500">
                 <Trans>Created</Trans>
               </span>
               <span>{formatShortDate(project.createdAt.slice(0, 10))}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">
+              <span className="text-zinc-500">
                 <Trans>Next due</Trans>
               </span>
               <span>{due ? formatShortDate(due) : "—"}</span>

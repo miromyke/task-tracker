@@ -27,19 +27,19 @@ function todayStr() {
 }
 
 function cellClass(day: CalendarDay | undefined): string {
-  if (!day) return "bg-muted/60 text-muted-foreground/60";
-  if (day.gold) return "bg-gold text-amber-950 font-semibold";
+  if (!day) return "bg-zinc-200/60 text-zinc-500/60";
+  if (day.gold) return "bg-amber-400 text-amber-950 font-semibold";
   switch (day.level) {
     case 1:
-      return "bg-green1 text-green-900";
+      return "bg-green-200 text-green-900";
     case 2:
-      return "bg-green2 text-green-950";
+      return "bg-green-300 text-green-950";
     case 3:
-      return "bg-green3 text-white";
+      return "bg-green-500 text-white";
     case 4:
-      return "bg-green4 text-white";
+      return "bg-green-700 text-white";
     default:
-      return "bg-muted/60 text-muted-foreground/60";
+      return "bg-zinc-200/60 text-zinc-500/60";
   }
 }
 
@@ -68,7 +68,7 @@ function MonthGrid({
   return (
     <div className="rounded-lg border p-3">
       <h3 className="mb-2 text-center text-sm font-semibold capitalize">{title}</h3>
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium capitalize text-muted-foreground">
+      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium capitalize text-zinc-500">
         {weekdays.map((w, i) => (
           <div key={i}>{w}</div>
         ))}
@@ -88,7 +88,7 @@ function MonthGrid({
                 "flex aspect-square items-center justify-center rounded-md text-xs transition-transform",
                 cellClass(day),
                 clickable && "hover:scale-105 cursor-pointer",
-                date === today && "ring-2 ring-primary ring-offset-1"
+                date === today && "ring-2 ring-zinc-900 ring-offset-1"
               )}
             >
               {d}
@@ -211,20 +211,20 @@ export function CalendarPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-500">
         <span className="flex items-center gap-1.5">
           <Trans>Less</Trans>
           <span className="inline-flex gap-0.5">
-            <span className="h-3 w-3 rounded-sm bg-muted/60" />
-            <span className="h-3 w-3 rounded-sm bg-green1" />
-            <span className="h-3 w-3 rounded-sm bg-green2" />
-            <span className="h-3 w-3 rounded-sm bg-green3" />
-            <span className="h-3 w-3 rounded-sm bg-green4" />
+            <span className="h-3 w-3 rounded-sm bg-zinc-200/60" />
+            <span className="h-3 w-3 rounded-sm bg-green-200" />
+            <span className="h-3 w-3 rounded-sm bg-green-300" />
+            <span className="h-3 w-3 rounded-sm bg-green-500" />
+            <span className="h-3 w-3 rounded-sm bg-green-700" />
           </span>
           <Trans>More</Trans>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-gold" />
+          <span className="h-3 w-3 rounded-sm bg-amber-400" />
           <Trans>Task completed</Trans>
         </span>
       </div>

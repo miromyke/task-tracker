@@ -96,7 +96,7 @@ export function ProjectsPage() {
           <h1 className="text-2xl font-bold tracking-tight">
             <Trans>Projects</Trans>
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-zinc-500">
             <Trans>House renovation</Trans>
           </p>
         </div>
@@ -105,10 +105,10 @@ export function ProjectsPage() {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
         </div>
       ) : projects.length === 0 ? (
-        <Card className="py-12 text-center text-muted-foreground">
+        <Card className="py-12 text-center text-zinc-500">
           <Trans>No projects yet. Create your first one to get started.</Trans>
         </Card>
       ) : (
@@ -119,8 +119,8 @@ export function ProjectsPage() {
                 <div className="ds-placeholder aspect-[4/3] w-full" />
                 <div className="space-y-1 p-3">
                   <h3 className="font-semibold leading-tight">{p.name}</h3>
-                  {p.description && <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>}
-                  <p className="pt-1 text-xs text-muted-foreground">
+                  {p.description && <p className="line-clamp-2 text-xs text-zinc-500">{p.description}</p>}
+                  <p className="pt-1 text-xs text-zinc-500">
                     <Plural value={p.taskCount} one="# task" other="# tasks" />
                   </p>
                 </div>

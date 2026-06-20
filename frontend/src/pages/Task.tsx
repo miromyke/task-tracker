@@ -50,8 +50,8 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
       <div className="min-w-0 flex-1">
         <div className="text-sm">
           <span className="font-medium">{name}</span>{" "}
-          <span className="text-muted-foreground">{i18n._(describeMsg(log))}</span>
-          <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</span>
+          <span className="text-zinc-500">{i18n._(describeMsg(log))}</span>
+          <span className="ml-2 text-xs text-zinc-500">{formatDateTime(log.createdAt)}</span>
         </div>
         {log.type === "note" && log.text && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
         {log.imagePath && (
@@ -67,7 +67,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
 function MetaRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</div>
       <div className="mt-1 text-sm">{children}</div>
     </div>
   );
@@ -131,14 +131,14 @@ export function TaskPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
       </div>
     );
   }
   if (!task) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/" className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900">
           <ChevronLeft className="h-4 w-4" /> <Trans>Back</Trans>
         </Link>
         <p>
@@ -156,7 +156,7 @@ export function TaskPage() {
     <div className="space-y-5">
       <Link
         to={`/projects/${task.projectId}/board`}
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
@@ -187,7 +187,7 @@ export function TaskPage() {
             </Select>
           </MetaRow>
           <MetaRow label={<Trans>Tag</Trans>}>
-            <Badge className="border-transparent bg-secondary text-secondary-foreground">#{task.tag}</Badge>
+            <Badge className="border-transparent bg-zinc-200 text-zinc-800">#{task.tag}</Badge>
           </MetaRow>
           <MetaRow label={<Trans>Assignee</Trans>}>
             {assignee ? (
@@ -196,22 +196,22 @@ export function TaskPage() {
                 {assignee.name}
               </span>
             ) : (
-              <span className="text-muted-foreground">
+              <span className="text-zinc-500">
                 <Trans>Unassigned</Trans>
               </span>
             )}
           </MetaRow>
           <MetaRow label={<Trans>Due date</Trans>}>
             {task.dueDate ? (
-              <span className={cn(overdue && "text-destructive")}>{formatShortDate(task.dueDate)}</span>
+              <span className={cn(overdue && "text-red-600")}>{formatShortDate(task.dueDate)}</span>
             ) : (
-              <span className="text-muted-foreground">—</span>
+              <span className="text-zinc-500">—</span>
             )}
           </MetaRow>
           <MetaRow label={<Trans>Created</Trans>}>
             {formatShortDate(task.createdAt.slice(0, 10))}
             {creator && (
-              <span className="text-muted-foreground">
+              <span className="text-zinc-500">
                 {" "}
                 <Trans>by {creator.name}</Trans>
               </span>
@@ -221,10 +221,10 @@ export function TaskPage() {
 
         {/* Main column */}
         <div className="order-2 space-y-5 md:order-1">
-          {task.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
+          {task.description && <p className="whitespace-pre-wrap text-sm text-zinc-500">{task.description}</p>}
 
           <div className="space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <Trans>Activity log</Trans>
             </h2>
             {logs.map((log) => (
@@ -241,9 +241,9 @@ export function TaskPage() {
                 className="min-h-[60px]"
               />
               {noteImage && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span className="truncate">{noteImage.name}</span>
-                  <button type="button" onClick={() => setNoteImage(null)} className="text-destructive">
+                  <button type="button" onClick={() => setNoteImage(null)} className="text-red-600">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>

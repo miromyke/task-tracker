@@ -60,14 +60,14 @@ export function ProjectBoardPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
       </div>
     );
   }
   if (!project) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/" className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900">
           <ChevronLeft className="h-4 w-4" /> <Trans>Projects</Trans>
         </Link>
         <p>
@@ -81,7 +81,7 @@ export function ProjectBoardPage() {
     <div className="space-y-4">
       <Link
         to={`/projects/${projectId}`}
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900"
       >
         <ChevronLeft className="h-4 w-4" /> {project.name}
       </Link>
