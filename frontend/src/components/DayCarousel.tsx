@@ -15,6 +15,7 @@ interface Props {
   initialDate: string;
   activeDates: string[]; // sorted ascending; days that have activity
   tag?: string;
+  projectId?: number; // scope the day report to one project
 }
 
 type Slide = { kind: "media"; event: DayEvent } | { kind: "items"; events: DayEvent[] };
@@ -91,7 +92,7 @@ function EventLine({ event }: { event: DayEvent }) {
   );
 }
 
-export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag }: Props) {
+export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag, projectId }: Props) {
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
@@ -110,7 +111,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
     let cancelled = false;
     setLoading(true);
     api
-      .getCalendarDay(currentDate, tag)
+      .getCalendarDay(currentDate, tag, projectId)
       .then((r) => {
         if (cancelled) return;
         const sl = buildSlides(r.events);
@@ -124,7 +125,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag 
     return () => {
       cancelled = true;
     };
-  }, [open, currentDate, tag]);
+  }, [open, currentDate, tag, projectId]);
 
   function next() {
     if (slideIndex < slides.length - 1) {

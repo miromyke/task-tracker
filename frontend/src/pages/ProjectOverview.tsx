@@ -79,7 +79,7 @@ export function ProjectOverviewPage() {
       </div>
 
       {/* Pulse */}
-      {pulse && <PulseCard pulse={pulse} counts={progress.counts} />}
+      {pulse && <PulseCard pulse={pulse} counts={progress.counts} projectId={projectId} />}
 
       <div className="grid gap-4 md:grid-cols-[1fr_260px]">
         {/* Up next */}

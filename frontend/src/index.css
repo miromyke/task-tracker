@@ -38,6 +38,11 @@
     --green-2: 130 35% 70%;
     --green-3: 138 42% 52%;
     --green-4: 145 55% 34%;
+    /* Lime ramp — Pulse activity bars (pale → saturated) */
+    --lime-1: 80 60% 85%;
+    --lime-2: 82 55% 68%;
+    --lime-3: 92 50% 48%;
+    --lime-4: 100 50% 33%;
   }
 }
 

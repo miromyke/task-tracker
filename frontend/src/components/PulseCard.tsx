@@ -1,22 +1,36 @@
-import { Plural, Trans, useLingui } from "@lingui/react/macro";
+import { useState } from "react";
+import { Trans, useLingui } from "@lingui/react/macro";
 import type { Pulse, Status } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
+import { DayCarousel } from "@/components/DayCarousel";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function barColor(count: number, gold: boolean): string {
   if (count === 0) return "bg-muted"; // no activity
-  if (gold) return "bg-green4"; // completion day → saturated green
-  return "bg-green2"; // normal activity → pale green
+  if (gold) return "bg-lime4"; // completion day → saturated lime
+  return "bg-lime2"; // normal activity → pale lime
 }
 
 const FULL = 60; // chart height in px
 const MIN = 14; // min bar height for an active day
 
-export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Status, number> }) {
+export function PulseCard({
+  pulse,
+  counts,
+  projectId,
+}: {
+  pulse: Pulse;
+  counts: Record<Status, number>;
+  projectId: number;
+}) {
   const { i18n } = useLingui();
   const max = Math.max(1, ...pulse.days.map((d) => d.count));
+  const activeDates = pulse.days.filter((d) => d.count > 0).map((d) => d.date);
+
+  const [open, setOpen] = useState(false);
+  const [pickedDate, setPickedDate] = useState("");
 
   return (
     <Card className="space-y-3 p-4">
@@ -27,11 +41,6 @@ export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Stat
           <span className="font-semibold">
             <Trans>Pulse</Trans>
           </span>
-          {pulse.streak > 0 && (
-            <span className="text-sm text-muted-foreground">
-              · <Plural value={pulse.streak} one="#-day streak" other="#-day streak" />
-            </span>
-          )}
         </div>
         {pulse.lastActivity && (
           <span className="text-sm text-muted-foreground">
@@ -44,11 +53,25 @@ export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Stat
       <div className="flex items-end gap-1" style={{ height: FULL }}>
         {pulse.days.map((d) => {
           const h = d.count === 0 ? 4 : MIN + (d.count / max) * (FULL - MIN);
+          const label = `${formatShortDate(d.date)} · ${d.count}`;
+          if (d.count === 0) {
+            return <div key={d.date} title={label} className="flex-1 rounded-md bg-muted opacity-70" style={{ height: h }} />;
+          }
           return (
-            <div
+            <button
               key={d.date}
-              title={`${formatShortDate(d.date)} · ${d.count}`}
-              className={cn("flex-1 rounded-md", barColor(d.count, d.gold), d.count === 0 && "opacity-70")}
+              type="button"
+              title={label}
+              aria-label={label}
+              onClick={() => {
+                setPickedDate(d.date);
+                setOpen(true);
+              }}
+              className={cn(
+                "flex-1 cursor-pointer rounded-md outline-none transition-all",
+                barColor(d.count, d.gold),
+                "hover:brightness-105 hover:ring-2 hover:ring-foreground/30 focus-visible:ring-2 focus-visible:ring-ring"
+              )}
               style={{ height: h }}
             />
           );
@@ -64,7 +87,7 @@ export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Stat
           </span>
           <span aria-hidden>·</span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-green4" />
+            <span className="h-3 w-3 rounded-sm bg-lime4" />
             <span className="font-semibold text-foreground">{pulse.completedThisWeek}</span>{" "}
             <Trans context="count">completed</Trans>
           </span>
@@ -83,6 +106,14 @@ export function PulseCard({ pulse, counts }: { pulse: Pulse; counts: Record<Stat
           </span>
         ))}
       </div>
+
+      <DayCarousel
+        open={open}
+        onOpenChange={setOpen}
+        initialDate={pickedDate}
+        activeDates={activeDates}
+        projectId={projectId}
+      />
     </Card>
   );
 }

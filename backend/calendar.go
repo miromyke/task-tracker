@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -122,7 +123,8 @@ func (s *Server) handleCalendarDay(w http.ResponseWriter, r *http.Request) {
 	startUTC := dayT.UTC().Format(time.RFC3339)
 	endUTC := dayT.AddDate(0, 0, 1).UTC().Format(time.RFC3339)
 
-	events, err := s.store.DayEvents(startUTC, endUTC, tag)
+	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
+	events, err := s.store.DayEvents(startUTC, endUTC, tag, projectID)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -293,7 +295,7 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRo
 
 // DayEvents returns notes and status changes for a day, enriched with user and
 // task/project context, ordered chronologically for the carousel report.
-func (s *Store) DayEvents(startUTC, endUTC, tag string) ([]DayEvent, error) {
+func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayEvent, error) {
 	q := `
 		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.image_path, li.created_at,
 		       u.id, u.username, u.name, u.avatar_path,
@@ -308,6 +310,10 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string) ([]DayEvent, error) {
 	if tag != "" {
 		q += " AND t.tag = ?"
 		args = append(args, tag)
+	}
+	if projectID > 0 {
+		q += " AND t.project_id = ?"
+		args = append(args, projectID)
 	}
 	q += " ORDER BY li.created_at, li.id"
 
