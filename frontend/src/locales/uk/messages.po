@@ -30,7 +30,7 @@ msgstr "{0, plural, one {# запис} few {# записи} many {# записі
 #. placeholder {0}: p.taskCount
 #: src/pages/Projects.tsx
 #~ msgid "{0, plural, one {# task} other {# tasks}}"
-#~ msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
+#~ msgstr "{0, plural, one {# задача} few {# задачі} many {# задач} other {# задачі}}"
 
 #. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
@@ -77,7 +77,7 @@ msgstr "Полишено"
 
 #: src/pages/Task.tsx
 msgid "abandoned this task"
-msgstr "облишено це завдання"
+msgstr "облишено цю задачу"
 
 #: src/components/AppLayout.tsx
 msgid "Account"
@@ -97,7 +97,7 @@ msgstr "Журнал дій"
 
 #: src/pages/Projects.tsx
 msgid "Add task"
-msgstr "Додати завдання"
+msgstr "Додати задачу"
 
 #: src/components/DayCarousel.tsx
 msgid "added a file"
@@ -205,7 +205,7 @@ msgstr "Виконано вчасно"
 
 #: src/pages/Task.tsx
 msgid "completed this task"
-msgstr "завершено це завдання"
+msgstr "завершено цю задачу"
 
 #: src/pages/Login.tsx
 msgid "Continue"
@@ -217,7 +217,7 @@ msgstr "Не вдалося увійти"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
-msgstr "Не вдалося зберегти завдання"
+msgstr "Не вдалося зберегти задачу"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
@@ -226,7 +226,7 @@ msgstr "Створити"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Create task"
-msgstr "Створити завдання"
+msgstr "Створити задачу"
 
 #: src/pages/Task.tsx
 msgid "Created"
@@ -234,7 +234,7 @@ msgstr "Створено"
 
 #: src/pages/Task.tsx
 msgid "created this task"
-msgstr "створено це завдання"
+msgstr "створено цю задачу"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
@@ -269,11 +269,11 @@ msgstr "напр. дах"
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Edit task"
-msgstr "Редагувати завдання"
+msgstr "Редагувати задачу"
 
 #: src/pages/Task.tsx
 msgid "edited this task"
-msgstr "відредаговано завдання"
+msgstr "відредаговано задачу"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
@@ -373,7 +373,7 @@ msgstr "Новий проєкт"
 
 #: src/components/TaskFormDialog.tsx
 msgid "New task"
-msgstr "Нове завдання"
+msgstr "Нова задача"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Next due"
@@ -389,11 +389,11 @@ msgstr "Файлів ще немає."
 
 #: src/components/KanbanBoard.tsx
 msgid "No tasks"
-msgstr "Немає завдань"
+msgstr "Немає задач"
 
 #: src/components/KanbanBoard.tsx
 msgid "No tasks in {activeLabel}."
-msgstr "Немає завдань у «{activeLabel}»."
+msgstr "Немає задач у «{activeLabel}»."
 
 #: src/components/DayCarousel.tsx
 msgid "Nothing logged on this day."
@@ -401,7 +401,7 @@ msgstr "Цього дня нічого не записано."
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Nothing open — nice work."
-#~ msgstr "Немає відкритих завдань — чудова робота."
+#~ msgstr "Немає відкритих задач — чудова робота."
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
@@ -490,15 +490,15 @@ msgstr "Теги"
 
 #: src/components/DayCarousel.tsx
 msgid "Task"
-msgstr "Завдання"
+msgstr "Задача"
 
 #: src/components/CalendarView.tsx
 msgid "Task completed"
-msgstr "Завдання завершено"
+msgstr "Задачу завершено"
 
 #: src/pages/Task.tsx
 msgid "Task not found."
-msgstr "Завдання не знайдено."
+msgstr "Задачу не знайдено."
 
 #: src/pages/Projects.tsx
 msgid "Tasks"
@@ -540,7 +540,7 @@ msgstr "оновлено"
 
 #: src/pages/Task.tsx
 msgid "updated this task"
-msgstr "оновлено завдання"
+msgstr "оновлено задачу"
 
 #: src/components/PulseCard.tsx
 #~ msgid "updates this week"
