@@ -130,6 +130,106 @@ func (s *Server) handleCalendarDay(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"date": date, "events": events})
 }
 
+// PulseDay is one bar in the project pulse chart.
+type PulseDay struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+	Gold  bool   `json:"gold"`
+}
+
+func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	loc := s.cfg.Location
+	now := time.Now().In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	start := today.AddDate(0, 0, -29) // 30-day window (chart shows last 14)
+
+	rows, err := s.store.ProjectLogsSince(id, start.UTC().Format(time.RFC3339))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	type agg struct {
+		count, completed int
+		gold             bool
+	}
+	byDay := map[string]*agg{}
+	for _, lr := range rows {
+		t, err := time.Parse(time.RFC3339, lr.CreatedAt)
+		if err != nil {
+			continue
+		}
+		d := t.In(loc).Format("2006-01-02")
+		a := byDay[d]
+		if a == nil {
+			a = &agg{}
+			byDay[d] = a
+		}
+		a.count++
+		if lr.Type == "status_change" && lr.ToStatus != nil && *lr.ToStatus == "done" {
+			a.gold = true
+			a.completed++
+		}
+	}
+
+	days := make([]PulseDay, 0, 14)
+	for i := 13; i >= 0; i-- {
+		d := today.AddDate(0, 0, -i).Format("2006-01-02")
+		pd := PulseDay{Date: d}
+		if a := byDay[d]; a != nil {
+			pd.Count = a.count
+			pd.Gold = a.gold
+		}
+		days = append(days, pd)
+	}
+
+	weekStart := today.AddDate(0, 0, -6).Format("2006-01-02")
+	updates, completed := 0, 0
+	var lastActivity string
+	for d, a := range byDay {
+		if a.count == 0 {
+			continue
+		}
+		if d >= weekStart {
+			updates += a.count
+			completed += a.completed
+		}
+		if d > lastActivity {
+			lastActivity = d
+		}
+	}
+
+	streak := 0
+	if lastActivity != "" {
+		cur, _ := time.ParseInLocation("2006-01-02", lastActivity, loc)
+		for {
+			if a := byDay[cur.Format("2006-01-02")]; a != nil && a.count > 0 {
+				streak++
+				cur = cur.AddDate(0, 0, -1)
+			} else {
+				break
+			}
+		}
+	}
+
+	var la *string
+	if lastActivity != "" {
+		la = &lastActivity
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"days":              days,
+		"updatesThisWeek":   updates,
+		"completedThisWeek": completed,
+		"lastActivity":      la,
+		"streak":            streak,
+	})
+}
+
 // ---- store queries for the calendar ----
 
 // LogRangeRow is a lightweight row used to build the calendar rollup.
@@ -152,6 +252,28 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error)
 		args = append(args, tag)
 	}
 	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []LogRangeRow{}
+	for rows.Next() {
+		var lr LogRangeRow
+		var to *string
+		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to); err != nil {
+			return nil, err
+		}
+		lr.ToStatus = to
+		out = append(out, lr)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRow, error) {
+	rows, err := s.db.Query(
+		`SELECT li.created_at, li.type, li.to_status FROM log_items li
+		 JOIN tasks t ON t.id = li.task_id
+		 WHERE t.project_id = ? AND li.created_at >= ?`, projectID, startUTC)
 	if err != nil {
 		return nil, err
 	}

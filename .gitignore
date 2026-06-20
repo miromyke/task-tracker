@@ -27,3 +27,6 @@ wf_*.png
 
 # Source logo (canonical copy lives in frontend/public/)
 /logo.png
+
+# Go build output (module name binary)
+backend/renoplanner

@@ -69,6 +69,20 @@ export interface DayEvent {
   };
 }
 
+export interface PulseDay {
+  date: string;
+  count: number;
+  gold: boolean;
+}
+
+export interface Pulse {
+  days: PulseDay[];
+  updatesThisWeek: number;
+  completedThisWeek: number;
+  lastActivity: string | null;
+  streak: number;
+}
+
 export interface TaskUpdate {
   title?: string;
   description?: string;
@@ -140,6 +154,7 @@ export const api = {
   createProject: (name: string, description: string) =>
     req<Project>("/projects", jsonBody("POST", { name, description })),
   getProject: (id: number) => req<Project>(`/projects/${id}`),
+  getProjectPulse: (id: number) => req<Pulse>(`/projects/${id}/pulse`),
 
   // tasks
   listTasks: (projectId: number, opts: { status?: string; tag?: string } = {}) =>

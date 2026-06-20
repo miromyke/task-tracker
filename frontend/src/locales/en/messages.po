@@ -18,11 +18,10 @@ msgstr ""
 msgid "{0, plural, one {# task} other {# tasks}}"
 msgstr "{0, plural, one {# task} other {# tasks}}"
 
-#. placeholder {0}: progress.done
-#. placeholder {1}: progress.total
-#: src/pages/ProjectOverview.tsx
-msgid "{0} of {1} tasks done"
-msgstr "{0} of {1} tasks done"
+#. placeholder {0}: pulse.streak
+#: src/components/PulseCard.tsx
+msgid "{0, plural, one {#-day streak} other {#-day streak}}"
+msgstr "{0, plural, one {#-day streak} other {#-day streak}}"
 
 #: src/pages/Calendar.tsx
 msgid "{z, plural, one {# month} other {# months}}"
@@ -115,6 +114,11 @@ msgstr "changed the status"
 msgid "completed"
 msgstr "completed"
 
+#: src/components/PulseCard.tsx
+msgctxt "count"
+msgid "completed"
+msgstr "completed"
+
 #: src/pages/Task.tsx
 msgid "completed this task"
 msgstr "completed this task"
@@ -190,6 +194,11 @@ msgstr "In progress"
 #: src/components/AppLayout.tsx
 msgid "Language"
 msgstr "Language"
+
+#. placeholder {0}: formatShortDate(pulse.lastActivity)
+#: src/components/PulseCard.tsx
+msgid "last activity {0}"
+msgstr "last activity {0}"
 
 #: src/pages/Calendar.tsx
 msgid "Less"
@@ -272,6 +281,10 @@ msgstr "Nothing open — nice work."
 msgid "Open board"
 msgstr "Open board"
 
+#: src/components/PulseCard.tsx
+msgid "past 14 days"
+msgstr "past 14 days"
+
 #: src/pages/Task.tsx
 msgid "Photo"
 msgstr "Photo"
@@ -291,6 +304,10 @@ msgstr "Project not found."
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Projects"
+
+#: src/components/PulseCard.tsx
+msgid "Pulse"
+msgstr "Pulse"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -362,6 +379,10 @@ msgstr "updated"
 #: src/pages/Task.tsx
 msgid "updated this task"
 msgstr "updated this task"
+
+#: src/components/PulseCard.tsx
+msgid "updates this week"
+msgstr "updates this week"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"

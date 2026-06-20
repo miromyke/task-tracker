@@ -36,6 +36,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/projects", s.requireAuth(s.handleListProjects))
 	mux.HandleFunc("POST /api/projects", s.requireAuth(s.handleCreateProject))
 	mux.HandleFunc("GET /api/projects/{id}", s.requireAuth(s.handleGetProject))
+	mux.HandleFunc("GET /api/projects/{id}/pulse", s.requireAuth(s.handleProjectPulse))
 	mux.HandleFunc("GET /api/projects/{id}/tasks", s.requireAuth(s.handleListTasks))
 	mux.HandleFunc("POST /api/projects/{id}/tasks", s.requireAuth(s.handleCreateTask))
 

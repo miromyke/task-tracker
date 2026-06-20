@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { CalendarClock, CalendarDays, ChevronLeft, KanbanSquare, Loader2 } from "lucide-react";
-import { Trans, useLingui } from "@lingui/react/macro";
-import { api, type Project, type Task, type User } from "@/lib/api";
-import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
-import { ProgressBar } from "@/components/ProgressBar";
+import { Trans } from "@lingui/react/macro";
+import { api, type Project, type Pulse, type Task, type User } from "@/lib/api";
+import { STATUS_DOT } from "@/lib/constants";
+import { PulseCard } from "@/components/PulseCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -17,20 +17,26 @@ export function ProjectOverviewPage() {
   const { id } = useParams();
   const projectId = Number(id);
   const navigate = useNavigate();
-  const { i18n } = useLingui();
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [pulse, setPulse] = useState<Pulse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.getProject(projectId), api.listTasks(projectId), api.listUsers()])
-      .then(([p, t, u]) => {
+    Promise.all([
+      api.getProject(projectId),
+      api.listTasks(projectId),
+      api.listUsers(),
+      api.getProjectPulse(projectId),
+    ])
+      .then(([p, t, u, pl]) => {
         setProject(p);
         setTasks(t);
         setUsers(u);
+        setPulse(pl);
       })
       .finally(() => setLoading(false));
   }, [projectId]);
@@ -72,26 +78,8 @@ export function ProjectOverviewPage() {
         {project.description && <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>}
       </div>
 
-      {/* Progress */}
-      <Card className="space-y-3 p-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-medium">
-            <Trans>
-              {progress.done} of {progress.total} tasks done
-            </Trans>
-          </span>
-          <span className="text-sm font-semibold tabular-nums">{progress.percent}%</span>
-        </div>
-        <ProgressBar counts={progress.counts} total={progress.total} />
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {STATUS_ORDER.map((s) => (
-            <span key={s} className="inline-flex items-center gap-1.5">
-              <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[s])} />
-              {i18n._(STATUS_LABEL[s])} {progress.counts[s]}
-            </span>
-          ))}
-        </div>
-      </Card>
+      {/* Pulse */}
+      {pulse && <PulseCard pulse={pulse} counts={progress.counts} />}
 
       <div className="grid gap-4 md:grid-cols-[1fr_260px]">
         {/* Up next */}

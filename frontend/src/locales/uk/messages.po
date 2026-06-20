@@ -18,11 +18,10 @@ msgstr ""
 msgid "{0, plural, one {# task} other {# tasks}}"
 msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
 
-#. placeholder {0}: progress.done
-#. placeholder {1}: progress.total
-#: src/pages/ProjectOverview.tsx
-msgid "{0} of {1} tasks done"
-msgstr "{0} з {1} завдань виконано"
+#. placeholder {0}: pulse.streak
+#: src/components/PulseCard.tsx
+msgid "{0, plural, one {#-day streak} other {#-day streak}}"
+msgstr "{0, plural, one {серія # день} few {серія # дні} many {серія # днів} other {серія # дня}}"
 
 #: src/pages/Calendar.tsx
 msgid "{z, plural, one {# month} other {# months}}"
@@ -115,6 +114,11 @@ msgstr "змінив статус"
 msgid "completed"
 msgstr "завершив"
 
+#: src/components/PulseCard.tsx
+msgctxt "count"
+msgid "completed"
+msgstr "виконано"
+
 #: src/pages/Task.tsx
 msgid "completed this task"
 msgstr "завершив це завдання"
@@ -190,6 +194,11 @@ msgstr "В роботі"
 #: src/components/AppLayout.tsx
 msgid "Language"
 msgstr "Мова"
+
+#. placeholder {0}: formatShortDate(pulse.lastActivity)
+#: src/components/PulseCard.tsx
+msgid "last activity {0}"
+msgstr "остання активність {0}"
 
 #: src/pages/Calendar.tsx
 msgid "Less"
@@ -272,6 +281,10 @@ msgstr "Немає відкритих завдань — чудова робот
 msgid "Open board"
 msgstr "Відкрити дошку"
 
+#: src/components/PulseCard.tsx
+msgid "past 14 days"
+msgstr "за 14 днів"
+
 #: src/pages/Task.tsx
 msgid "Photo"
 msgstr "Фото"
@@ -291,6 +304,10 @@ msgstr "Проєкт не знайдено."
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Проєкти"
+
+#: src/components/PulseCard.tsx
+msgid "Pulse"
+msgstr "Пульс"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -362,6 +379,10 @@ msgstr "оновив"
 #: src/pages/Task.tsx
 msgid "updated this task"
 msgstr "оновив завдання"
+
+#: src/components/PulseCard.tsx
+msgid "updates this week"
+msgstr "оновлень цього тижня"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"
