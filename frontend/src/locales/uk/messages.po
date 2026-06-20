@@ -13,14 +13,49 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#. placeholder {0}: d.attachments
+#: src/components/PulseCard.tsx
+msgid "{0, plural, one {# attachment} other {# attachments}}"
+msgstr "{0, plural, one {# вкладення} few {# вкладення} many {# вкладень} other {# вкладення}}"
+
+#. placeholder {0}: d.count
+#: src/components/PulseCard.tsx
+msgid "{0, plural, one {# log} other {# logs}}"
+msgstr "{0, plural, one {# запис} few {# записи} many {# записів} other {# запису}}"
+
 #. placeholder {0}: p.taskCount
 #: src/pages/Projects.tsx
 msgid "{0, plural, one {# task} other {# tasks}}"
 msgstr "{0, plural, one {# завдання} few {# завдання} many {# завдань} other {# завдання}}"
 
+#. placeholder {0}: formatShortDate(d.date)
+#: src/components/PulseCard.tsx
+msgid "{0} · {logs} · {atts}"
+msgstr "{0} · {logs} · {atts}"
+
 #: src/pages/Calendar.tsx
 msgid "{z, plural, one {# month} other {# months}}"
 msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
+
+#: src/components/PulseCard.tsx
+msgid "1 month"
+msgstr "1 місяць"
+
+#: src/components/PulseCard.tsx
+msgid "1 week"
+msgstr "1 тиждень"
+
+#: src/components/PulseCard.tsx
+msgid "2 weeks"
+msgstr "2 тижні"
+
+#: src/components/PulseCard.tsx
+msgid "3 months"
+msgstr "3 місяці"
+
+#: src/components/PulseCard.tsx
+msgid "6 months"
+msgstr "6 місяців"
 
 #: src/components/DayCarousel.tsx
 msgid "abandoned"
@@ -39,8 +74,8 @@ msgid "Account"
 msgstr "Обліковий запис"
 
 #: src/pages/ProjectOverview.tsx
-msgid "Activity calendar"
-msgstr "Календар активності"
+#~ msgid "Activity calendar"
+#~ msgstr "Календар активності"
 
 #: src/pages/Task.tsx
 msgid "Activity log"
@@ -110,9 +145,9 @@ msgid "completed"
 msgstr "завершив"
 
 #: src/components/PulseCard.tsx
-msgctxt "count"
-msgid "completed"
-msgstr "виконано"
+#~ msgctxt "count"
+#~ msgid "completed"
+#~ msgstr "виконано"
 
 #: src/pages/Task.tsx
 msgid "completed this task"
@@ -192,8 +227,8 @@ msgstr "Мова"
 
 #. placeholder {0}: formatShortDate(pulse.lastActivity)
 #: src/components/PulseCard.tsx
-msgid "last activity {0}"
-msgstr "остання активність {0}"
+#~ msgid "last activity {0}"
+#~ msgstr "остання активність {0}"
 
 #: src/pages/Calendar.tsx
 msgid "Less"
@@ -277,8 +312,8 @@ msgid "Open board"
 msgstr "Відкрити дошку"
 
 #: src/components/PulseCard.tsx
-msgid "past 14 days"
-msgstr "за 14 днів"
+#~ msgid "past 14 days"
+#~ msgstr "за 14 днів"
 
 #: src/pages/Task.tsx
 msgid "Photo"
@@ -301,8 +336,8 @@ msgid "Projects"
 msgstr "Проєкти"
 
 #: src/components/PulseCard.tsx
-msgid "Pulse"
-msgstr "Пульс"
+#~ msgid "Pulse"
+#~ msgstr "Пульс"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -376,8 +411,8 @@ msgid "updated this task"
 msgstr "оновив завдання"
 
 #: src/components/PulseCard.tsx
-msgid "updates this week"
-msgstr "оновлень цього тижня"
+#~ msgid "updates this week"
+#~ msgstr "оновлень цього тижня"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"

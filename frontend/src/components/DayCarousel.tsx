@@ -151,6 +151,23 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
     }
   }
 
+  // keyboard navigation: ← / → step through slides (and roll into adjacent days)
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, slideIndex, slides, currentDate, activeDates]);
+
   const slide = slides[slideIndex];
   const hasPrev = slideIndex > 0 || adjacentDate(activeDates, currentDate, -1) !== null;
   const hasNext = slideIndex < slides.length - 1 || adjacentDate(activeDates, currentDate, 1) !== null;
@@ -160,89 +177,93 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
       <DialogContent
         hideClose
         className={cn(
-          "z-50 flex flex-col gap-0 overflow-hidden border-0 bg-neutral-900 p-0 text-neutral-50 shadow-none",
+          "z-50 flex flex-col gap-0 border-0 bg-neutral-900 p-0 text-neutral-50 shadow-none",
           // mobile: immersive fullscreen
           "left-0 top-0 h-full w-full max-w-none translate-x-0 translate-y-0 rounded-none",
           // desktop: centered, phone-sized story card on the dimmed backdrop
           "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-[88vh] sm:max-h-[800px] sm:w-[26rem] sm:max-w-[26rem] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-white/10 sm:shadow-2xl"
         )}
       >
-        {/* segmented progress */}
-        <div className="flex gap-1 px-3 pt-3">
-          {(slides.length ? slides : [0]).map((_, i) => (
-            <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
-              <div className={cn("h-full rounded-full bg-white transition-all", i <= slideIndex ? "w-full" : "w-0")} />
-            </div>
-          ))}
-        </div>
-
-        {/* header */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <DialogTitle className="text-sm font-semibold capitalize">{formatDayHeading(currentDate)}</DialogTitle>
-            <div className="text-xs text-white/60">
-              {slides.length > 0 ? `${slideIndex + 1} / ${slides.length}` : "—"}
-              {tag ? ` · #${tag}` : ""}
-            </div>
+        {/* card surface — clips media/progress to the rounded corners; the desktop
+            arrows live outside this so they can sit beyond the card edges */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[inherit]">
+          {/* segmented progress */}
+          <div className="flex gap-1 px-3 pt-3">
+            {(slides.length ? slides : [0]).map((_, i) => (
+              <div key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+                <div className={cn("h-full rounded-full bg-white transition-all", i <= slideIndex ? "w-full" : "w-0")} />
+              </div>
+            ))}
           </div>
-          <DialogClose className="rounded-full p-1 text-white/70 hover:text-white focus:outline-none">
-            <X className="h-5 w-5" />
-          </DialogClose>
-        </div>
 
-        {/* content + tap zones */}
-        <div className="relative min-h-0 flex-1">
-          {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-white/60" />
-            </div>
-          ) : !slide ? (
-            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
-              <Trans>Nothing logged on this day.</Trans>
-            </div>
-          ) : slide.kind === "media" ? (
-            <div className="absolute inset-0">
-              <img
-                src={slide.event.imagePath!}
-                alt="attachment"
-                className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
-              />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                <EventLine event={slide.event} />
+          {/* header */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <div>
+              <DialogTitle className="text-sm font-semibold capitalize">{formatDayHeading(currentDate)}</DialogTitle>
+              <div className="text-xs text-white/60">
+                {slides.length > 0 ? `${slideIndex + 1} / ${slides.length}` : "—"}
+                {tag ? ` · #${tag}` : ""}
               </div>
             </div>
-          ) : (
-            <div className="flex h-full flex-col justify-center gap-6 px-6 sm:px-14">
-              {slide.events.map((e) => (
-                <EventLine key={e.id} event={e} />
-              ))}
-            </div>
-          )}
+            <DialogClose className="rounded-full p-1 text-white/70 hover:text-white focus:outline-none">
+              <X className="h-5 w-5" />
+            </DialogClose>
+          </div>
 
-          {/* mobile: tap zones — left third = back, right two-thirds = forward */}
-          <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default sm:hidden" />
-          <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default sm:hidden" />
+          {/* content + tap zones */}
+          <div className="relative min-h-0 flex-1">
+            {loading ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-white/60" />
+              </div>
+            ) : !slide ? (
+              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
+                <Trans>Nothing logged on this day.</Trans>
+              </div>
+            ) : slide.kind === "media" ? (
+              <div className="absolute inset-0">
+                <img
+                  src={slide.event.imagePath!}
+                  alt="attachment"
+                  className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
+                  <EventLine event={slide.event} />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col justify-center gap-6 px-6 sm:px-14">
+                {slide.events.map((e) => (
+                  <EventLine key={e.id} event={e} />
+                ))}
+              </div>
+            )}
 
-          {/* desktop: arrow controls */}
-          <button
-            type="button"
-            aria-label="Previous"
-            onClick={prev}
-            disabled={!hasPrev}
-            className="absolute left-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white/90 transition hover:bg-black/60 disabled:opacity-0 sm:block"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next"
-            onClick={next}
-            disabled={!hasNext}
-            className="absolute right-2 top-1/2 z-20 hidden -translate-y-1/2 rounded-full bg-black/40 p-1.5 text-white/90 transition hover:bg-black/60 disabled:opacity-0 sm:block"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+            {/* mobile: tap zones — left third = back, right two-thirds = forward */}
+            <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default sm:hidden" />
+            <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default sm:hidden" />
+          </div>
         </div>
+
+        {/* desktop: arrow controls, placed just outside the story card */}
+        <button
+          type="button"
+          aria-label="Previous"
+          onClick={prev}
+          disabled={!hasPrev}
+          className="absolute right-full top-1/2 z-20 mr-4 hidden -translate-y-1/2 rounded-full bg-white/10 p-3 text-white/90 transition hover:bg-white/20 disabled:opacity-0 sm:block"
+        >
+          <ChevronLeft className="h-8 w-8" />
+        </button>
+        <button
+          type="button"
+          aria-label="Next"
+          onClick={next}
+          disabled={!hasNext}
+          className="absolute left-full top-1/2 z-20 ml-4 hidden -translate-y-1/2 rounded-full bg-white/10 p-3 text-white/90 transition hover:bg-white/20 disabled:opacity-0 sm:block"
+        >
+          <ChevronRight className="h-8 w-8" />
+        </button>
       </DialogContent>
     </Dialog>
   );

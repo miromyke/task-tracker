@@ -47,7 +47,7 @@ export interface LogItem {
 export interface CalendarDay {
   date: string;
   count: number;
-  level: number; // 0-4
+  attachments: number;
   gold: boolean;
 }
 
@@ -73,14 +73,11 @@ export interface PulseDay {
   date: string;
   count: number;
   gold: boolean;
+  attachments: number;
 }
 
 export interface Pulse {
   days: PulseDay[];
-  updatesThisWeek: number;
-  completedThisWeek: number;
-  lastActivity: string | null;
-  streak: number;
 }
 
 export interface TaskUpdate {

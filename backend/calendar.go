@@ -7,28 +7,14 @@ import (
 	"time"
 )
 
-// CalendarDay is one cell in the activity calendar.
+// CalendarDay is one cell in the activity calendar. Coloring mirrors the project
+// Pulse: zinc (none) / lime (activity) / deeper lime (has attachment) / purple
+// (a task was completed). Count and attachment totals drive the hover tooltip.
 type CalendarDay struct {
-	Date  string `json:"date"`  // YYYY-MM-DD (in the configured timezone)
-	Count int    `json:"count"` // number of log entries that day
-	Level int    `json:"level"` // green intensity 0-4 (by log count)
-	Gold  bool   `json:"gold"`  // true if any transition INTO "done" happened
-}
-
-// greenLevel buckets activity count into 4 green shades (0 = none).
-func greenLevel(n int) int {
-	switch {
-	case n <= 0:
-		return 0
-	case n == 1:
-		return 1
-	case n <= 3:
-		return 2
-	case n <= 6:
-		return 3
-	default:
-		return 4
-	}
+	Date        string `json:"date"`        // YYYY-MM-DD (in the configured timezone)
+	Count       int    `json:"count"`       // number of log entries that day
+	Attachments int    `json:"attachments"` // number of log entries with an image
+	Gold        bool   `json:"gold"`        // true if any transition INTO "done" happened
 }
 
 // DayEventTask is the task context embedded in a day-report event.
@@ -82,8 +68,9 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type agg struct {
-		count int
-		gold  bool
+		count       int
+		attachments int
+		gold        bool
 	}
 	byDay := map[string]*agg{}
 	for _, lr := range rows {
@@ -101,11 +88,14 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 		if lr.Type == "status_change" && lr.ToStatus != nil && *lr.ToStatus == "done" {
 			a.gold = true
 		}
+		if lr.Image != nil && *lr.Image != "" {
+			a.attachments++
+		}
 	}
 
 	out := make([]CalendarDay, 0, len(byDay))
 	for day, a := range byDay {
-		out = append(out, CalendarDay{Date: day, Count: a.count, Level: greenLevel(a.count), Gold: a.gold})
+		out = append(out, CalendarDay{Date: day, Count: a.count, Attachments: a.attachments, Gold: a.gold})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Date < out[j].Date })
 	writeJSON(w, http.StatusOK, out)
@@ -134,9 +124,10 @@ func (s *Server) handleCalendarDay(w http.ResponseWriter, r *http.Request) {
 
 // PulseDay is one bar in the project pulse chart.
 type PulseDay struct {
-	Date  string `json:"date"`
-	Count int    `json:"count"`
-	Gold  bool   `json:"gold"`
+	Date        string `json:"date"`
+	Count       int    `json:"count"`
+	Gold        bool   `json:"gold"`
+	Attachments int    `json:"attachments"`
 }
 
 func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +139,8 @@ func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 	loc := s.cfg.Location
 	now := time.Now().In(loc)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	start := today.AddDate(0, 0, -29) // 30-day window (chart shows last 14)
+	const window = 180 // days returned; the frontend slices to the selected span
+	start := today.AddDate(0, 0, -(window - 1))
 
 	rows, err := s.store.ProjectLogsSince(id, start.UTC().Format(time.RFC3339))
 	if err != nil {
@@ -157,8 +149,9 @@ func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type agg struct {
-		count, completed int
-		gold             bool
+		count       int
+		gold        bool
+		attachments int
 	}
 	byDay := map[string]*agg{}
 	for _, lr := range rows {
@@ -175,60 +168,26 @@ func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 		a.count++
 		if lr.Type == "status_change" && lr.ToStatus != nil && *lr.ToStatus == "done" {
 			a.gold = true
-			a.completed++
+		}
+		if lr.Image != nil && *lr.Image != "" {
+			a.attachments++
 		}
 	}
 
-	days := make([]PulseDay, 0, 14)
-	for i := 13; i >= 0; i-- {
+	days := make([]PulseDay, 0, window)
+	for i := window - 1; i >= 0; i-- {
 		d := today.AddDate(0, 0, -i).Format("2006-01-02")
 		pd := PulseDay{Date: d}
 		if a := byDay[d]; a != nil {
 			pd.Count = a.count
 			pd.Gold = a.gold
+			pd.Attachments = a.attachments
 		}
 		days = append(days, pd)
 	}
 
-	weekStart := today.AddDate(0, 0, -6).Format("2006-01-02")
-	updates, completed := 0, 0
-	var lastActivity string
-	for d, a := range byDay {
-		if a.count == 0 {
-			continue
-		}
-		if d >= weekStart {
-			updates += a.count
-			completed += a.completed
-		}
-		if d > lastActivity {
-			lastActivity = d
-		}
-	}
-
-	streak := 0
-	if lastActivity != "" {
-		cur, _ := time.ParseInLocation("2006-01-02", lastActivity, loc)
-		for {
-			if a := byDay[cur.Format("2006-01-02")]; a != nil && a.count > 0 {
-				streak++
-				cur = cur.AddDate(0, 0, -1)
-			} else {
-				break
-			}
-		}
-	}
-
-	var la *string
-	if lastActivity != "" {
-		la = &lastActivity
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"days":              days,
-		"updatesThisWeek":   updates,
-		"completedThisWeek": completed,
-		"lastActivity":      la,
-		"streak":            streak,
+		"days": days,
 	})
 }
 
@@ -239,10 +198,11 @@ type LogRangeRow struct {
 	CreatedAt string
 	Type      string
 	ToStatus  *string
+	Image     *string
 }
 
 func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error) {
-	q := "SELECT li.created_at, li.type, li.to_status FROM log_items li"
+	q := "SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li"
 	args := []any{}
 	if tag != "" {
 		q += " JOIN tasks t ON t.id = li.task_id"
@@ -261,11 +221,11 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error)
 	out := []LogRangeRow{}
 	for rows.Next() {
 		var lr LogRangeRow
-		var to *string
-		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to); err != nil {
+		var to, img *string
+		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to, &img); err != nil {
 			return nil, err
 		}
-		lr.ToStatus = to
+		lr.ToStatus, lr.Image = to, img
 		out = append(out, lr)
 	}
 	return out, rows.Err()
@@ -273,7 +233,7 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string) ([]LogRangeRow, error)
 
 func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRow, error) {
 	rows, err := s.db.Query(
-		`SELECT li.created_at, li.type, li.to_status FROM log_items li
+		`SELECT li.created_at, li.type, li.to_status, li.image_path FROM log_items li
 		 JOIN tasks t ON t.id = li.task_id
 		 WHERE t.project_id = ? AND li.created_at >= ?`, projectID, startUTC)
 	if err != nil {
@@ -283,11 +243,11 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRo
 	out := []LogRangeRow{}
 	for rows.Next() {
 		var lr LogRangeRow
-		var to *string
-		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to); err != nil {
+		var to, img *string
+		if err := rows.Scan(&lr.CreatedAt, &lr.Type, &to, &img); err != nil {
 			return nil, err
 		}
-		lr.ToStatus = to
+		lr.ToStatus, lr.Image = to, img
 		out = append(out, lr)
 	}
 	return out, rows.Err()

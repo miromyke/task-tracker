@@ -98,17 +98,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-zinc-100/95 px-4 backdrop-blur">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-white/95 px-4 backdrop-blur">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
-          <span>Mirodom</span>
         </Link>
         <AccountDialog />
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto p-4 pb-24">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t bg-zinc-100/95 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t bg-white/95 backdrop-blur">
         <Link
           to="/"
           className={cn(

@@ -1,111 +1,107 @@
 import { useState } from "react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { Pulse, Status } from "@/lib/api";
-import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
+import { plural } from "@lingui/core/macro";
+import type { Pulse } from "@/lib/api";
 import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DayCarousel } from "@/components/DayCarousel";
 import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-function barColor(count: number, gold: boolean): string {
+function barColor(count: number, gold: boolean, attachments: number): string {
   if (count === 0) return "bg-zinc-200"; // no activity
-  if (gold) return "bg-lime-600"; // completion day → saturated lime
-  return "bg-lime-300"; // normal activity → pale lime
+  if (gold) return "bg-purple-400"; // completion day → vibrant purple
+  if (attachments > 0) return "bg-lime-300"; // day with an attachment → slightly deeper lime
+  return "bg-lime-200"; // normal activity → pale lime
 }
 
 const FULL = 60; // chart height in px
 const MIN = 14; // min bar height for an active day
 
-export function PulseCard({
-  pulse,
-  counts,
-  projectId,
-}: {
-  pulse: Pulse;
-  counts: Record<Status, number>;
-  projectId: number;
-}) {
-  const { i18n } = useLingui();
-  const max = Math.max(1, ...pulse.days.map((d) => d.count));
-  const activeDates = pulse.days.filter((d) => d.count > 0).map((d) => d.date);
+const SPANS = [7, 14, 30, 90, 180] as const;
+type Span = (typeof SPANS)[number];
 
+const SPAN_LABEL: Record<Span, React.ReactNode> = {
+  7: <Trans>1 week</Trans>,
+  14: <Trans>2 weeks</Trans>,
+  30: <Trans>1 month</Trans>,
+  90: <Trans>3 months</Trans>,
+  180: <Trans>6 months</Trans>,
+};
+
+export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId: number }) {
+  const { t } = useLingui();
+  const [span, setSpan] = useState<Span>(30);
   const [open, setOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState("");
 
+  const days = pulse.days.slice(-span);
+  const max = Math.max(1, ...days.map((d) => d.count));
+  const activeDates = pulse.days.filter((d) => d.count > 0).map((d) => d.date);
+
+  // tighten spacing/corners as bars get denser
+  const dense = span > 30;
+  const gap = dense ? "gap-px" : "gap-1";
+  const radius = dense ? "rounded-sm" : "rounded-md";
+
   return (
-    <Card className="space-y-3 p-4">
-      {/* header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-          <span className="font-semibold">
-            <Trans>Pulse</Trans>
-          </span>
-        </div>
-        {pulse.lastActivity && (
-          <span className="text-sm text-zinc-500">
-            <Trans>last activity {formatShortDate(pulse.lastActivity)}</Trans>
-          </span>
-        )}
-      </div>
-
-      {/* 14-day activity chart */}
-      <div className="flex items-end gap-1" style={{ height: FULL }}>
-        {pulse.days.map((d) => {
-          const h = d.count === 0 ? 4 : MIN + (d.count / max) * (FULL - MIN);
-          const label = `${formatShortDate(d.date)} · ${d.count}`;
-          if (d.count === 0) {
-            return <div key={d.date} title={label} className="flex-1 rounded-md bg-zinc-200 opacity-70" style={{ height: h }} />;
-          }
-          return (
+    <Card className="space-y-3 p-4 shadow-none">
+      {/* span selector */}
+      <div className="flex justify-end">
+        <div className="inline-flex rounded-md border p-0.5 text-xs">
+          {SPANS.map((s) => (
             <button
-              key={d.date}
+              key={s}
               type="button"
-              title={label}
-              aria-label={label}
-              onClick={() => {
-                setPickedDate(d.date);
-                setOpen(true);
-              }}
+              onClick={() => setSpan(s)}
               className={cn(
-                "flex-1 cursor-pointer rounded-md outline-none transition-all",
-                barColor(d.count, d.gold),
-                "hover:brightness-105 hover:ring-2 hover:ring-zinc-900/30 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                "rounded px-2 py-1 transition-colors",
+                s === span ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
               )}
-              style={{ height: h }}
-            />
-          );
-        })}
-      </div>
-
-      {/* stats */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
-        <div className="flex items-center gap-2 text-zinc-500">
-          <span>
-            <span className="font-semibold text-zinc-900">{pulse.updatesThisWeek}</span>{" "}
-            <Trans>updates this week</Trans>
-          </span>
-          <span aria-hidden>·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded-sm bg-lime-600" />
-            <span className="font-semibold text-zinc-900">{pulse.completedThisWeek}</span>{" "}
-            <Trans context="count">completed</Trans>
-          </span>
+            >
+              {SPAN_LABEL[s]}
+            </button>
+          ))}
         </div>
-        <span className="text-zinc-500">
-          <Trans>past 14 days</Trans>
-        </span>
       </div>
 
-      {/* status legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t pt-3 text-xs text-zinc-500">
-        {STATUS_ORDER.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[s])} />
-            {i18n._(STATUS_LABEL[s])} {counts[s]}
-          </span>
-        ))}
-      </div>
+      {/* activity chart */}
+      <TooltipProvider delayDuration={150}>
+        <div className={cn("flex items-end", gap)} style={{ height: FULL }}>
+          {days.map((d) => {
+            const h = d.count === 0 ? 4 : MIN + (d.count / max) * (FULL - MIN);
+            const logs = plural(d.count, { one: "# log", other: "# logs" });
+            const atts = plural(d.attachments, { one: "# attachment", other: "# attachments" });
+            const label = t`${formatShortDate(d.date)} · ${logs} · ${atts}`;
+            return (
+              <Tooltip key={d.date}>
+                <TooltipTrigger asChild>
+                  {d.count === 0 ? (
+                    <div aria-label={label} className={cn("flex-1 bg-zinc-200 opacity-70", radius)} style={{ height: h }} />
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={label}
+                      onClick={() => {
+                        setPickedDate(d.date);
+                        setOpen(true);
+                      }}
+                      className={cn(
+                        "flex-1 cursor-pointer outline-none transition-all",
+                        radius,
+                        barColor(d.count, d.gold, d.attachments),
+                        "hover:brightness-105 hover:ring-2 hover:ring-zinc-900/30 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                      )}
+                      style={{ height: h }}
+                    />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
 
       <DayCarousel
         open={open}

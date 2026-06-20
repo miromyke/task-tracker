@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
+import { plural } from "@lingui/core/macro";
 import { api, type CalendarDay } from "@/lib/api";
 import { DayCarousel } from "@/components/DayCarousel";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const ALL = "__all__";
@@ -26,21 +29,13 @@ function todayStr() {
   return ymd(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+// Mirrors the Pulse coloring: none → zinc, activity → pale lime,
+// has attachment → deeper lime, task completed → vibrant purple.
 function cellClass(day: CalendarDay | undefined): string {
-  if (!day) return "bg-zinc-200/60 text-zinc-500/60";
-  if (day.gold) return "bg-amber-400 text-amber-950 font-semibold";
-  switch (day.level) {
-    case 1:
-      return "bg-green-200 text-green-900";
-    case 2:
-      return "bg-green-300 text-green-950";
-    case 3:
-      return "bg-green-500 text-white";
-    case 4:
-      return "bg-green-700 text-white";
-    default:
-      return "bg-zinc-200/60 text-zinc-500/60";
-  }
+  if (!day || day.count === 0) return "bg-zinc-200/60 text-zinc-500/60"; // no activity
+  if (day.gold) return "bg-purple-600 text-white font-semibold"; // completion day
+  if (day.attachments > 0) return "bg-lime-300 text-lime-950"; // day with an attachment
+  return "bg-lime-100 text-lime-950"; // normal activity
 }
 
 function MonthGrid({
@@ -58,6 +53,7 @@ function MonthGrid({
   data: Map<string, CalendarDay>;
   onPick: (date: string) => void;
 }) {
+  const { t } = useLingui();
   const offset = firstWeekday(year, month0);
   const total = daysInMonth(year, month0);
   const today = todayStr();
@@ -66,36 +62,48 @@ function MonthGrid({
   for (let d = 1; d <= total; d++) cells.push(d);
 
   return (
-    <div className="rounded-lg border p-3">
-      <h3 className="mb-2 text-center text-sm font-semibold capitalize">{title}</h3>
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium capitalize text-zinc-500">
+    <div className="rounded-lg border p-5">
+      <h3 className="mb-3 text-center text-lg font-semibold capitalize">{title}</h3>
+      <div className="mb-2 grid grid-cols-7 gap-2 text-center text-sm font-medium capitalize text-zinc-500">
         {weekdays.map((w, i) => (
           <div key={i}>{w}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((d, i) => {
-          if (d === null) return <div key={`b${i}`} />;
-          const date = ymd(year, month0, d);
-          const day = data.get(date);
-          const clickable = !!day;
-          return (
-            <button
-              key={date}
-              disabled={!clickable}
-              onClick={() => clickable && onPick(date)}
-              className={cn(
-                "flex aspect-square items-center justify-center rounded-md text-xs transition-transform",
-                cellClass(day),
-                clickable && "hover:scale-105 cursor-pointer",
-                date === today && "ring-2 ring-zinc-900 ring-offset-1"
-              )}
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
+      <TooltipProvider delayDuration={150}>
+        <div className="grid grid-cols-7 gap-2">
+          {cells.map((d, i) => {
+            if (d === null) return <div key={`b${i}`} />;
+            const date = ymd(year, month0, d);
+            const day = data.get(date);
+            const clickable = !!day;
+            const button = (
+              <button
+                key={date}
+                disabled={!clickable}
+                onClick={() => clickable && onPick(date)}
+                className={cn(
+                  "flex aspect-square items-center justify-center rounded-lg text-base transition-transform",
+                  cellClass(day),
+                  clickable && "hover:scale-105 cursor-pointer",
+                  date === today && "ring-2 ring-zinc-900 ring-offset-1"
+                )}
+              >
+                {d}
+              </button>
+            );
+            if (!clickable) return button;
+            const logs = plural(day.count, { one: "# log", other: "# logs" });
+            const atts = plural(day.attachments, { one: "# attachment", other: "# attachments" });
+            const label = t`${formatShortDate(date)} · ${logs} · ${atts}`;
+            return (
+              <Tooltip key={date}>
+                <TooltipTrigger asChild>{button}</TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -193,7 +201,7 @@ export function CalendarPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         {months.map((m) => (
           <MonthGrid
             key={`${m.year}-${m.month0}`}
@@ -213,18 +221,15 @@ export function CalendarPage() {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-500">
         <span className="flex items-center gap-1.5">
-          <Trans>Less</Trans>
-          <span className="inline-flex gap-0.5">
-            <span className="h-3 w-3 rounded-sm bg-zinc-200/60" />
-            <span className="h-3 w-3 rounded-sm bg-green-200" />
-            <span className="h-3 w-3 rounded-sm bg-green-300" />
-            <span className="h-3 w-3 rounded-sm bg-green-500" />
-            <span className="h-3 w-3 rounded-sm bg-green-700" />
-          </span>
-          <Trans>More</Trans>
+          <span className="h-3 w-3 rounded-sm bg-lime-100" />
+          <Trans>Activity</Trans>
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-sm bg-amber-400" />
+          <span className="h-3 w-3 rounded-sm bg-lime-300" />
+          <Trans>Has attachment</Trans>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-purple-600" />
           <Trans>Task completed</Trans>
         </span>
       </div>

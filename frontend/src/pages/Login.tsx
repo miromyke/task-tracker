@@ -37,7 +37,6 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
-          <CardTitle className="text-xl">Mirodom</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
