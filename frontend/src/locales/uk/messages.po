@@ -523,6 +523,10 @@ msgstr "Файли"
 msgid "Files for {0}"
 msgstr "Файли для {0}"
 
+#: src/pages/Chat.tsx
+msgid "general"
+msgstr "загальний"
+
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "З вкладенням"
@@ -908,6 +912,10 @@ msgstr "Задачі"
 #: src/pages/Projects.tsx
 msgid "Tasks for {0}"
 msgstr "Задачі для {0}"
+
+#: src/pages/Chat.tsx
+msgid "Team-wide chat"
+msgstr "Чат для всієї команди"
 
 #: src/components/UserManagement.tsx
 msgid "Temp password"

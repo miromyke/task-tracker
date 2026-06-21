@@ -334,8 +334,20 @@ function MessageRow({ message, author, refs }: { message: Message; author?: User
   );
 }
 
+// The default channel is seeded with English name/description in the Go backend
+// (see seedDefaultChannel), so those literals are stored in the DB and never pass
+// through the frontend i18n. Translate the known seed values at display time;
+// user-created channels pass through unchanged.
+function useSeedLabels() {
+  const { t } = useLingui();
+  const name = (n: string) => (n === "general" ? t`general` : n);
+  const description = (d: string) => (d === "Team-wide chat" ? t`Team-wide chat` : d);
+  return { name, description };
+}
+
 export function ChatPage() {
   const { user } = useAuth();
+  const seed = useSeedLabels();
   const [searchParams, setSearchParams] = useSearchParams();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -491,7 +503,7 @@ export function ChatPage() {
                 )}
               >
                 <Hash className="h-4 w-4 shrink-0 opacity-70" />
-                <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                <span className="min-w-0 flex-1 truncate font-medium">{seed.name(c.name)}</span>
                 {c.messageCount > 0 && (
                   <span
                     className={cn(
@@ -517,9 +529,9 @@ export function ChatPage() {
                 <X className="h-5 w-5" />
               </button>
               <Hash className="h-4 w-4 opacity-70" />
-              <span className="font-semibold">{selected.name}</span>
+              <span className="font-semibold">{seed.name(selected.name)}</span>
               {selected.description && (
-                <span className="truncate text-sm text-muted-foreground">— {selected.description}</span>
+                <span className="truncate text-sm text-muted-foreground">— {seed.description(selected.description)}</span>
               )}
             </div>
             <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4">

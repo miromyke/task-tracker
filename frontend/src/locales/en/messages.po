@@ -527,6 +527,10 @@ msgstr "Files"
 msgid "Files for {0}"
 msgstr "Files for {0}"
 
+#: src/pages/Chat.tsx
+msgid "general"
+msgstr "general"
+
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "Has attachment"
@@ -912,6 +916,10 @@ msgstr "Tasks"
 #: src/pages/Projects.tsx
 msgid "Tasks for {0}"
 msgstr "Tasks for {0}"
+
+#: src/pages/Chat.tsx
+msgid "Team-wide chat"
+msgstr "Team-wide chat"
 
 #: src/components/UserManagement.tsx
 msgid "Temp password"
