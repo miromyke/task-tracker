@@ -189,6 +189,14 @@ msgstr "Archive project"
 msgid "Archive task"
 msgstr "Archive task"
 
+#: src/pages/Projects.tsx
+msgid "Archive this project?"
+msgstr "Archive this project?"
+
+#: src/pages/Task.tsx
+msgid "Archive this task?"
+msgstr "Archive this task?"
+
 #: src/components/KanbanBoard.tsx
 msgid "Archived"
 msgstr "Archived"
@@ -267,6 +275,7 @@ msgid "Calendar"
 msgstr "Calendar"
 
 #: src/components/BlockTaskDialog.tsx
+#: src/components/ConfirmDialog.tsx
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Cancel"
@@ -483,6 +492,10 @@ msgstr "Images"
 #: src/lib/constants.ts
 msgid "In progress"
 msgstr "In progress"
+
+#: src/pages/Task.tsx
+msgid "It will be hidden from the board by default. You can unarchive it later from the task page."
+msgstr "It will be hidden from the board by default. You can unarchive it later from the task page."
 
 #: src/components/AppLayout.tsx
 msgid "Language"
@@ -783,9 +796,17 @@ msgstr "Tasks for {0}"
 msgid "Temp password"
 msgstr "Temp password"
 
+#: src/pages/Projects.tsx
+msgid "The project and its tasks will be hidden from the default view. You can unarchive it later with “Show archived”."
+msgstr "The project and its tasks will be hidden from the default view. You can unarchive it later with “Show archived”."
+
 #: src/components/AppLayout.tsx
 msgid "Theme"
 msgstr "Theme"
+
+#: src/pages/Task.tsx
+msgid "This task is archived — it's hidden from the board by default."
+msgstr "This task is archived — it's hidden from the board by default."
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"

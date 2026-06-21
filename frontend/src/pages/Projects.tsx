@@ -9,6 +9,7 @@ import { BlockTaskDialog } from "@/components/BlockTaskDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { FilesView } from "@/components/FilesView";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,6 +141,7 @@ export function ProjectsPage() {
   const [moveError, setMoveError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [blockTask, setBlockTask] = useState<Task | null>(null);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -221,12 +223,19 @@ export function ProjectsPage() {
 
   // Archive / unarchive the selected project. When archiving while archived items
   // are hidden, the project drops out of the list, so deselect it.
-  async function toggleArchiveSelected() {
+  async function setProjectArchived(archived: boolean) {
     if (!selectedProject) return;
-    const nowArchived = !selectedProject.archived;
-    await api.setProjectArchived(selectedProject.id, nowArchived);
-    if (nowArchived && !showArchived) select(null);
+    await api.setProjectArchived(selectedProject.id, archived);
+    if (archived && !showArchived) select(null);
     await loadBase();
+  }
+
+  // Archiving a project hides it (and its tasks) from the default view, so guard
+  // it behind a confirm dialog. Unarchiving is the safe direction and stays direct.
+  function onArchiveProjectClick() {
+    if (!selectedProject) return;
+    if (selectedProject.archived) setProjectArchived(false);
+    else setArchiveConfirmOpen(true);
   }
 
   // The view switch (Tasks/Calendar/Files): shown in a desktop top strip over the
@@ -379,7 +388,7 @@ export function ProjectsPage() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={toggleArchiveSelected}
+                onClick={onArchiveProjectClick}
                 title={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
                 aria-label={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
               >
@@ -449,6 +458,20 @@ export function ProjectsPage() {
         projectId={blockTask?.projectId}
         currentTaskId={blockTask?.id}
         onConfirm={applyBlock}
+      />
+
+      <ConfirmDialog
+        open={archiveConfirmOpen}
+        onOpenChange={setArchiveConfirmOpen}
+        title={<Trans>Archive this project?</Trans>}
+        description={
+          <Trans>
+            The project and its tasks will be hidden from the default view. You can unarchive it later with “Show
+            archived”.
+          </Trans>
+        }
+        confirmLabel={<Trans>Archive project</Trans>}
+        onConfirm={() => setProjectArchived(true)}
       />
     </div>
   );

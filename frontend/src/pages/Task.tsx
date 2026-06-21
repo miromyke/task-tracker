@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { BlockTaskDialog } from "@/components/BlockTaskDialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -135,6 +136,7 @@ export function TaskPage() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [logTab, setLogTab] = useState<"comments" | "activity">("comments");
 
@@ -195,10 +197,18 @@ export function TaskPage() {
     setLogs((prev) => [...prev, ...res.newLogs]);
   }
 
-  async function toggleArchive() {
+  async function setArchived(archived: boolean) {
     if (!task) return;
-    const res = await api.updateTask(task.id, { archived: !task.archived });
+    const res = await api.updateTask(task.id, { archived });
     setTask(res.task);
+  }
+
+  // Archiving hides the task from the default board, so guard it behind a confirm
+  // dialog. Unarchiving is the safe/restore direction and stays one click.
+  function onArchiveClick() {
+    if (!task) return;
+    if (task.archived) setArchived(false);
+    else setArchiveConfirmOpen(true);
   }
 
   async function toggleCriterion(c: Criterion) {
@@ -264,6 +274,13 @@ export function TaskPage() {
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
 
+      {task.archived && (
+        <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <Archive className="h-4 w-4 shrink-0" />
+          <Trans>This task is archived — it's hidden from the board by default.</Trans>
+        </div>
+      )}
+
       <div className="flex shrink-0 items-start justify-between gap-3">
         <h1 className="flex items-center gap-2 text-xl font-bold leading-tight">
           {task.archived && <Archive className="h-4 w-4 shrink-0 text-muted-foreground" />}
@@ -273,7 +290,7 @@ export function TaskPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={toggleArchive}
+            onClick={onArchiveClick}
             title={task.archived ? t`Unarchive task` : t`Archive task`}
           >
             {task.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
@@ -573,6 +590,19 @@ export function TaskPage() {
         projectId={task.projectId}
         currentTaskId={task.id}
         onConfirm={applyBlock}
+      />
+
+      <ConfirmDialog
+        open={archiveConfirmOpen}
+        onOpenChange={setArchiveConfirmOpen}
+        title={<Trans>Archive this task?</Trans>}
+        description={
+          <Trans>
+            It will be hidden from the board by default. You can unarchive it later from the task page.
+          </Trans>
+        }
+        confirmLabel={<Trans>Archive task</Trans>}
+        onConfirm={() => setArchived(true)}
       />
     </div>
   );

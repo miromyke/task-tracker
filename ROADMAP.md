@@ -66,7 +66,7 @@ polling or SSE (avoid heavy infra unless needed).
 - **Reference files** — link an uploaded file/asset inline (picker or token) that
   renders as a link/preview to that file.
 
-## 6. Make archiving more deliberate
+## 6. Make archiving more deliberate ✅ Done
 
 The archived state should be **more visible**, and the archive **action should be
 less easy** to trigger by accident.
@@ -75,3 +75,7 @@ less easy** to trigger by accident.
   status clearer (e.g. stronger banner/treatment on the task page and cards).
 - Less easy: today archive is a single icon-button click — guard it (confirmation
   dialog, or move it behind an overflow menu) so it isn't a one-tap mistake.
+
+Implemented: a reusable `ConfirmDialog` now guards the archive direction on both the
+task page and the project (unarchive stays one click); the task page shows an amber
+archived banner; and archived cards get a dashed muted border + clearer badge.

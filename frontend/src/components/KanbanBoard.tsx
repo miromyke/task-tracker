@@ -64,7 +64,7 @@ function CardBody({
       )}
       <div className="flex flex-wrap items-center gap-2">
         {task.archived && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-md border border-muted-foreground/30 bg-background px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
             <Archive className="h-3.5 w-3.5" />
             <Trans>Archived</Trans>
           </span>
@@ -149,7 +149,7 @@ function DraggableCard({
       onClick={onClick}
       className={cn(
         "cursor-grab touch-none rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing",
-        task.archived && "opacity-60",
+        task.archived && "border-dashed border-muted-foreground/40 bg-muted/40 opacity-70",
         isDragging && "opacity-40"
       )}
     >
@@ -284,7 +284,13 @@ function MobileBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: B
           </p>
         ) : (
           colTasks.map((t) => (
-            <div key={t.id} className={cn("rounded-lg border bg-card p-3 shadow-sm", t.archived && "opacity-60")}>
+            <div
+              key={t.id}
+              className={cn(
+                "rounded-lg border bg-card p-3 shadow-sm",
+                t.archived && "border-dashed border-muted-foreground/40 bg-muted/40 opacity-70"
+              )}
+            >
               <div onClick={() => onCardClick(t.id)}>
                 <CardBody task={t} usersById={usersById} taskTitleById={taskTitleById} />
               </div>
