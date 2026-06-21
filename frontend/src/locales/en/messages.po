@@ -429,6 +429,10 @@ msgid "Delete this file permanently?"
 msgstr "Delete this file permanently?"
 
 #: src/components/FilesView.tsx
+msgid "Delete this file?"
+msgstr "Delete this file?"
+
+#: src/components/FilesView.tsx
 msgid "Deletion requested"
 msgstr "Deletion requested"
 
@@ -556,8 +560,12 @@ msgid "It will be hidden from the board by default. You can unarchive it later f
 msgstr "It will be hidden from the board by default. You can unarchive it later from the task page."
 
 #: src/components/FilesView.tsx
-msgid "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
-msgstr "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
+#~ msgid "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
+#~ msgstr "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
+
+#: src/components/FilesView.tsx
+msgid "It will be removed from Files."
+msgstr "It will be removed from Files."
 
 #: src/components/AppLayout.tsx
 msgid "Language"
@@ -864,12 +872,12 @@ msgid "Status"
 msgstr "Status"
 
 #: src/components/FilesView.tsx
-msgid "Submit for deletion"
-msgstr "Submit for deletion"
+#~ msgid "Submit for deletion"
+#~ msgstr "Submit for deletion"
 
 #: src/components/FilesView.tsx
-msgid "Submit this file for deletion?"
-msgstr "Submit this file for deletion?"
+#~ msgid "Submit this file for deletion?"
+#~ msgstr "Submit this file for deletion?"
 
 #: src/components/FilesView.tsx
 msgid "Submitted for deletion"

@@ -88,8 +88,8 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
 }
 
 // Fullscreen viewer for a single asset, with prev/next across the loaded list.
-// In the live grid it offers a "request deletion" action; in the pending queue it
-// offers restore and (for admins) permanent delete.
+// In the live grid it offers a plain "Delete" action (a soft-delete under the
+// hood); in the admin pending queue it offers restore and permanent delete.
 function Lightbox({
   assets,
   index,
@@ -552,9 +552,9 @@ export function FilesView({
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={(o) => !o && setConfirmDelete(null)}
-        title={t`Submit this file for deletion?`}
-        description={t`It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good.`}
-        confirmLabel={t`Submit for deletion`}
+        title={t`Delete this file?`}
+        description={t`It will be removed from Files.`}
+        confirmLabel={t`Delete`}
         destructive
         onConfirm={async () => {
           if (!confirmDelete) return;

@@ -140,7 +140,7 @@ every other upload, so the `nosniff`/inline-render safety rules are inherited fo
 Sent messages resolve the new file via the existing `referencedFileIds` → `getAsset`
 lazy-resolution. Strings extracted + translated to Ukrainian.
 
-## 8. Files: drop the "approval" framing from deletion
+## 8. Files: drop the "approval" framing from deletion ✅ Done
 
 The soft-delete UI currently surfaces the admin-purge workflow to everyone —
 "Submitted for deletion", "submit for deletion", language about an admin approving
@@ -150,6 +150,18 @@ The two-stage soft-delete + admin purge can stay under the hood (`assets`
 `deletion_requested_at`, the admin-only pending tab in `FilesView.tsx`); this is a
 copy/UX change, not a model change. Decide what, if anything, a member sees after they
 delete (likely: the file just disappears from their grid).
+
+Implemented: purely a member-facing copy change in `FilesView.tsx` — no model/endpoint
+change. The delete confirm dialog was reworded from queue/admin language ("Submit this
+file for deletion?" / "It will be moved to the deletion queue… An admin can restore it…"
+/ "Submit for deletion") to a plain delete ("Delete this file?" / "It will be removed
+from Files." / "Delete"). The lightbox trash action already read "Delete". On confirm the
+file just disappears from the member's grid (existing `removeFromView` after the
+soft-delete `requestDeleteAsset` call), with no after-state shown. The two-stage
+soft-delete + admin purge is untouched under the hood: the admin-only "Submitted for
+deletion" toggle, the queued-files banner, "Deletion requested by", restore, and the
+permanent-delete dialog keep their explicit language. Strings extracted + the two new
+member-facing strings translated to Ukrainian.
 
 ## 9. Files: make the project optional on upload ✅ Done
 
@@ -161,6 +173,29 @@ filters by the selected project. Make `project_id` nullable (migration via
 new nullable column path or table rebuild), add an upload endpoint that doesn't require
 a project, and show project-less files under an "All files" / "No project" bucket. This
 is the shared prerequisite for **item 7** (chat uploads have no project).
+
+## 10. Files: collect & show upload metadata (who / when / context)
+
+Surface the provenance of each uploaded file: **who** uploaded it, **when**, and **in
+what context** — chat, a task (`#<id>`), or a direct Files-page upload. Some of this is
+already stored but never shown; the chat context isn't recorded at all yet.
+
+Current state (starting point):
+- `assets.uploaded_by` + `assets.created_at` already capture who/when, but the Files
+  grid/lightbox (`FilesView.tsx`) only shows filename, size, and date — not the
+  uploader (resolve via `usersById`).
+- Context is partially derivable: `task_id`/`log_id` ⇒ a task upload, `project_id` ⇒ a
+  Files-page project upload, all three null ⇒ a project-less Files upload **or** a chat
+  upload — the two are indistinguishable today because chat uploads (`AddAssets(nil, …)`
+  via `POST /api/assets`) don't link back to the message/channel.
+- To label chat uploads, record the chat context on the asset (e.g. a nullable
+  `message_id`/`channel_id`, or a generic `source`/`context` enum) at upload time, or
+  backfill the link when the message that references `#file<id>` is posted.
+
+Deliverable: show "Uploaded by <name> · <date> · <context>" in the Files lightbox (and
+maybe a context chip on the grid), with the context resolving to a link where it makes
+sense (task page, channel). Decide whether to add an explicit context column vs. infer
+it from the existing `task_id`/`project_id` + a new chat link.
 
 Implemented: `assets.project_id` is now nullable. Fresh DBs get it from the updated
 canonical schema; existing DBs are migrated by `migrateAssetsProjectNullable` — SQLite
