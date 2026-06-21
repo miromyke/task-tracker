@@ -541,6 +541,21 @@ export function TaskPage() {
               </SelectContent>
             </Select>
             {statusError && <p className="mt-1 text-xs text-red-600">{statusError}</p>}
+            {task.status === "blocked" && (task.blockedByTaskId || task.blockedReason) && (
+              <div className="mt-2 space-y-1 text-xs">
+                {task.blockedByTaskId && (
+                  <p className="text-muted-foreground">
+                    <Trans>Blocked by</Trans>{" "}
+                    <Link to={`/tasks/${task.blockedByTaskId}`} className="font-medium text-foreground underline">
+                      {taskTitleById.get(task.blockedByTaskId) ?? `#${task.blockedByTaskId}`}
+                    </Link>
+                  </p>
+                )}
+                {task.blockedReason && (
+                  <p className="whitespace-pre-wrap text-muted-foreground">{task.blockedReason}</p>
+                )}
+              </div>
+            )}
           </MetaRow>
           <MetaRow label={<Trans>Tags</Trans>}>
             <span className="flex flex-wrap gap-1">
@@ -585,25 +600,6 @@ export function TaskPage() {
             input below stays put. */}
         <div className="order-2 flex min-h-0 flex-1 flex-col md:order-1">
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
-          {task.status === "blocked" && (
-            <div className="space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/40">
-              <div className="flex items-center gap-1.5 font-medium text-amber-900 dark:text-amber-200">
-                <Ban className="h-4 w-4" />
-                <Trans>Blocked</Trans>
-              </div>
-              {task.blockedByTaskId && (
-                <p className="text-amber-900 dark:text-amber-200">
-                  <Trans>Blocked by</Trans>{" "}
-                  <Link to={`/tasks/${task.blockedByTaskId}`} className="font-medium underline">
-                    {taskTitleById.get(task.blockedByTaskId) ?? `#${task.blockedByTaskId}`}
-                  </Link>
-                </p>
-              )}
-              {task.blockedReason && (
-                <p className="whitespace-pre-wrap text-amber-800 dark:text-amber-300">{task.blockedReason}</p>
-              )}
-            </div>
-          )}
           {task.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
 
           {(task.criteria ?? []).length > 0 &&

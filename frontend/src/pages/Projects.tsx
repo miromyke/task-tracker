@@ -385,14 +385,18 @@ export function ProjectsPage() {
             {/* Tasks / Calendar / Files — desktop shows these in the top strip above. */}
             <div className="lg:hidden">{viewTabs}</div>
             {selectedProject && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={onArchiveProjectClick}
-                title={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
-                aria-label={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
-              >
-                {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              <Button variant="outline" onClick={onArchiveProjectClick}>
+                {selectedProject.archived ? (
+                  <>
+                    <ArchiveRestore className="h-4 w-4" />
+                    <Trans>Unarchive this project</Trans>
+                  </>
+                ) : (
+                  <>
+                    <Archive className="h-4 w-4" />
+                    <Trans>Archive this project</Trans>
+                  </>
+                )}
               </Button>
             )}
             {view === "board" && (

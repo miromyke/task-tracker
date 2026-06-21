@@ -195,6 +195,10 @@ msgid "Archive task"
 msgstr "Archive task"
 
 #: src/pages/Projects.tsx
+msgid "Archive this project"
+msgstr "Archive this project"
+
+#: src/pages/Projects.tsx
 msgid "Archive this project?"
 msgstr "Archive this project?"
 
@@ -252,7 +256,6 @@ msgid "blocked"
 msgstr "blocked"
 
 #: src/lib/constants.ts
-#: src/pages/Task.tsx
 msgid "Blocked"
 msgstr "Blocked"
 
@@ -862,12 +865,16 @@ msgid "Unarchive"
 msgstr "Unarchive"
 
 #: src/pages/Projects.tsx
-msgid "Unarchive project"
-msgstr "Unarchive project"
+#~ msgid "Unarchive project"
+#~ msgstr "Unarchive project"
 
 #: src/pages/Task.tsx
 msgid "Unarchive task"
 msgstr "Unarchive task"
+
+#: src/pages/Projects.tsx
+msgid "Unarchive this project"
+msgstr "Unarchive this project"
 
 #: src/pages/Task.tsx
 msgid "unarchived this task"

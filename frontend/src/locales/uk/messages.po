@@ -158,10 +158,6 @@ msgstr "адмін"
 msgid "All"
 msgstr "Усі"
 
-#: src/components/TaskFormDialog.tsx
-#~ msgid "All criteria must be checked before a task can be marked done."
-#~ msgstr ""
-
 #: src/pages/Projects.tsx
 msgid "All events"
 msgstr "Усі події"
@@ -193,6 +189,10 @@ msgstr "Архівувати проєкт"
 #: src/pages/Task.tsx
 msgid "Archive task"
 msgstr "Архівувати задачу"
+
+#: src/pages/Projects.tsx
+msgid "Archive this project"
+msgstr "Архівувати цей проєкт"
 
 #: src/pages/Projects.tsx
 msgid "Archive this project?"
@@ -252,7 +252,6 @@ msgid "blocked"
 msgstr "заблоковано"
 
 #: src/lib/constants.ts
-#: src/pages/Task.tsx
 msgid "Blocked"
 msgstr "Заблоковано"
 
@@ -862,12 +861,16 @@ msgid "Unarchive"
 msgstr "Розархівувати"
 
 #: src/pages/Projects.tsx
-msgid "Unarchive project"
-msgstr "Розархівувати проєкт"
+#~ msgid "Unarchive project"
+#~ msgstr "Розархівувати проєкт"
 
 #: src/pages/Task.tsx
 msgid "Unarchive task"
 msgstr "Розархівувати задачу"
+
+#: src/pages/Projects.tsx
+msgid "Unarchive this project"
+msgstr "Розархівувати цей проєкт"
 
 #: src/pages/Task.tsx
 msgid "unarchived this task"
