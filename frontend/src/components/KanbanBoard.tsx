@@ -51,7 +51,7 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
               className={cn(
                 "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
                 closedOverdue
-                  ? "bg-zinc-200 text-zinc-700"
+                  ? "bg-accent text-accent-foreground"
                   : overdueDays > 7
                     ? "bg-red-600 text-white"
                     : "bg-red-200 text-red-900"
@@ -66,7 +66,7 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
               <Trans>Completed on time</Trans>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <CalendarClock className="h-3.5 w-3.5" />
               {formatShortDate(task.dueDate)}
             </span>
@@ -75,7 +75,7 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
           <span
             className={cn(
               "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
-              criteriaAllDone ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-600"
+              criteriaAllDone ? "bg-green-100 text-green-800" : "bg-muted text-muted-foreground"
             )}
             title={t`Success criteria`}
           >
@@ -114,7 +114,7 @@ function DraggableCard({ task, usersById, onClick }: { task: Task; usersById: Ma
       {...attributes}
       onClick={onClick}
       className={cn(
-        "cursor-grab touch-none rounded-lg border bg-white p-3 shadow-sm active:cursor-grabbing",
+        "cursor-grab touch-none rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing",
         isDragging && "opacity-40"
       )}
     >
@@ -141,20 +141,20 @@ function Column({
       <div className="mb-2 flex items-center gap-2 px-1">
         <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[status])} />
         <span className="text-sm font-semibold">{i18n._(STATUS_LABEL[status])}</span>
-        <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-500">{tasks.length}</span>
+        <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">{tasks.length}</span>
       </div>
       <div
         ref={setNodeRef}
         className={cn(
           "flex min-h-24 flex-1 flex-col gap-2 rounded-xl border border-dashed p-2 transition-colors",
-          isOver ? "border-zinc-900 bg-zinc-200" : "border-zinc-200 bg-zinc-200/40"
+          isOver ? "border-foreground bg-accent" : "border-border bg-muted/40"
         )}
       >
         {tasks.map((t) => (
           <DraggableCard key={t.id} task={t} usersById={usersById} onClick={() => onCardClick(t.id)} />
         ))}
         {tasks.length === 0 && (
-          <p className="px-1 py-4 text-center text-xs text-zinc-500">
+          <p className="px-1 py-4 text-center text-xs text-muted-foreground">
             <Trans>No tasks</Trans>
           </p>
         )}
@@ -193,7 +193,7 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
       </div>
       <DragOverlay>
         {activeTask ? (
-          <div className="w-64 rotate-1 rounded-lg border bg-white p-3 shadow-md">
+          <div className="w-64 rotate-1 rounded-lg border bg-card p-3 shadow-md">
             <CardBody task={activeTask} usersById={usersById} />
           </div>
         ) : null}
@@ -222,12 +222,12 @@ function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
               onClick={() => setActive(s)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                on ? "border-transparent bg-zinc-900 text-zinc-50" : "bg-white text-zinc-500"
+                on ? "border-transparent bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s])} />
               {i18n._(STATUS_LABEL[s])}
-              <span className={cn("text-xs", on ? "text-zinc-50/70" : "text-zinc-500")}>{count}</span>
+              <span className={cn("text-xs", on ? "text-primary-foreground/70" : "text-muted-foreground")}>{count}</span>
             </button>
           );
         })}
@@ -235,19 +235,19 @@ function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 
       <div className="space-y-2">
         {colTasks.length === 0 ? (
-          <p className="py-10 text-center text-sm text-zinc-500">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             <Trans>No tasks in {activeLabel}.</Trans>
           </p>
         ) : (
           colTasks.map((t) => (
-            <div key={t.id} className="rounded-lg border bg-white p-3 shadow-sm">
+            <div key={t.id} className="rounded-lg border bg-card p-3 shadow-sm">
               <div onClick={() => onCardClick(t.id)}>
                 <CardBody task={t} usersById={usersById} />
               </div>
               <div className="mt-2 flex items-center justify-end border-t pt-2">
                 <Select value={t.status} onValueChange={(v) => onMove(t, v as Status)}>
-                  <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs text-zinc-500 shadow-none">
-                    <span className="text-zinc-500">
+                  <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs text-muted-foreground shadow-none">
+                    <span className="text-muted-foreground">
                       <Trans>Move:</Trans>
                     </span>
                     <SelectValue />

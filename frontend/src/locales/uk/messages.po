@@ -288,6 +288,10 @@ msgstr "створено цю задачу"
 msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 msgstr "Критерії не можна редагувати після додавання — лише облишити. Усі решта критеріїв мають бути виконані, перш ніж задачу можна позначити готовою."
 
+#: src/components/AppLayout.tsx
+msgid "Dark"
+msgstr "Темна"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
@@ -382,6 +386,10 @@ msgstr "Мова"
 #: src/pages/Calendar.tsx
 #~ msgid "Less"
 #~ msgstr "Менше"
+
+#: src/components/AppLayout.tsx
+msgid "Light"
+msgstr "Світла"
 
 #: src/components/FilesView.tsx
 msgid "Load more"
@@ -560,6 +568,10 @@ msgstr "Статус"
 msgid "Success criteria"
 msgstr "Критерії успіху"
 
+#: src/components/AppLayout.tsx
+msgid "System"
+msgstr "Системна"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 #~ msgid "Tag"
@@ -595,6 +607,10 @@ msgstr "Задачі"
 #: src/pages/Projects.tsx
 msgid "Tasks for {0}"
 msgstr "Задачі для {0}"
+
+#: src/components/AppLayout.tsx
+msgid "Theme"
+msgstr "Тема"
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"

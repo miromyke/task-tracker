@@ -105,12 +105,12 @@ function ProjectTile({
       className={cn(
         "flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full",
         active
-          ? "border-zinc-900 bg-zinc-900 text-white"
-          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-foreground hover:border-border hover:bg-muted"
       )}
     >
       <span className="truncate font-medium">{label}</span>
-      <span className={cn("text-xs tabular-nums", active ? "text-white/60" : "text-zinc-400")}>{count}</span>
+      <span className={cn("text-xs tabular-nums", active ? "text-white/60" : "text-muted-foreground")}>{count}</span>
     </button>
   );
 }
@@ -320,7 +320,7 @@ export function ProjectsPage() {
           <div className="min-w-0">
             <h2 className="truncate text-2xl font-bold tracking-tight">{heading}</h2>
             {selectedProject?.description && (
-              <p className="mt-1 text-sm text-zinc-500">{selectedProject.description}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{selectedProject.description}</p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -339,7 +339,7 @@ export function ProjectsPage() {
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : view === "calendar" ? (
           <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
@@ -348,12 +348,12 @@ export function ProjectsPage() {
         ) : (
           <>
             {moveError && (
-              <div className="flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
                 <span>{moveError}</span>
                 <button
                   type="button"
                   onClick={() => setMoveError(null)}
-                  className="shrink-0 text-amber-500 hover:text-amber-900"
+                  className="shrink-0 text-amber-500 hover:text-amber-900 dark:hover:text-amber-200"
                   aria-label={t`Dismiss`}
                 >
                   <X className="h-4 w-4" />

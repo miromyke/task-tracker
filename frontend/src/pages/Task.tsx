@@ -70,11 +70,11 @@ function AttachmentView({ asset }: { asset: Asset }) {
   return (
     <a
       href={`${asset.path}?download=1`}
-      className="inline-flex max-w-full items-center gap-2 rounded-lg border bg-zinc-50 px-3 py-2 text-sm hover:bg-zinc-100"
+      className="inline-flex max-w-full items-center gap-2 rounded-lg border bg-muted px-3 py-2 text-sm hover:bg-muted"
     >
-      <FileText className="h-4 w-4 shrink-0 text-zinc-500" />
+      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="truncate">{asset.filename}</span>
-      <Download className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+      <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </a>
   );
 }
@@ -88,8 +88,8 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
       <div className="min-w-0 flex-1">
         <div className="text-sm">
           <span className="font-medium">{name}:</span>{" "}
-          <span className="text-zinc-500">{i18n._(describeMsg(log))}</span>
-          <span className="ml-2 text-xs text-zinc-500">{formatDateTime(log.createdAt)}</span>
+          <span className="text-muted-foreground">{i18n._(describeMsg(log))}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</span>
         </div>
         {log.type === "note" && log.text && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
         {(log.attachments ?? []).length > 0 && (
@@ -107,7 +107,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
 function MetaRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1 text-sm">{children}</div>
     </div>
   );
@@ -191,14 +191,14 @@ export function TaskPage() {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
   if (!task) {
     return (
       <div className="space-y-4">
-        <Link to="/" className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-900">
+        <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
           <ChevronLeft className="h-4 w-4" /> <Trans>Back</Trans>
         </Link>
         <p>
@@ -216,7 +216,7 @@ export function TaskPage() {
     <div className="flex h-full flex-col gap-5">
       <Link
         to={`/?project=${task.projectId}`}
-        className="inline-flex shrink-0 items-center text-sm text-zinc-500 hover:text-zinc-900"
+        className="inline-flex shrink-0 items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
@@ -250,7 +250,7 @@ export function TaskPage() {
           <MetaRow label={<Trans>Tags</Trans>}>
             <span className="flex flex-wrap gap-1">
               {task.tags.map((tg) => (
-                <Badge key={tg} className="border-transparent bg-zinc-200 text-zinc-800">
+                <Badge key={tg} className="border-transparent bg-accent text-accent-foreground">
                   #{tg}
                 </Badge>
               ))}
@@ -263,7 +263,7 @@ export function TaskPage() {
                 {assignee.name}
               </span>
             ) : (
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 <Trans>Unassigned</Trans>
               </span>
             )}
@@ -272,13 +272,13 @@ export function TaskPage() {
             {task.dueDate ? (
               <span className={cn(overdue && "text-red-600")}>{formatShortDate(task.dueDate)}</span>
             ) : (
-              <span className="text-zinc-500">—</span>
+              <span className="text-muted-foreground">—</span>
             )}
           </MetaRow>
           <MetaRow label={<Trans>Created</Trans>}>
             {formatShortDate(task.createdAt.slice(0, 10))}
             {creator && (
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 {" "}
                 <Trans>by {creator.name}</Trans>
               </span>
@@ -290,7 +290,7 @@ export function TaskPage() {
             input below stays put. */}
         <div className="order-2 flex min-h-0 flex-1 flex-col md:order-1">
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
-          {task.description && <p className="whitespace-pre-wrap text-sm text-zinc-500">{task.description}</p>}
+          {task.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
 
           {(task.criteria ?? []).length > 0 &&
             (() => {
@@ -298,9 +298,9 @@ export function TaskPage() {
               const abandoned = task.criteria.filter((c) => c.abandoned);
               return (
                 <Card className="space-y-3 p-4">
-                  <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <Trans>Success criteria</Trans>{" "}
-                    <span className="text-zinc-400">
+                    <span className="text-muted-foreground">
                       {live.filter((c) => c.done).length}/{live.length}
                     </span>
                   </h2>
@@ -310,19 +310,19 @@ export function TaskPage() {
                         <button
                           type="button"
                           onClick={() => toggleCriterion(c)}
-                          className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm hover:text-zinc-900"
+                          className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm hover:text-foreground"
                         >
                           {c.done ? (
                             <CheckSquare className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                           ) : (
-                            <Square className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+                            <Square className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           )}
-                          <span className={cn(c.done && "text-zinc-400 line-through")}>{c.text}</span>
+                          <span className={cn(c.done && "text-muted-foreground line-through")}>{c.text}</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => abandonCriterion(c)}
-                          className="mt-0.5 shrink-0 text-zinc-300 hover:text-zinc-700 group-hover:text-zinc-400"
+                          className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground group-hover:text-muted-foreground"
                           aria-label={t`Abandon criterion`}
                           title={t`Abandon criterion`}
                         >
@@ -334,13 +334,13 @@ export function TaskPage() {
                   {abandoned.length > 0 && (
                     <ul className="space-y-1.5 border-t pt-2">
                       {abandoned.map((c) => (
-                        <li key={c.id} className="flex items-start gap-2 text-sm text-zinc-400">
+                        <li key={c.id} className="flex items-start gap-2 text-sm text-muted-foreground">
                           <Ban className="mt-0.5 h-4 w-4 shrink-0" />
                           <span className="min-w-0 flex-1 line-through">{c.text}</span>
                           <button
                             type="button"
                             onClick={() => abandonCriterion(c)}
-                            className="mt-0.5 shrink-0 text-zinc-400 hover:text-zinc-700"
+                            className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground"
                             aria-label={t`Restore criterion`}
                             title={t`Restore criterion`}
                           >
@@ -355,7 +355,7 @@ export function TaskPage() {
             })()}
 
           <div className="space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Trans>Activity log</Trans>
             </h2>
             {logs.map((log) => (
@@ -375,7 +375,7 @@ export function TaskPage() {
               {noteFiles.length > 0 && (
                 <div className="space-y-1">
                   {noteFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs text-zinc-500">
+                    <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Paperclip className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{f.name}</span>
                       <button

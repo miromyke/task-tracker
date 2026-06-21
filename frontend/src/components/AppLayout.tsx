@@ -6,6 +6,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
 import { api } from "@/lib/api";
 import { activateLocale, LOCALES, type Locale } from "@/i18n";
+import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ function AccountDialog() {
   const { i18n } = useLingui();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [theme, setThemeState] = useState<Theme>(getStoredTheme);
   if (!user) return null;
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -41,7 +43,7 @@ function AccountDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="rounded-full ring-offset-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400">
+        <button className="rounded-full ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <UserAvatar name={user.name} avatarPath={user.avatarPath} />
         </button>
       </DialogTrigger>
@@ -55,7 +57,7 @@ function AccountDialog() {
           <UserAvatar name={user.name} avatarPath={user.avatarPath} className="h-20 w-20 text-xl" />
           <div className="text-center">
             <div className="font-medium">{user.name}</div>
-            <div className="text-sm text-zinc-500">@{user.username}</div>
+            <div className="text-sm text-muted-foreground">@{user.username}</div>
           </div>
         </div>
 
@@ -73,6 +75,34 @@ function AccountDialog() {
                   {LOCALES[l]}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>
+            <Trans>Theme</Trans>
+          </Label>
+          <Select
+            value={theme}
+            onValueChange={(v) => {
+              setTheme(v as Theme);
+              setThemeState(v as Theme);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="system">
+                <Trans>System</Trans>
+              </SelectItem>
+              <SelectItem value="light">
+                <Trans>Light</Trans>
+              </SelectItem>
+              <SelectItem value="dark">
+                <Trans>Dark</Trans>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -95,9 +125,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full flex-col sm:flex-row">
       {/* Mobile: top bar. Desktop (sm+): left rail. */}
-      <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-white/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
+      <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
         <Link to="/" className="flex items-center font-semibold">
-          <Acorn weight="fill" className="h-8 w-8 text-zinc-900" />
+          <Acorn weight="fill" className="h-8 w-8 text-foreground" />
         </Link>
         <AccountDialog />
       </nav>

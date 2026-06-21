@@ -288,6 +288,10 @@ msgstr "created this task"
 msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 msgstr "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 
+#: src/components/AppLayout.tsx
+msgid "Dark"
+msgstr "Dark"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
@@ -382,6 +386,10 @@ msgstr "Language"
 #: src/pages/Calendar.tsx
 #~ msgid "Less"
 #~ msgstr "Less"
+
+#: src/components/AppLayout.tsx
+msgid "Light"
+msgstr "Light"
 
 #: src/components/FilesView.tsx
 msgid "Load more"
@@ -560,6 +568,10 @@ msgstr "Status"
 msgid "Success criteria"
 msgstr "Success criteria"
 
+#: src/components/AppLayout.tsx
+msgid "System"
+msgstr "System"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 #~ msgid "Tag"
@@ -595,6 +607,10 @@ msgstr "Tasks"
 #: src/pages/Projects.tsx
 msgid "Tasks for {0}"
 msgstr "Tasks for {0}"
+
+#: src/components/AppLayout.tsx
+msgid "Theme"
+msgstr "Theme"
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"

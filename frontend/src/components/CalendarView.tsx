@@ -29,7 +29,7 @@ function todayStr() {
 // Mirrors the Pulse coloring: none → zinc, activity → pale lime,
 // has attachment → deeper lime, task completed → vibrant purple.
 function cellClass(day: CalendarDay | undefined): string {
-  if (!day || day.count === 0) return "bg-zinc-200/60 text-zinc-500/60"; // no activity
+  if (!day || day.count === 0) return "bg-muted/60 text-muted-foreground/60"; // no activity
   if (day.gold) return "bg-purple-600 text-white font-semibold"; // completion day
   if (day.attachments > 0) return "bg-lime-300 text-lime-950"; // day with an attachment
   return "bg-lime-100 text-lime-950"; // normal activity
@@ -61,7 +61,7 @@ function MonthGrid({
   return (
     <div className="rounded-lg border p-5">
       <h3 className="mb-3 text-center text-lg font-semibold capitalize">{title}</h3>
-      <div className="mb-2 grid grid-cols-7 gap-2 text-center text-sm font-medium capitalize text-zinc-500">
+      <div className="mb-2 grid grid-cols-7 gap-2 text-center text-sm font-medium capitalize text-muted-foreground">
         {weekdays.map((w, i) => (
           <div key={i}>{w}</div>
         ))}
@@ -82,7 +82,7 @@ function MonthGrid({
                   "flex aspect-square items-center justify-center rounded-lg text-base transition-transform",
                   cellClass(day),
                   clickable && "hover:scale-105 cursor-pointer",
-                  date === today && "ring-2 ring-zinc-900 ring-offset-1"
+                  date === today && "ring-2 ring-foreground ring-offset-1 ring-offset-background"
                 )}
               >
                 {d}
@@ -186,7 +186,7 @@ export function CalendarView({ projectId, tag }: { projectId?: number; tag?: str
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-lime-100" />
           <Trans>Activity</Trans>

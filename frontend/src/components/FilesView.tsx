@@ -43,7 +43,7 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      className="group relative aspect-square overflow-hidden rounded-lg border bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+      className="group relative aspect-square overflow-hidden rounded-lg border bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       {asset.kind === "image" ? (
         <img src={asset.path} alt={asset.filename} loading="lazy" className="h-full w-full object-cover" />
@@ -57,7 +57,7 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
           </span>
         </>
       ) : (
-        <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-zinc-500">
+        <span className="flex h-full flex-col items-center justify-center gap-2 p-3 text-muted-foreground">
           <FileText className="h-8 w-8" />
           <span className="line-clamp-2 break-all text-center text-[11px] leading-tight">{asset.filename}</span>
         </span>
@@ -259,10 +259,10 @@ function AddFilesDialog({
               type="file"
               multiple
               onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="block w-full text-sm text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-zinc-700"
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
             />
             {files.length > 0 && (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 <Plural value={files.length} one="# file selected" other="# files selected" />
               </p>
             )}
@@ -352,7 +352,7 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
               onClick={() => setKind(value)}
               className={cn(
                 "rounded px-3 py-1 text-sm font-medium transition-colors",
-                kind === value ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+                kind === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {i18n._(label)}
@@ -369,10 +369,10 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : assets.length === 0 ? (
-        <p className="py-16 text-center text-sm text-zinc-500">
+        <p className="py-16 text-center text-sm text-muted-foreground">
           <Trans>No files yet.</Trans>
         </p>
       ) : (

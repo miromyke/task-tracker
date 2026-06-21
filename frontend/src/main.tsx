@@ -5,9 +5,11 @@ import { I18nProvider } from "@lingui/react";
 import { i18n } from "@lingui/core";
 import App from "./App";
 import { activateLocale, detectLocale } from "./i18n";
+import { initTheme } from "./lib/theme";
 import "./index.css";
 
 async function bootstrap() {
+  initTheme();
   await activateLocale(detectLocale());
   ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>

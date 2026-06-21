@@ -201,7 +201,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
 
           <div className="space-y-2">
             <Label htmlFor="description">
-              <Trans>Description</Trans> <span className="font-normal text-zinc-400"><Trans>(optional)</Trans></span>
+              <Trans>Description</Trans> <span className="font-normal text-muted-foreground"><Trans>(optional)</Trans></span>
             </Label>
             <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
@@ -218,12 +218,12 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                     <Input
                       value={c.text}
                       disabled
-                      className={c.abandoned ? "line-through text-zinc-400" : "text-zinc-700"}
+                      className={c.abandoned ? "line-through text-muted-foreground" : "text-foreground"}
                     />
                     <button
                       type="button"
                       onClick={() => toggleAbandon(i)}
-                      className="shrink-0 text-zinc-400 hover:text-zinc-900"
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
                       aria-label={c.abandoned ? t`Restore criterion` : t`Abandon criterion`}
                       title={c.abandoned ? t`Restore criterion` : t`Abandon criterion`}
                     >
@@ -247,7 +247,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                     <button
                       type="button"
                       onClick={() => removeNewCriterion(i)}
-                      className="shrink-0 text-zinc-400 hover:text-zinc-900"
+                      className="shrink-0 text-muted-foreground hover:text-foreground"
                       aria-label={t`Remove criterion`}
                     >
                       <X className="h-4 w-4" />
@@ -260,7 +260,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
               <Plus className="h-4 w-4" />
               <Trans>Add criterion</Trans>
             </Button>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               <Trans>
                 Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a
                 task can be marked done.
@@ -281,7 +281,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                   {selectedTags.map((tg) => (
                     <span
                       key={tg}
-                      className="inline-flex items-center gap-1 rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-800"
+                      className="inline-flex items-center gap-1 rounded bg-accent px-1.5 py-0.5 text-xs text-accent-foreground"
                     >
                       #{tg}
                       <button
@@ -290,7 +290,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                           e.stopPropagation();
                           removeTag(tg);
                         }}
-                        className="text-zinc-500 hover:text-zinc-900"
+                        className="text-muted-foreground hover:text-foreground"
                         aria-label={t`Remove tag`}
                       >
                         <X className="h-3 w-3" />
@@ -314,7 +314,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                   />
                 </div>
                 {tagOpen && tagOptionCount > 0 && (
-                  <ul className="absolute z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-white py-1 text-sm shadow-md">
+                  <ul className="absolute z-50 mt-1 max-h-44 w-full overflow-auto rounded-md border bg-popover py-1 text-sm shadow-md">
                     {tagMatches.map((tg, i) => (
                       <li key={tg}>
                         <button
@@ -324,7 +324,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                           onClick={() => addTag(tg)}
                           onMouseEnter={() => setTagHighlight(i)}
                           className={`flex w-full items-center px-2 py-1.5 text-left ${
-                            i === tagHighlight ? "bg-zinc-100" : ""
+                            i === tagHighlight ? "bg-muted" : ""
                           }`}
                         >
                           #{tg}
@@ -339,7 +339,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                           onClick={() => addTag(tagInput)}
                           onMouseEnter={() => setTagHighlight(tagMatches.length)}
                           className={`flex w-full items-center gap-1 px-2 py-1.5 text-left ${
-                            tagHighlight === tagMatches.length ? "bg-zinc-100" : ""
+                            tagHighlight === tagMatches.length ? "bg-muted" : ""
                           }`}
                         >
                           <Plus className="h-3.5 w-3.5" />
@@ -350,7 +350,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                   </ul>
                 )}
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 <Trans>Pick an existing tag or type a new one and press Enter.</Trans>
               </p>
             </div>

@@ -10,7 +10,7 @@ import { formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function barColor(count: number, gold: boolean, attachments: number): string {
-  if (count === 0) return "bg-zinc-200"; // no activity
+  if (count === 0) return "bg-muted"; // no activity
   if (gold) return "bg-purple-400"; // completion day → vibrant purple
   if (attachments > 0) return "bg-lime-300"; // day with an attachment → slightly deeper lime
   return "bg-lime-200"; // normal activity → pale lime
@@ -58,7 +58,7 @@ export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: numb
               onClick={() => setSpan(s)}
               className={cn(
                 "rounded px-2 py-1 transition-colors",
-                s === span ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+                s === span ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {SPAN_LABEL[s]}
@@ -79,7 +79,7 @@ export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: numb
               <Tooltip key={d.date}>
                 <TooltipTrigger asChild>
                   {d.count === 0 ? (
-                    <div aria-label={label} className={cn("flex-1 bg-zinc-200 opacity-70", radius)} style={{ height: h }} />
+                    <div aria-label={label} className={cn("flex-1 bg-muted opacity-70", radius)} style={{ height: h }} />
                   ) : (
                     <button
                       type="button"
@@ -92,7 +92,7 @@ export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: numb
                         "flex-1 cursor-pointer outline-none transition-all",
                         radius,
                         barColor(d.count, d.gold, d.attachments),
-                        "hover:brightness-105 hover:ring-2 hover:ring-zinc-900/30 focus-visible:ring-2 focus-visible:ring-zinc-400"
+                        "hover:brightness-105 hover:ring-2 hover:ring-foreground/30 focus-visible:ring-2 focus-visible:ring-ring"
                       )}
                       style={{ height: h }}
                     />
