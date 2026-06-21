@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { LogOut, Upload } from "lucide-react";
-import { Acorn } from "@phosphor-icons/react";
+import { AcornIcon } from "@phosphor-icons/react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
 import { api } from "@/lib/api";
@@ -130,7 +130,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Mobile: top bar. Desktop (sm+): left rail. */}
       <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
         <Link to="/" className="flex items-center font-semibold">
-          <Acorn weight="fill" className="h-8 w-8 text-foreground" />
+          <AcornIcon weight="fill" className="h-8 w-8 text-foreground" />
         </Link>
         <AccountDialog />
       </nav>

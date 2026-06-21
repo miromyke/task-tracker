@@ -18,6 +18,7 @@ msgstr ""
 msgid "\"{0}\" still has unchecked success criteria — open it to finish them first."
 msgstr "\"{0}\" має невиконані критерії успіху — відкрийте задачу, щоб спершу їх завершити."
 
+#: src/components/BlockTaskDialog.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "(optional)"
 msgstr "(необов'язково)"
@@ -103,6 +104,7 @@ msgid "Account"
 msgstr "Обліковий запис"
 
 #: src/components/CalendarView.tsx
+#: src/pages/Task.tsx
 msgid "Activity"
 msgstr "Активність"
 
@@ -111,8 +113,8 @@ msgstr "Активність"
 #~ msgstr "Календар активності"
 
 #: src/pages/Task.tsx
-msgid "Activity log"
-msgstr "Журнал дій"
+#~ msgid "Activity log"
+#~ msgstr "Журнал дій"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Add at least one success criterion"
@@ -175,6 +177,22 @@ msgstr "Усі теги"
 msgid "All tasks"
 msgstr "Усі задачі"
 
+#: src/pages/Task.tsx
+msgid "Archive"
+msgstr "Архівувати"
+
+#: src/pages/Projects.tsx
+msgid "Archive project"
+msgstr "Архівувати проєкт"
+
+#: src/pages/Task.tsx
+msgid "Archive task"
+msgstr "Архівувати задачу"
+
+#: src/components/KanbanBoard.tsx
+msgid "Archived"
+msgstr "Архівовано"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Assignee"
@@ -204,6 +222,37 @@ msgstr "Назад"
 msgid "Back to board"
 msgstr "Назад до дошки"
 
+#: src/components/BlockTaskDialog.tsx
+msgid "Block task"
+msgstr "Заблокувати задачу"
+
+#: src/components/BlockTaskDialog.tsx
+msgid "Block this task"
+msgstr "Заблокувати цю задачу"
+
+#: src/components/DayCarousel.tsx
+msgid "blocked"
+msgstr "заблоковано"
+
+#: src/lib/constants.ts
+#: src/pages/Task.tsx
+msgid "Blocked"
+msgstr "Заблоковано"
+
+#: src/components/BlockTaskDialog.tsx
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Blocked by"
+msgstr "Заблоковано:"
+
+#: src/components/KanbanBoard.tsx
+msgid "Blocked by {blockerTitle}"
+msgstr "Заблоковано: {blockerTitle}"
+
+#: src/pages/Task.tsx
+msgid "blocked this task"
+msgstr "заблоковано цю задачу"
+
 #: src/pages/ProjectBoard.tsx
 #~ msgid "Board"
 #~ msgstr "Дошка"
@@ -217,6 +266,7 @@ msgstr "автор: {0}"
 msgid "Calendar"
 msgstr "Календар"
 
+#: src/components/BlockTaskDialog.tsx
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Cancel"
@@ -245,6 +295,10 @@ msgstr "Виконайте всі критерії успіху, перш ніж
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
 msgstr "Виберіть принаймні один файл"
+
+#: src/pages/Task.tsx
+msgid "Comments"
+msgstr "Коментарі"
 
 #: src/components/DayCarousel.tsx
 msgid "completed"
@@ -374,6 +428,10 @@ msgstr "напр. дах"
 msgid "e.g. Tiles grouted and sealed"
 msgstr "напр. Плитку затерто й загерметизовано"
 
+#: src/components/BlockTaskDialog.tsx
+msgid "e.g. waiting on the electrician to finish first"
+msgstr "напр., очікуємо, поки електрик закінчить"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Edit task"
@@ -405,6 +463,10 @@ msgstr "Файли для {0}"
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "З вкладенням"
+
+#: src/pages/Projects.tsx
+msgid "Hide archived"
+msgstr "Сховати архівовані"
 
 #: src/pages/Projects.tsx
 #~ msgid "House renovation"
@@ -508,9 +570,17 @@ msgstr "Новий тимчасовий пароль"
 #~ msgid "Next due"
 #~ msgstr "Найближчий термін"
 
+#: src/pages/Task.tsx
+msgid "No comments yet. Post the first update below."
+msgstr "Коментарів ще немає. Додайте перше оновлення нижче."
+
 #: src/components/FilesView.tsx
 msgid "No files yet."
 msgstr "Файлів ще немає."
+
+#: src/components/BlockTaskDialog.tsx
+msgid "No other tasks to block on"
+msgstr "Немає інших задач для блокування"
 
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
@@ -591,6 +661,11 @@ msgstr "Проєкти"
 #~ msgid "Pulse"
 #~ msgstr "Пульс"
 
+#: src/components/BlockTaskDialog.tsx
+#: src/components/TaskFormDialog.tsx
+msgid "Reason"
+msgstr "Причина"
+
 #: src/components/TaskFormDialog.tsx
 msgid "Remove criterion"
 msgstr "Видалити критерій"
@@ -620,6 +695,18 @@ msgstr "Зберегти зміни"
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Виберіть проєкт"
+
+#: src/components/BlockTaskDialog.tsx
+msgid "Select the blocking task"
+msgstr "Виберіть задачу, що блокує"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Select the task that blocks this one"
+msgstr "Виберіть задачу, яка блокує цю"
+
+#: src/pages/Projects.tsx
+msgid "Show archived"
+msgstr "Показати архівовані"
 
 #: src/pages/Task.tsx
 msgid "Someone"
@@ -707,6 +794,18 @@ msgstr "Назва обовʼязкова"
 #: src/lib/constants.ts
 msgid "To do"
 msgstr "Зробити"
+
+#: src/pages/Task.tsx
+msgid "Unarchive"
+msgstr "Розархівувати"
+
+#: src/pages/Projects.tsx
+msgid "Unarchive project"
+msgstr "Розархівувати проєкт"
+
+#: src/pages/Task.tsx
+msgid "Unarchive task"
+msgstr "Розархівувати задачу"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx

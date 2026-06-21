@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
+import { AcornIcon } from "@phosphor-icons/react";
 import { useAuth } from "@/context/auth";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ export function LoginPage() {
     <div className="flex min-h-full items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <img src="/logo.png" alt="" className="h-16 w-16 object-contain" />
+          <AcornIcon weight="fill" className="h-8 w-8 text-foreground" />
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">

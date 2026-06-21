@@ -18,6 +18,7 @@ msgstr ""
 msgid "\"{0}\" still has unchecked success criteria — open it to finish them first."
 msgstr "\"{0}\" still has unchecked success criteria — open it to finish them first."
 
+#: src/components/BlockTaskDialog.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "(optional)"
 msgstr "(optional)"
@@ -103,6 +104,7 @@ msgid "Account"
 msgstr "Account"
 
 #: src/components/CalendarView.tsx
+#: src/pages/Task.tsx
 msgid "Activity"
 msgstr "Activity"
 
@@ -111,8 +113,8 @@ msgstr "Activity"
 #~ msgstr "Activity calendar"
 
 #: src/pages/Task.tsx
-msgid "Activity log"
-msgstr "Activity log"
+#~ msgid "Activity log"
+#~ msgstr "Activity log"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Add at least one success criterion"
@@ -175,6 +177,22 @@ msgstr "All tags"
 msgid "All tasks"
 msgstr "All tasks"
 
+#: src/pages/Task.tsx
+msgid "Archive"
+msgstr "Archive"
+
+#: src/pages/Projects.tsx
+msgid "Archive project"
+msgstr "Archive project"
+
+#: src/pages/Task.tsx
+msgid "Archive task"
+msgstr "Archive task"
+
+#: src/components/KanbanBoard.tsx
+msgid "Archived"
+msgstr "Archived"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Assignee"
@@ -204,6 +222,37 @@ msgstr "Back"
 msgid "Back to board"
 msgstr "Back to board"
 
+#: src/components/BlockTaskDialog.tsx
+msgid "Block task"
+msgstr "Block task"
+
+#: src/components/BlockTaskDialog.tsx
+msgid "Block this task"
+msgstr "Block this task"
+
+#: src/components/DayCarousel.tsx
+msgid "blocked"
+msgstr "blocked"
+
+#: src/lib/constants.ts
+#: src/pages/Task.tsx
+msgid "Blocked"
+msgstr "Blocked"
+
+#: src/components/BlockTaskDialog.tsx
+#: src/components/TaskFormDialog.tsx
+#: src/pages/Task.tsx
+msgid "Blocked by"
+msgstr "Blocked by"
+
+#: src/components/KanbanBoard.tsx
+msgid "Blocked by {blockerTitle}"
+msgstr "Blocked by {blockerTitle}"
+
+#: src/pages/Task.tsx
+msgid "blocked this task"
+msgstr "blocked this task"
+
 #: src/pages/ProjectBoard.tsx
 #~ msgid "Board"
 #~ msgstr "Board"
@@ -217,6 +266,7 @@ msgstr "by {0}"
 msgid "Calendar"
 msgstr "Calendar"
 
+#: src/components/BlockTaskDialog.tsx
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
 msgid "Cancel"
@@ -245,6 +295,10 @@ msgstr "Check off all success criteria before marking this done."
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
 msgstr "Choose at least one file"
+
+#: src/pages/Task.tsx
+msgid "Comments"
+msgstr "Comments"
 
 #: src/components/DayCarousel.tsx
 msgid "completed"
@@ -374,6 +428,10 @@ msgstr "e.g. roof"
 msgid "e.g. Tiles grouted and sealed"
 msgstr "e.g. Tiles grouted and sealed"
 
+#: src/components/BlockTaskDialog.tsx
+msgid "e.g. waiting on the electrician to finish first"
+msgstr "e.g. waiting on the electrician to finish first"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Edit task"
@@ -405,6 +463,10 @@ msgstr "Files for {0}"
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "Has attachment"
+
+#: src/pages/Projects.tsx
+msgid "Hide archived"
+msgstr "Hide archived"
 
 #: src/pages/Projects.tsx
 #~ msgid "House renovation"
@@ -508,9 +570,17 @@ msgstr "New temp password"
 #~ msgid "Next due"
 #~ msgstr "Next due"
 
+#: src/pages/Task.tsx
+msgid "No comments yet. Post the first update below."
+msgstr "No comments yet. Post the first update below."
+
 #: src/components/FilesView.tsx
 msgid "No files yet."
 msgstr "No files yet."
+
+#: src/components/BlockTaskDialog.tsx
+msgid "No other tasks to block on"
+msgstr "No other tasks to block on"
 
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
@@ -591,6 +661,11 @@ msgstr "Projects"
 #~ msgid "Pulse"
 #~ msgstr "Pulse"
 
+#: src/components/BlockTaskDialog.tsx
+#: src/components/TaskFormDialog.tsx
+msgid "Reason"
+msgstr "Reason"
+
 #: src/components/TaskFormDialog.tsx
 msgid "Remove criterion"
 msgstr "Remove criterion"
@@ -620,6 +695,18 @@ msgstr "Save changes"
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Select a project"
+
+#: src/components/BlockTaskDialog.tsx
+msgid "Select the blocking task"
+msgstr "Select the blocking task"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Select the task that blocks this one"
+msgstr "Select the task that blocks this one"
+
+#: src/pages/Projects.tsx
+msgid "Show archived"
+msgstr "Show archived"
 
 #: src/pages/Task.tsx
 msgid "Someone"
@@ -707,6 +794,18 @@ msgstr "Title is required"
 #: src/lib/constants.ts
 msgid "To do"
 msgstr "To do"
+
+#: src/pages/Task.tsx
+msgid "Unarchive"
+msgstr "Unarchive"
+
+#: src/pages/Projects.tsx
+msgid "Unarchive project"
+msgstr "Unarchive project"
+
+#: src/pages/Task.tsx
+msgid "Unarchive task"
+msgstr "Unarchive task"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
