@@ -63,7 +63,8 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	startUTC := fromT.UTC().Format(time.RFC3339)
 	endUTC := toT.AddDate(0, 0, 1).UTC().Format(time.RFC3339) // exclusive end
 
-	rows, err := s.store.LogsInRange(startUTC, endUTC, tag, projectID)
+	includeArchived := q.Get("archived") == "1"
+	rows, err := s.store.LogsInRange(startUTC, endUTC, tag, projectID, includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -116,12 +117,18 @@ func (s *Server) handleCalendarDay(w http.ResponseWriter, r *http.Request) {
 	endUTC := dayT.AddDate(0, 0, 1).UTC().Format(time.RFC3339)
 
 	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
-	events, err := s.store.DayEvents(startUTC, endUTC, tag, projectID)
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	events, err := s.store.DayEvents(startUTC, endUTC, tag, projectID, includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"date": date, "events": events})
+	minor, err := s.store.DayMinorEvents(startUTC, endUTC, tag, projectID, includeArchived)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"date": date, "events": events, "minor": minor})
 }
 
 // PulseDay is one bar in the project pulse chart.
@@ -139,24 +146,25 @@ func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	s.writePulse(w, id)
+	s.writePulse(w, id, r.URL.Query().Get("archived") == "1")
 }
 
 // handlePulse serves the pulse across all projects, or one via ?project=<id>.
 func (s *Server) handlePulse(w http.ResponseWriter, r *http.Request) {
 	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
-	s.writePulse(w, projectID)
+	s.writePulse(w, projectID, r.URL.Query().Get("archived") == "1")
 }
 
 // writePulse builds and writes the activity pulse; projectID == 0 spans all projects.
-func (s *Server) writePulse(w http.ResponseWriter, projectID int64) {
+// Logs from archived tasks/projects are excluded unless includeArchived is set.
+func (s *Server) writePulse(w http.ResponseWriter, projectID int64, includeArchived bool) {
 	loc := s.cfg.Location
 	now := time.Now().In(loc)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	const window = 180 // days returned; the frontend slices to the selected span
 	start := today.AddDate(0, 0, -(window - 1))
 
-	rows, err := s.store.ProjectLogsSince(projectID, start.UTC().Format(time.RFC3339))
+	rows, err := s.store.ProjectLogsSince(projectID, start.UTC().Format(time.RFC3339), includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -219,6 +227,13 @@ type LogRangeRow struct {
 // logRangeCols selects the rollup fields plus a per-log attachment count.
 const logRangeCols = "li.created_at, li.type, li.to_status, (SELECT COUNT(*) FROM assets a WHERE a.log_id = li.id)"
 
+// reportEventTypes restricts a log query to the entries the day report (DayEvents)
+// actually renders. The pulse/calendar counts share it so a day's bar height always
+// matches what opening that day shows — otherwise minor entries (created, edit,
+// due_date_change, criterion_check, archive…) inflate the count but render nothing,
+// most visibly on archived projects whose history is dominated by them.
+const reportEventTypes = "li.type IN ('note', 'status_change')"
+
 func scanLogRange(rows *sql.Rows) (LogRangeRow, error) {
 	var lr LogRangeRow
 	var to *string
@@ -230,14 +245,18 @@ func scanLogRange(rows *sql.Rows) (LogRangeRow, error) {
 }
 
 // LogsInRange returns log rows in [startUTC, endUTC); projectID == 0 spans all projects.
-func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]LogRangeRow, error) {
+// Logs from archived tasks/projects are excluded unless includeArchived is set.
+func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]LogRangeRow, error) {
 	q := "SELECT " + logRangeCols + " FROM log_items li"
 	args := []any{}
-	if projectID != 0 {
+	if projectID != 0 || !includeArchived {
 		q += " JOIN tasks t ON t.id = li.task_id"
 	}
-	q += " WHERE li.created_at >= ? AND li.created_at < ?"
+	q += " WHERE " + reportEventTypes + " AND li.created_at >= ? AND li.created_at < ?"
 	args = append(args, startUTC, endUTC)
+	if !includeArchived {
+		q += " AND t.archived_at IS NULL AND t.project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)"
+	}
 	if tag != "" {
 		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = li.task_id AND tt.tag = ?)"
 		args = append(args, tag)
@@ -263,11 +282,15 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64) ([]Lo
 }
 
 // ProjectLogsSince returns log rows since startUTC; projectID == 0 spans all projects.
-func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRow, error) {
+// Logs from archived tasks/projects are excluded unless includeArchived is set.
+func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchived bool) ([]LogRangeRow, error) {
 	q := "SELECT " + logRangeCols + ` FROM log_items li
 		 JOIN tasks t ON t.id = li.task_id
-		 WHERE li.created_at >= ?`
+		 WHERE ` + reportEventTypes + ` AND li.created_at >= ?`
 	args := []any{startUTC}
+	if !includeArchived {
+		q += " AND t.archived_at IS NULL AND t.project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)"
+	}
 	if projectID != 0 {
 		q += " AND t.project_id = ?"
 		args = append(args, projectID)
@@ -290,7 +313,7 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string) ([]LogRangeRo
 
 // DayEvents returns notes and status changes for a day, enriched with user and
 // task/project context, ordered chronologically for the carousel report.
-func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayEvent, error) {
+func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]DayEvent, error) {
 	q := `
 		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.created_at,
 		       u.id, u.username, u.name, u.avatar_path,
@@ -300,8 +323,11 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 		JOIN tasks t ON t.id = li.task_id
 		JOIN projects p ON p.id = t.project_id
 		WHERE li.created_at >= ? AND li.created_at < ?
-		  AND li.type IN ('note', 'status_change')`
+		  AND ` + reportEventTypes
 	args := []any{startUTC, endUTC}
+	if !includeArchived {
+		q += " AND t.archived_at IS NULL AND p.archived_at IS NULL"
+	}
 	if tag != "" {
 		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = ?)"
 		args = append(args, tag)
@@ -360,4 +386,57 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64) ([]DayE
 		}
 	}
 	return out, nil
+}
+
+// MinorEvent is a lightweight log entry the day report doesn't narrate as a story
+// line (edits, due-date/assignee changes, archive, checklist tweaks…). The carousel
+// rolls these up into an "also today" footer and lists them in the detailed view.
+type MinorEvent struct {
+	Type        string `json:"type"`
+	CreatedAt   string `json:"createdAt"`
+	UserName    string `json:"userName"`
+	TaskTitle   string `json:"taskTitle"`
+	ProjectName string `json:"projectName"`
+}
+
+// DayMinorEvents returns the day's log entries that DayEvents excludes (everything
+// outside reportEventTypes), with the same tag/project/archived scoping, ordered
+// chronologically. The frontend aggregates them by type for the footer summary.
+func (s *Store) DayMinorEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]MinorEvent, error) {
+	q := `
+		SELECT li.type, li.created_at, u.name, t.title, p.name
+		FROM log_items li
+		JOIN users u ON u.id = li.user_id
+		JOIN tasks t ON t.id = li.task_id
+		JOIN projects p ON p.id = t.project_id
+		WHERE li.created_at >= ? AND li.created_at < ?
+		  AND NOT (` + reportEventTypes + `)`
+	args := []any{startUTC, endUTC}
+	if !includeArchived {
+		q += " AND t.archived_at IS NULL AND p.archived_at IS NULL"
+	}
+	if tag != "" {
+		q += " AND EXISTS (SELECT 1 FROM task_tags tt WHERE tt.task_id = t.id AND tt.tag = ?)"
+		args = append(args, tag)
+	}
+	if projectID > 0 {
+		q += " AND t.project_id = ?"
+		args = append(args, projectID)
+	}
+	q += " ORDER BY li.created_at, li.id"
+
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []MinorEvent{}
+	for rows.Next() {
+		var m MinorEvent
+		if err := rows.Scan(&m.Type, &m.CreatedAt, &m.UserName, &m.TaskTitle, &m.ProjectName); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }

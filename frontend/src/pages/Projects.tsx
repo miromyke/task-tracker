@@ -168,10 +168,11 @@ export function ProjectsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showArchived]);
 
-  // Pulse is scoped server-side, so refetch whenever the selection changes.
+  // Pulse is scoped server-side, so refetch whenever the selection or the
+  // archived view changes.
   useEffect(() => {
-    api.getPulse(selectedId ?? undefined).then(setPulse);
-  }, [selectedId]);
+    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
+  }, [selectedId, showArchived]);
 
   function select(id: number | null) {
     setSearchParams(id ? { project: String(id) } : {}, { replace: true });
@@ -207,7 +208,7 @@ export function ProjectsPage() {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: to } : t)));
     try {
       await api.updateTask(task.id, { status: to });
-      api.getPulse(selectedId ?? undefined).then(setPulse);
+      api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
     } catch {
       loadBase();
     }
@@ -218,7 +219,7 @@ export function ProjectsPage() {
     if (!blockTask) return;
     const res = await api.updateTask(blockTask.id, { status: "blocked", blockedByTaskId, blockedReason: reason });
     setTasks((prev) => prev.map((t) => (t.id === res.task.id ? res.task : t)));
-    api.getPulse(selectedId ?? undefined).then(setPulse);
+    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
   }
 
   // Archive / unarchive the selected project. When archiving while archived items
@@ -415,7 +416,11 @@ export function ProjectsPage() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : view === "calendar" ? (
-          <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
+          <CalendarView
+            projectId={selectedId ?? undefined}
+            tag={tag === ALL ? undefined : tag}
+            includeArchived={showArchived}
+          />
         ) : view === "files" ? (
           <FilesView projectId={selectedId ?? undefined} projects={projects} usersById={usersById} />
         ) : (
@@ -433,7 +438,9 @@ export function ProjectsPage() {
                 </button>
               </div>
             )}
-            {pulse && <PulseCard pulse={pulse} projectId={selectedId ?? undefined} />}
+            {pulse && (
+              <PulseCard pulse={pulse} projectId={selectedId ?? undefined} includeArchived={showArchived} />
+            )}
             <KanbanBoard
               tasks={visibleTasks}
               usersById={usersById}

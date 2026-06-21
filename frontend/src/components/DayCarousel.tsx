@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
+import { plural } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
-import { api, type Asset, type DayEvent } from "@/lib/api";
+import { api, type Asset, type DayEvent, type MinorEvent } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatDayHeading, formatTime } from "@/lib/format";
@@ -16,6 +17,7 @@ interface Props {
   activeDates: string[]; // sorted ascending; days that have activity
   tag?: string;
   projectId?: number; // scope the day report to one project
+  includeArchived?: boolean; // surface logs from archived tasks/projects
 }
 
 type Slide = { kind: "media"; event: DayEvent; asset: Asset } | { kind: "items"; events: DayEvent[] };
@@ -102,11 +104,82 @@ function EventLine({ event }: { event: DayEvent }) {
   );
 }
 
-export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag, projectId }: Props) {
+// "3 edits" / "1 due-date change" — the count-bearing noun for the footer summary.
+function minorLabel(type: string, n: number): string {
+  switch (type) {
+    case "created":
+      return plural(n, { one: "# task created", other: "# tasks created" });
+    case "edit":
+      return plural(n, { one: "# edit", other: "# edits" });
+    case "due_date_change":
+      return plural(n, { one: "# due-date change", other: "# due-date changes" });
+    case "assignee_change":
+      return plural(n, { one: "# assignee change", other: "# assignee changes" });
+    case "archive":
+      return plural(n, { one: "# archive update", other: "# archive updates" });
+    case "title_change":
+      return plural(n, { one: "# title change", other: "# title changes" });
+    case "description_change":
+      return plural(n, { one: "# description edit", other: "# description edits" });
+    case "tags_change":
+      return plural(n, { one: "# tag change", other: "# tag changes" });
+    case "criteria_change":
+      return plural(n, { one: "# checklist change", other: "# checklist changes" });
+    case "criterion_check":
+      return plural(n, { one: "# checklist tick", other: "# checklist ticks" });
+    default:
+      return plural(n, { one: "# update", other: "# updates" });
+  }
+}
+
+// The verb phrase for one minor event in the detailed view.
+function minorAction(type: string): MessageDescriptor {
+  switch (type) {
+    case "created":
+      return msg`created the task`;
+    case "edit":
+      return msg`edited the task`;
+    case "due_date_change":
+      return msg`changed the due date`;
+    case "assignee_change":
+      return msg`changed the assignee`;
+    case "archive":
+      return msg`archived / unarchived`;
+    case "title_change":
+      return msg`changed the title`;
+    case "description_change":
+      return msg`edited the description`;
+    case "tags_change":
+      return msg`changed tags`;
+    case "criteria_change":
+      return msg`edited the checklist`;
+    case "criterion_check":
+      return msg`ticked a checklist item`;
+    default:
+      return msg`updated`;
+  }
+}
+
+function MinorLine({ event }: { event: MinorEvent }) {
+  const { i18n } = useLingui();
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-xs leading-snug">
+      <span className="min-w-0 text-white/70">
+        <span className="font-medium text-white/90">{event.userName}:</span> {i18n._(minorAction(event.type))}{" "}
+        <span className="text-white/90">«{event.taskTitle}»</span>
+      </span>
+      <span className="shrink-0 text-white/40">{formatTime(event.createdAt)}</span>
+    </div>
+  );
+}
+
+export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag, projectId, includeArchived }: Props) {
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [minor, setMinor] = useState<MinorEvent[]>([]);
+  const [showDetail, setShowDetail] = useState(false);
   const pending = useRef<"start" | "end">("start");
 
   useEffect(() => {
@@ -121,12 +194,14 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
     let cancelled = false;
     setLoading(true);
     api
-      .getCalendarDay(currentDate, tag, projectId)
+      .getCalendarDay(currentDate, tag, projectId, includeArchived)
       .then((r) => {
         if (cancelled) return;
         const sl = buildSlides(r.events);
         setSlides(sl);
         setSlideIndex(pending.current === "end" ? Math.max(0, sl.length - 1) : 0);
+        setMinor(r.minor);
+        setShowDetail(false); // collapse the footer when the day changes
         pending.current = "start";
       })
       .finally(() => {
@@ -135,7 +210,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
     return () => {
       cancelled = true;
     };
-  }, [open, currentDate, tag, projectId]);
+  }, [open, currentDate, tag, projectId, includeArchived]);
 
   function next() {
     if (slideIndex < slides.length - 1) {
@@ -180,6 +255,13 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
 
   const slide = slides[slideIndex];
   const isVideo = slide?.kind === "media" && slide.asset.kind === "video";
+
+  // Roll the minor events up by type for the "also today" footer, busiest first.
+  const minorByType = (() => {
+    const counts = new Map<string, number>();
+    for (const e of minor) counts.set(e.type, (counts.get(e.type) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  })();
   const hasPrev = slideIndex > 0 || adjacentDate(activeDates, currentDate, -1) !== null;
   const hasNext = slideIndex < slides.length - 1 || adjacentDate(activeDates, currentDate, 1) !== null;
 
@@ -288,6 +370,42 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
               className={cn("absolute right-0 z-10 w-2/3 cursor-default sm:hidden", isVideo ? "bottom-16 top-0" : "inset-y-0")}
             />
           </div>
+
+          {/* "also today" footer — minor events the story doesn't narrate, rolled
+              up by type. Tapping expands a detailed, per-event list. */}
+          {!loading && minor.length > 0 && (
+            <div className="shrink-0 border-t border-amber-300/15 bg-gradient-to-t from-amber-400/[0.07] to-transparent backdrop-blur">
+              {showDetail && (
+                <div className="max-h-44 space-y-2 overflow-y-auto px-4 pb-2 pt-3">
+                  {minor.map((e, i) => (
+                    <MinorLine key={i} event={e} />
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowDetail((d) => !d)}
+                aria-expanded={showDetail}
+                className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[13px] transition-colors hover:bg-amber-400/[0.06]"
+              >
+                <span className="min-w-0">
+                  <span className="mr-1.5 rounded bg-amber-400/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">
+                    <Trans>Also today</Trans>
+                  </span>{" "}
+                  {minorByType.map(([type, n], i) => (
+                    <span key={type} className="font-medium text-amber-100/70">
+                      {i > 0 ? <span className="text-amber-300/40"> · </span> : ""}
+                      {minorLabel(type, n)}
+                    </span>
+                  ))}
+                </span>
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-amber-300/25 bg-amber-400/[0.06] py-1 pl-2.5 pr-2 text-[11px] font-semibold uppercase tracking-wide text-amber-200/80 transition-colors group-hover:border-amber-300/45 group-hover:bg-amber-400/15 group-hover:text-amber-100">
+                  {showDetail ? <Trans>Hide</Trans> : <Trans>Details</Trans>}
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showDetail && "rotate-180")} />
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* desktop: arrow controls, placed just outside the story card */}

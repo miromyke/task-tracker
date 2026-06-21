@@ -54,6 +54,50 @@ msgstr "{0, plural, one {# log} other {# logs}}"
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# archive update} other {# archive updates}}"
+msgstr "{n, plural, one {# archive update} other {# archive updates}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# assignee change} other {# assignee changes}}"
+msgstr "{n, plural, one {# assignee change} other {# assignee changes}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# checklist change} other {# checklist changes}}"
+msgstr "{n, plural, one {# checklist change} other {# checklist changes}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# checklist tick} other {# checklist ticks}}"
+msgstr "{n, plural, one {# checklist tick} other {# checklist ticks}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# description edit} other {# description edits}}"
+msgstr "{n, plural, one {# description edit} other {# description edits}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# due-date change} other {# due-date changes}}"
+msgstr "{n, plural, one {# due-date change} other {# due-date changes}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# edit} other {# edits}}"
+msgstr "{n, plural, one {# edit} other {# edits}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# tag change} other {# tag changes}}"
+msgstr "{n, plural, one {# tag change} other {# tag changes}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# task created} other {# tasks created}}"
+msgstr "{n, plural, one {# task created} other {# tasks created}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# title change} other {# title changes}}"
+msgstr "{n, plural, one {# title change} other {# title changes}}"
+
+#: src/components/DayCarousel.tsx
+msgid "{n, plural, one {# update} other {# updates}}"
+msgstr "{n, plural, one {# update} other {# updates}}"
+
 #: src/components/KanbanBoard.tsx
 msgid "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
 msgstr "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
@@ -182,6 +226,14 @@ msgstr "All tags"
 msgid "All tasks"
 msgstr "All tasks"
 
+#: src/components/DayCarousel.tsx
+msgid "Also today"
+msgstr "Also today"
+
+#: src/components/DayCarousel.tsx
+#~ msgid "Also today:"
+#~ msgstr "Also today:"
+
 #: src/pages/Task.tsx
 msgid "Archive"
 msgstr "Archive"
@@ -209,6 +261,10 @@ msgstr "Archive this task?"
 #: src/components/KanbanBoard.tsx
 msgid "Archived"
 msgstr "Archived"
+
+#: src/components/DayCarousel.tsx
+msgid "archived / unarchived"
+msgstr "archived / unarchived"
 
 #: src/pages/Task.tsx
 msgid "archived this task"
@@ -301,10 +357,16 @@ msgstr "Change avatar"
 msgid "Change password"
 msgstr "Change password"
 
+#: src/components/DayCarousel.tsx
+msgid "changed tags"
+msgstr "changed tags"
+
+#: src/components/DayCarousel.tsx
 #: src/pages/Task.tsx
 msgid "changed the assignee"
 msgstr "changed the assignee"
 
+#: src/components/DayCarousel.tsx
 #: src/pages/Task.tsx
 msgid "changed the due date"
 msgstr "changed the due date"
@@ -312,6 +374,10 @@ msgstr "changed the due date"
 #: src/pages/Task.tsx
 msgid "changed the status"
 msgstr "changed the status"
+
+#: src/components/DayCarousel.tsx
+msgid "changed the title"
+msgstr "changed the title"
 
 #: src/pages/Chat.tsx
 msgid "Channels"
@@ -401,6 +467,10 @@ msgstr "Create task"
 msgid "Created"
 msgstr "Created"
 
+#: src/components/DayCarousel.tsx
+msgid "created the task"
+msgstr "created the task"
+
 #: src/pages/Task.tsx
 msgid "created this task"
 msgstr "created this task"
@@ -446,6 +516,10 @@ msgstr "Deletion requested by {requesterName}"
 #: src/pages/Projects.tsx
 msgid "Description"
 msgstr "Description"
+
+#: src/components/DayCarousel.tsx
+msgid "Details"
+msgstr "Details"
 
 #: src/components/UserManagement.tsx
 msgid "Disable"
@@ -509,6 +583,18 @@ msgstr "e.g. waiting on the electrician to finish first"
 msgid "Edit task"
 msgstr "Edit task"
 
+#: src/components/DayCarousel.tsx
+msgid "edited the checklist"
+msgstr "edited the checklist"
+
+#: src/components/DayCarousel.tsx
+msgid "edited the description"
+msgstr "edited the description"
+
+#: src/components/DayCarousel.tsx
+msgid "edited the task"
+msgstr "edited the task"
+
 #: src/pages/Task.tsx
 msgid "edited this task"
 msgstr "edited this task"
@@ -539,6 +625,10 @@ msgstr "general"
 #: src/components/CalendarView.tsx
 msgid "Has attachment"
 msgstr "Has attachment"
+
+#: src/components/DayCarousel.tsx
+msgid "Hide"
+msgstr "Hide"
 
 #: src/pages/Projects.tsx
 msgid "Hide archived"
@@ -962,6 +1052,10 @@ msgstr "This removes the file and its data for good. This cannot be undone."
 #: src/pages/Task.tsx
 msgid "This task is archived — it's hidden from the board by default."
 msgstr "This task is archived — it's hidden from the board by default."
+
+#: src/components/DayCarousel.tsx
+msgid "ticked a checklist item"
+msgstr "ticked a checklist item"
 
 #: src/pages/Calendar.tsx
 #~ msgid "Timeline"

@@ -107,7 +107,15 @@ function MonthGrid({
 
 // Calendar timeline scoped by the shared project/tag selectors. The visible span
 // is fixed (2 months on desktop, 1 on mobile) and oriented into the past.
-export function CalendarView({ projectId, tag }: { projectId?: number; tag?: string }) {
+export function CalendarView({
+  projectId,
+  tag,
+  includeArchived,
+}: {
+  projectId?: number;
+  tag?: string;
+  includeArchived?: boolean;
+}) {
   const { i18n } = useLingui();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const zoom = isDesktop ? 2 : 1;
@@ -139,8 +147,8 @@ export function CalendarView({ projectId, tag }: { projectId?: number; tag?: str
     (anchor.year === now.getFullYear() && anchor.month0 >= now.getMonth());
 
   useEffect(() => {
-    api.getCalendar(from, to, tag, projectId).then(setDays);
-  }, [from, to, tag, projectId]);
+    api.getCalendar(from, to, tag, projectId, includeArchived).then(setDays);
+  }, [from, to, tag, projectId, includeArchived]);
 
   const data = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
   const activeDates = useMemo(() => days.map((d) => d.date).sort(), [days]);
@@ -208,6 +216,7 @@ export function CalendarView({ projectId, tag }: { projectId?: number; tag?: str
         activeDates={activeDates}
         tag={tag}
         projectId={projectId}
+        includeArchived={includeArchived}
       />
     </div>
   );

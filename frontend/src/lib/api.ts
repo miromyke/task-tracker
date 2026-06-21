@@ -163,6 +163,17 @@ export interface DayEvent {
   };
 }
 
+// A log entry the day report doesn't narrate as a story line (edit, due-date /
+// assignee change, archive, checklist tweak…). Rolled up into the "also today"
+// footer and listed in the detailed view.
+export interface MinorEvent {
+  type: string;
+  createdAt: string;
+  userName: string;
+  taskTitle: string;
+  projectName: string;
+}
+
 export interface PulseDay {
   date: string;
   count: number;
@@ -284,8 +295,14 @@ export const api = {
   setProjectArchived: (id: number, archived: boolean) =>
     req<Project>(`/projects/${id}`, jsonBody("PATCH", { archived })),
   // Activity pulse across all projects, or one when projectId is given.
-  getPulse: (projectId?: number) =>
-    req<Pulse>(`/pulse${qs({ project: projectId ? String(projectId) : undefined })}`),
+  // includeArchived surfaces logs from archived tasks/projects (mirrors ?archived=1).
+  getPulse: (projectId?: number, includeArchived = false) =>
+    req<Pulse>(
+      `/pulse${qs({
+        project: projectId ? String(projectId) : undefined,
+        archived: includeArchived ? "1" : undefined,
+      })}`
+    ),
 
   // tasks
   listTasks: (projectId: number, opts: { status?: string; tag?: string; includeArchived?: boolean } = {}) =>
@@ -387,12 +404,22 @@ export const api = {
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),
-  getCalendar: (from: string, to: string, tag?: string, projectId?: number) =>
+  getCalendar: (from: string, to: string, tag?: string, projectId?: number, includeArchived = false) =>
     req<CalendarDay[]>(
-      `/calendar${qs({ from, to, tag, project: projectId ? String(projectId) : undefined })}`
+      `/calendar${qs({
+        from,
+        to,
+        tag,
+        project: projectId ? String(projectId) : undefined,
+        archived: includeArchived ? "1" : undefined,
+      })}`
     ),
-  getCalendarDay: (date: string, tag?: string, projectId?: number) =>
-    req<{ date: string; events: DayEvent[] }>(
-      `/calendar/day/${date}${qs({ tag, project: projectId ? String(projectId) : undefined })}`
+  getCalendarDay: (date: string, tag?: string, projectId?: number, includeArchived = false) =>
+    req<{ date: string; events: DayEvent[]; minor: MinorEvent[] }>(
+      `/calendar/day/${date}${qs({
+        tag,
+        project: projectId ? String(projectId) : undefined,
+        archived: includeArchived ? "1" : undefined,
+      })}`
     ),
 };

@@ -30,7 +30,15 @@ const SPAN_LABEL: Record<Span, React.ReactNode> = {
   180: <Trans>6 months</Trans>,
 };
 
-export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: number }) {
+export function PulseCard({
+  pulse,
+  projectId,
+  includeArchived,
+}: {
+  pulse: Pulse;
+  projectId?: number;
+  includeArchived?: boolean;
+}) {
   const { t } = useLingui();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [span, setSpan] = useState<Span>(isDesktop ? 30 : 14);
@@ -111,6 +119,7 @@ export function PulseCard({ pulse, projectId }: { pulse: Pulse; projectId?: numb
         initialDate={pickedDate}
         activeDates={activeDates}
         projectId={projectId}
+        includeArchived={includeArchived}
       />
     </Card>
   );
