@@ -277,7 +277,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                 )
               )}
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={addCriterion} className="px-2">
+            <Button type="button" variant="secondary" size="sm" onClick={addCriterion} className="px-2">
               <Plus className="h-4 w-4" />
               <Trans>Add criterion</Trans>
             </Button>
