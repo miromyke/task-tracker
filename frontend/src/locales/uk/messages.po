@@ -92,6 +92,7 @@ msgid "abandoned"
 msgstr "облишено"
 
 #: src/lib/constants.ts
+#: src/pages/Task.tsx
 msgid "Abandoned"
 msgstr "Полишено"
 
@@ -135,6 +136,10 @@ msgstr "Додати учасника"
 #: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Додати задачу"
+
+#: src/pages/Task.tsx
+msgid "Added"
+msgstr "Додано"
 
 #: src/components/DayCarousel.tsx
 msgid "added a file"
@@ -200,6 +205,10 @@ msgstr "Архівувати цю задачу?"
 #: src/components/KanbanBoard.tsx
 msgid "Archived"
 msgstr "Архівовано"
+
+#: src/pages/Task.tsx
+msgid "archived this task"
+msgstr "заархівовано цю задачу"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -290,6 +299,10 @@ msgid "Change password"
 msgstr "Змінити пароль"
 
 #: src/pages/Task.tsx
+msgid "changed the assignee"
+msgstr "змінено виконавця"
+
+#: src/pages/Task.tsx
 msgid "changed the due date"
 msgstr "змінено термін"
 
@@ -300,6 +313,10 @@ msgstr "змінено статус"
 #: src/pages/Task.tsx
 msgid "Check off all success criteria before marking this done."
 msgstr "Виконайте всі критерії успіху, перш ніж позначати задачу готовою."
+
+#: src/pages/Task.tsx
+msgid "checked off a criterion"
+msgstr "виконано критерій"
 
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
@@ -611,6 +628,10 @@ msgstr "Немає задач"
 msgid "No tasks in {activeLabel}."
 msgstr "Немає задач у «{activeLabel}»."
 
+#: src/pages/Task.tsx
+msgid "none"
+msgstr "немає"
+
 #: src/components/DayCarousel.tsx
 msgid "Nothing logged on this day."
 msgstr "Цього дня нічого не записано."
@@ -695,6 +716,14 @@ msgstr "Видалити критерій"
 msgid "Remove tag"
 msgstr "Видалити тег"
 
+#: src/pages/Task.tsx
+msgid "removed the assignee"
+msgstr "знято виконавця"
+
+#: src/pages/Task.tsx
+msgid "renamed this task"
+msgstr "перейменовано цю задачу"
+
 #: src/components/UserManagement.tsx
 msgid "Reset"
 msgstr "Скинути"
@@ -703,6 +732,10 @@ msgstr "Скинути"
 #: src/pages/Task.tsx
 msgid "Restore criterion"
 msgstr "Відновити критерій"
+
+#: src/pages/Task.tsx
+msgid "Restored"
+msgstr "Відновлено"
 
 #: src/components/UserManagement.tsx
 msgid "Save"
@@ -836,10 +869,18 @@ msgstr "Розархівувати проєкт"
 msgid "Unarchive task"
 msgstr "Розархівувати задачу"
 
+#: src/pages/Task.tsx
+msgid "unarchived this task"
+msgstr "розархівовано цю задачу"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Unassigned"
 msgstr "Без виконавця"
+
+#: src/pages/Task.tsx
+msgid "unchecked a criterion"
+msgstr "знято позначку з критерію"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Up next"
@@ -852,6 +893,18 @@ msgstr "Оновити пароль"
 #: src/components/DayCarousel.tsx
 msgid "updated"
 msgstr "оновлено"
+
+#: src/pages/Task.tsx
+msgid "updated the checklist"
+msgstr "оновлено перелік"
+
+#: src/pages/Task.tsx
+msgid "updated the description"
+msgstr "оновлено опис"
+
+#: src/pages/Task.tsx
+msgid "updated the tags"
+msgstr "оновлено теги"
 
 #: src/pages/Task.tsx
 msgid "updated this task"

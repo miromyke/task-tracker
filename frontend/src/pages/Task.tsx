@@ -54,6 +54,20 @@ function describeMsg(log: LogItem): MessageDescriptor {
     }
     case "due_date_change":
       return msg`changed the due date`;
+    case "assignee_change":
+      return log.details?.toUser ? msg`changed the assignee` : msg`removed the assignee`;
+    case "title_change":
+      return msg`renamed this task`;
+    case "description_change":
+      return msg`updated the description`;
+    case "tags_change":
+      return msg`updated the tags`;
+    case "criteria_change":
+      return msg`updated the checklist`;
+    case "criterion_check":
+      return log.details?.done ? msg`checked off a criterion` : msg`unchecked a criterion`;
+    case "archive":
+      return log.details?.archived ? msg`archived this task` : msg`unarchived this task`;
     case "edit":
       return msg`edited this task`;
     default:
@@ -86,7 +100,157 @@ function AttachmentView({ asset }: { asset: Asset }) {
   );
 }
 
-function LogEntry({ log, user }: { log: LogItem; user?: User }) {
+// DiffTokens renders a row of added/removed values as +x / −x chips, used for
+// both tag and checklist diffs in the activity log.
+function DiffTokens({
+  label,
+  added,
+  removed,
+}: {
+  label: React.ReactNode;
+  added?: string[];
+  removed?: string[];
+}) {
+  if (!added?.length && !removed?.length) return null;
+  return (
+    <div className="text-xs text-muted-foreground">
+      <span>{label}:</span>{" "}
+      {added?.map((t) => (
+        <span key={`+${t}`} className="ml-1 text-foreground">
+          +{t}
+        </span>
+      ))}
+      {removed?.map((t) => (
+        <span key={`-${t}`} className="ml-1 line-through">
+          −{t}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// LogDetailView renders the structured specifics of an activity entry (block
+// target, due from→to, tag/checklist diffs) beneath its narration line. Falls
+// back to nothing for entries without details (older rows, simple field edits).
+function LogDetailView({
+  log,
+  taskTitleById,
+  usersById,
+}: {
+  log: LogItem;
+  taskTitleById: Map<number, string>;
+  usersById: Map<number, User>;
+}) {
+  const { i18n } = useLingui();
+  const d = log.details;
+  if (!d) return null;
+
+  if (log.type === "status_change" && d.blockedByTaskId) {
+    const title = taskTitleById.get(d.blockedByTaskId) ?? `#${d.blockedByTaskId}`;
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        <Trans>Blocked by</Trans>:{" "}
+        <Link to={`/tasks/${d.blockedByTaskId}`} className="text-foreground underline underline-offset-2">
+          {title}
+        </Link>
+      </p>
+    );
+  }
+
+  if (log.type === "due_date_change") {
+    const from = d.from ? formatShortDate(d.from) : i18n._(msg`none`);
+    const to = d.to ? formatShortDate(d.to) : i18n._(msg`none`);
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        {from} → {to}
+      </p>
+    );
+  }
+
+  if (log.type === "assignee_change") {
+    const nameOf = (uid: number | null | undefined) =>
+      uid ? usersById.get(uid)?.name ?? `#${uid}` : i18n._(msg`Unassigned`);
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        {nameOf(d.fromUser)} → {nameOf(d.toUser)}
+      </p>
+    );
+  }
+
+  if (log.type === "title_change") {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        <span className="line-through">{d.from}</span> → <span className="text-foreground">{d.to}</span>
+      </p>
+    );
+  }
+
+  if (log.type === "tags_change") {
+    return (
+      <div className="mt-1">
+        <DiffTokens label={<Trans>Tags</Trans>} added={d.added} removed={d.removed} />
+      </div>
+    );
+  }
+
+  if (log.type === "criteria_change") {
+    return <CriteriaDiffView added={d.added} abandoned={d.abandoned} restored={d.restored} />;
+  }
+
+  if (log.type === "criterion_check" && d.criterion) {
+    return (
+      <p className={cn("mt-1 text-xs text-muted-foreground", d.done && "line-through")}>{d.criterion}</p>
+    );
+  }
+
+  // Legacy "edit" entry: tags + criteria diffs lived nested under one row.
+  if (log.type === "edit") {
+    const c = d.criteria;
+    const hasCriteria = !!(c?.added?.length || c?.abandoned?.length || c?.restored?.length);
+    if (!d.tags && !hasCriteria) return null;
+    return (
+      <div className="mt-1 space-y-0.5">
+        {d.tags && <DiffTokens label={<Trans>Tags</Trans>} added={d.tags.added} removed={d.tags.removed} />}
+        <CriteriaDiffView added={c?.added} abandoned={c?.abandoned} restored={c?.restored} />
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// CriteriaDiffView renders a checklist diff as labelled +/− chip rows. Shared by
+// the criteria_change entry and the legacy bundled edit entry.
+function CriteriaDiffView({
+  added,
+  abandoned,
+  restored,
+}: {
+  added?: string[];
+  abandoned?: string[];
+  restored?: string[];
+}) {
+  if (!added?.length && !abandoned?.length && !restored?.length) return null;
+  return (
+    <div className="mt-1 space-y-0.5">
+      {added?.length ? <DiffTokens label={<Trans>Added</Trans>} added={added} /> : null}
+      {abandoned?.length ? <DiffTokens label={<Trans>Abandoned</Trans>} removed={abandoned} /> : null}
+      {restored?.length ? <DiffTokens label={<Trans>Restored</Trans>} added={restored} /> : null}
+    </div>
+  );
+}
+
+function LogEntry({
+  log,
+  user,
+  taskTitleById,
+  usersById,
+}: {
+  log: LogItem;
+  user?: User;
+  taskTitleById: Map<number, string>;
+  usersById: Map<number, User>;
+}) {
   const { i18n } = useLingui();
   const name = user?.name ?? i18n._(msg`Someone`);
   const isNote = log.type === "note";
@@ -103,6 +267,7 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
           <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(log.createdAt)}</span>
         </div>
         {showText && <p className="mt-1 whitespace-pre-wrap text-sm">{log.text}</p>}
+        {!isNote && <LogDetailView log={log} taskTitleById={taskTitleById} usersById={usersById} />}
         {(log.attachments ?? []).length > 0 && (
           <div className="mt-2 flex flex-col items-start gap-2">
             {log.attachments.map((a) => (
@@ -201,6 +366,7 @@ export function TaskPage() {
     if (!task) return;
     const res = await api.updateTask(task.id, { archived });
     setTask(res.task);
+    setLogs((prev) => [...prev, ...res.newLogs]);
   }
 
   // Archiving hides the task from the default board, so guard it behind a confirm
@@ -215,6 +381,7 @@ export function TaskPage() {
     if (!task || c.abandoned) return;
     const res = await api.setCriterion(task.id, c.id, { done: !c.done });
     setTask(res.task);
+    setLogs((prev) => [...prev, ...res.newLogs]);
     setStatusError(null);
   }
 
@@ -222,6 +389,7 @@ export function TaskPage() {
     if (!task) return;
     const res = await api.setCriterion(task.id, c.id, { abandoned: !c.abandoned });
     setTask(res.task);
+    setLogs((prev) => [...prev, ...res.newLogs]);
     setStatusError(null);
   }
 
@@ -514,7 +682,13 @@ export function TaskPage() {
               </TabsList>
             </Tabs>
             {(logTab === "comments" ? comments : activity).map((log) => (
-              <LogEntry key={log.id} log={log} user={usersById.get(log.userId)} />
+              <LogEntry
+                key={log.id}
+                log={log}
+                user={usersById.get(log.userId)}
+                taskTitleById={taskTitleById}
+                usersById={usersById}
+              />
             ))}
             {logTab === "comments" && comments.length === 0 && (
               <p className="text-sm text-muted-foreground">

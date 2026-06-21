@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -99,15 +100,68 @@ type CriterionInput struct {
 }
 
 type LogItem struct {
-	ID          int64   `json:"id"`
-	TaskID      int64   `json:"taskId"`
-	UserID      int64   `json:"userId"`
-	Type        string  `json:"type"` // created | note | status_change | due_date_change | edit
-	Text        string  `json:"text"`
-	FromStatus  *string `json:"fromStatus"`
-	ToStatus    *string `json:"toStatus"`
-	Attachments []Asset `json:"attachments"`
-	CreatedAt   string  `json:"createdAt"`
+	ID         int64  `json:"id"`
+	TaskID     int64  `json:"taskId"`
+	UserID     int64  `json:"userId"`
+	// Type values: created | note | status_change | due_date_change |
+	// assignee_change | title_change | description_change | tags_change |
+	// criteria_change | criterion_check | archive (legacy rows may carry the
+	// retired "edit").
+	Type string `json:"type"`
+	Text       string `json:"text"`
+	FromStatus *string `json:"fromStatus"`
+	ToStatus   *string `json:"toStatus"`
+	// Details is a structured, language-neutral payload describing exactly what
+	// changed (block reason + blocker, due from→to, archive direction, tag and
+	// checklist diffs). It supersedes Text for new entries so the activity log
+	// survives translation and stays queryable; older rows have it null and fall
+	// back to Text. See the *Details types below for the per-action shape.
+	Details     json.RawMessage `json:"details,omitempty"`
+	Attachments []Asset         `json:"attachments"`
+	CreatedAt   string          `json:"createdAt"`
+}
+
+// Structured shapes serialized into LogItem.Details, one per action type. All
+// fields use omitempty so an absent change leaves no key.
+type blockedDetails struct {
+	Reason          string `json:"reason,omitempty"`
+	BlockedByTaskID *int64 `json:"blockedByTaskId,omitempty"`
+}
+
+type dueDateDetails struct {
+	From *string `json:"from"` // YYYY-MM-DD or null (no prior date)
+	To   *string `json:"to"`   // YYYY-MM-DD or null (date cleared)
+}
+
+type assigneeDetails struct {
+	FromUser *int64 `json:"fromUser"` // prior assignee id, or null (was unassigned)
+	ToUser   *int64 `json:"toUser"`   // new assignee id, or null (now unassigned)
+}
+
+type archiveDetails struct {
+	Archived bool `json:"archived"`
+}
+
+type titleChangeDetails struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type criterionCheckDetails struct {
+	Criterion string `json:"criterion"`
+	Done      bool   `json:"done"`
+}
+
+// tagDiff is the payload for a tags_change entry; criteriaDiff for criteria_change.
+type tagDiff struct {
+	Added   []string `json:"added,omitempty"`
+	Removed []string `json:"removed,omitempty"`
+}
+
+type criteriaDiff struct {
+	Added     []string `json:"added,omitempty"`
+	Abandoned []string `json:"abandoned,omitempty"`
+	Restored  []string `json:"restored,omitempty"`
 }
 
 // Asset is an uploaded file (image, video, document, or other). Bytes live on
@@ -227,6 +281,7 @@ CREATE TABLE IF NOT EXISTS log_items (
   text        TEXT NOT NULL DEFAULT '',
   from_status TEXT,
   to_status   TEXT,
+  details     TEXT,
   created_at  TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS assets (
@@ -286,7 +341,10 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("tasks", "blocked_by_task_id", "INTEGER"); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("tasks", "blocked_reason", "TEXT NOT NULL DEFAULT ''")
+	if err := s.addColumnIfMissing("tasks", "blocked_reason", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("log_items", "details", "TEXT")
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -347,6 +405,44 @@ func nullStr(p *string) any {
 		return nil
 	}
 	return *p
+}
+
+// marshalDetails serializes a log entry's structured details to JSON, returning
+// nil when there's nothing worth recording (so the column stays null).
+func marshalDetails(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	switch string(b) {
+	case "null", "{}":
+		return nil
+	}
+	return b
+}
+
+// nullJSON stores a details payload as a TEXT value (string), or null when empty.
+func nullJSON(b json.RawMessage) any {
+	if len(b) == 0 {
+		return nil
+	}
+	return string(b)
+}
+
+// diffStrings returns the members of a that are not in b. Both are expected to be
+// the normalized (sorted, de-duplicated) tag sets.
+func diffStrings(a, b []string) []string {
+	set := make(map[string]bool, len(b))
+	for _, x := range b {
+		set[x] = true
+	}
+	out := []string{}
+	for _, x := range a {
+		if !set[x] {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 func eqInt64Ptr(a, b *int64) bool {
@@ -845,6 +941,33 @@ func sameCriteria(a, b []Criterion) bool {
 	return true
 }
 
+// diffCriteria summarizes how a checklist changed: brand-new items (added) and
+// items toggled into/out of the abandoned state. Criteria are matched by ID;
+// text is immutable and items are never deleted, so there's no "removed". Returns
+// nil when nothing notable changed.
+func diffCriteria(prev, next []Criterion) *criteriaDiff {
+	byID := make(map[int64]Criterion, len(prev))
+	for _, c := range prev {
+		byID[c.ID] = c
+	}
+	var d criteriaDiff
+	for _, c := range next {
+		old, existed := byID[c.ID]
+		switch {
+		case !existed:
+			d.Added = append(d.Added, c.Text)
+		case c.Abandoned && !old.Abandoned:
+			d.Abandoned = append(d.Abandoned, c.Text)
+		case !c.Abandoned && old.Abandoned:
+			d.Restored = append(d.Restored, c.Text)
+		}
+	}
+	if len(d.Added) == 0 && len(d.Abandoned) == 0 && len(d.Restored) == 0 {
+		return nil
+	}
+	return &d
+}
+
 // taskExistsTx reports whether a task with the given id exists. Used to validate
 // a blocked task's reference to the task that blocks it.
 func taskExistsTx(tx *sql.Tx, id *int64) bool {
@@ -1006,33 +1129,36 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	cur.Criteria = curCriteria
 
 	nt := *cur
-	var edits []string
+	titleChanged := false
+	oldTitle := cur.Title
 	if ch.Title != nil && *ch.Title != cur.Title {
 		nt.Title = *ch.Title
-		edits = append(edits, "title")
+		titleChanged = true
 	}
+	descChanged := false
 	if ch.Description != nil && *ch.Description != cur.Description {
 		nt.Description = *ch.Description
-		edits = append(edits, "description")
+		descChanged = true
 	}
 	tagsChanged := false
+	var tagsAdded, tagsRemoved []string
 	if ch.Tags != nil {
 		newTags := normalizeTags(*ch.Tags)
 		if !sameStrings(newTags, cur.Tags) {
 			nt.Tags = newTags
 			tagsChanged = true
-			edits = append(edits, "tags")
+			tagsAdded = diffStrings(newTags, cur.Tags)
+			tagsRemoved = diffStrings(cur.Tags, newTags)
 		}
 	}
+	assigneeChanged := false
 	if ch.SetAssignee && !eqInt64Ptr(ch.AssigneeID, cur.AssigneeID) {
 		nt.AssigneeID = ch.AssigneeID
-		edits = append(edits, "assignee")
+		assigneeChanged = true
 	}
 
 	dueChanged := false
-	var oldDue, newDue string
 	if ch.SetDueDate && !eqStrPtr(ch.DueDate, cur.DueDate) {
-		oldDue, newDue = dueDisplay(cur.DueDate), dueDisplay(ch.DueDate)
 		nt.DueDate = ch.DueDate
 		dueChanged = true
 		// A move to a strictly later date is a postponement; dates are stored as
@@ -1071,7 +1197,8 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		nt.BlockedReason = ""
 	}
 
-	// Archive / unarchive — organizational state, not logged as task history.
+	// Archive / unarchive — an organizational state, but now recorded in the
+	// history (see the "archive" log entry emitted below).
 	newArchived := cur.Archived
 	if ch.SetArchived {
 		newArchived = ch.Archived
@@ -1086,6 +1213,8 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 
 	// Reconcile the checklist (if the edit carries one) before the done-gate, so
 	// the gate sees the final set the caller intends.
+	criteriaChanged := false
+	var critDiff *criteriaDiff
 	if ch.Criteria != nil {
 		reconciled, err := reconcileCriteria(tx, taskID, *ch.Criteria, now)
 		if err != nil {
@@ -1093,7 +1222,8 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		}
 		nt.Criteria = reconciled
 		if !sameCriteria(curCriteria, reconciled) {
-			edits = append(edits, "checklist")
+			criteriaChanged = true
+			critDiff = diffCriteria(curCriteria, reconciled)
 		}
 	}
 
@@ -1116,38 +1246,79 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	}
 
 	var logs []LogItem
-	addLog := func(typ, text string, from, to *string) error {
+	addLog := func(typ, text string, from, to *string, details json.RawMessage) error {
 		res, err := tx.Exec(
-			`INSERT INTO log_items (task_id, user_id, type, text, from_status, to_status, created_at)
-			 VALUES (?,?,?,?,?,?,?)`,
-			taskID, actor, typ, text, nullStr(from), nullStr(to), now)
+			`INSERT INTO log_items (task_id, user_id, type, text, from_status, to_status, details, created_at)
+			 VALUES (?,?,?,?,?,?,?,?)`,
+			taskID, actor, typ, text, nullStr(from), nullStr(to), nullJSON(details), now)
 		if err != nil {
 			return err
 		}
 		id, _ := res.LastInsertId()
 		logs = append(logs, LogItem{ID: id, TaskID: taskID, UserID: actor, Type: typ, Text: text,
-			FromStatus: from, ToStatus: to, Attachments: []Asset{}, CreatedAt: now})
+			FromStatus: from, ToStatus: to, Details: details, Attachments: []Asset{}, CreatedAt: now})
 		return nil
 	}
 
 	if statusChanged {
 		// Capture the reason on a block transition so it survives in the history
-		// (the task's blocked_reason is cleared again once it's unblocked).
+		// (the task's blocked_reason is cleared again once it's unblocked). The
+		// reason stays in Text too, for the calendar day-report and legacy rows.
 		text := ""
+		var details json.RawMessage
 		if toS == "blocked" {
 			text = nt.BlockedReason
+			details = marshalDetails(blockedDetails{Reason: nt.BlockedReason, BlockedByTaskID: nt.BlockedByTaskID})
 		}
-		if err := addLog("status_change", text, &fromS, &toS); err != nil {
+		if err := addLog("status_change", text, &fromS, &toS, details); err != nil {
 			return nil, nil, err
 		}
 	}
 	if dueChanged {
-		if err := addLog("due_date_change", fmt.Sprintf("Due date: %s → %s", oldDue, newDue), nil, nil); err != nil {
+		// Record from→to structurally; the front end formats and translates it.
+		details := marshalDetails(dueDateDetails{From: cur.DueDate, To: nt.DueDate})
+		if err := addLog("due_date_change", "", nil, nil, details); err != nil {
 			return nil, nil, err
 		}
 	}
-	if len(edits) > 0 {
-		if err := addLog("edit", "Updated "+strings.Join(edits, ", "), nil, nil); err != nil {
+	if assigneeChanged {
+		// Record who it moved from/to (ids); the front end resolves names.
+		details := marshalDetails(assigneeDetails{FromUser: cur.AssigneeID, ToUser: nt.AssigneeID})
+		if err := addLog("assignee_change", "", nil, nil, details); err != nil {
+			return nil, nil, err
+		}
+	}
+	// Archive / unarchive is now part of the task history (it used to be silent).
+	if ch.SetArchived && newArchived != cur.Archived {
+		details := marshalDetails(archiveDetails{Archived: newArchived})
+		if err := addLog("archive", "", nil, nil, details); err != nil {
+			return nil, nil, err
+		}
+	}
+	// Field edits each get their own entry (title/description/tags/checklist), so
+	// the activity feed narrates exactly what changed instead of a lumped "edit".
+	if titleChanged {
+		details := marshalDetails(titleChangeDetails{From: oldTitle, To: nt.Title})
+		if err := addLog("title_change", "", nil, nil, details); err != nil {
+			return nil, nil, err
+		}
+	}
+	if descChanged {
+		// Descriptions are long/markdown — record the action, not a diff body.
+		if err := addLog("description_change", "", nil, nil, nil); err != nil {
+			return nil, nil, err
+		}
+	}
+	if tagsChanged {
+		details := marshalDetails(tagDiff{Added: tagsAdded, Removed: tagsRemoved})
+		if err := addLog("tags_change", "", nil, nil, details); err != nil {
+			return nil, nil, err
+		}
+	}
+	if criteriaChanged {
+		// critDiff is nil for a pure reorder; the entry still records that the
+		// checklist changed, just without add/abandon/restore chips.
+		if err := addLog("criteria_change", "", nil, nil, marshalDetails(critDiff)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -1159,10 +1330,29 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 }
 
 // SetCriterion updates a single checklist item's done and/or abandoned flags
-// (whichever are non-nil) and returns the updated task. Text is immutable, so it
-// is never touched here. Returns (nil, nil) if the criterion doesn't belong to
-// the task.
-func (s *Store) SetCriterion(taskID, criterionID int64, done, abandoned *bool) (*Task, error) {
+// (whichever are non-nil) and returns the updated task plus any log entries. Text
+// is immutable, so it is never touched here. Checking/unchecking records a
+// "criterion_check" entry; abandoning/restoring records a "criteria_change" entry
+// (matching the edit-dialog vocabulary). Returns (nil, nil, nil) if the criterion
+// doesn't belong to the task.
+func (s *Store) SetCriterion(taskID, criterionID, actor int64, done, abandoned *bool) (*Task, []LogItem, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback()
+
+	var text string
+	var curDone, curAbandoned bool
+	err = tx.QueryRow("SELECT text, done, abandoned FROM task_criteria WHERE id=? AND task_id=?",
+		criterionID, taskID).Scan(&text, &curDone, &curAbandoned)
+	if err == sql.ErrNoRows {
+		return nil, nil, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
 	sets := []string{}
 	args := []any{}
 	if done != nil {
@@ -1173,28 +1363,62 @@ func (s *Store) SetCriterion(taskID, criterionID int64, done, abandoned *bool) (
 		sets = append(sets, "abandoned=?")
 		args = append(args, *abandoned)
 	}
-	if len(sets) == 0 {
-		return s.GetTask(taskID)
+	if len(sets) > 0 {
+		args = append(args, criterionID, taskID)
+		if _, err := tx.Exec(
+			"UPDATE task_criteria SET "+strings.Join(sets, ", ")+" WHERE id=? AND task_id=?", args...); err != nil {
+			return nil, nil, err
+		}
 	}
-	args = append(args, criterionID, taskID)
-	res, err := s.db.Exec("UPDATE task_criteria SET "+strings.Join(sets, ", ")+" WHERE id=? AND task_id=?", args...)
-	if err != nil {
-		return nil, err
+
+	now := nowUTC()
+	var logs []LogItem
+	addLog := func(typ string, details json.RawMessage) error {
+		res, err := tx.Exec(
+			`INSERT INTO log_items (task_id, user_id, type, text, details, created_at) VALUES (?,?,?,?,?,?)`,
+			taskID, actor, typ, "", nullJSON(details), now)
+		if err != nil {
+			return err
+		}
+		id, _ := res.LastInsertId()
+		logs = append(logs, LogItem{ID: id, TaskID: taskID, UserID: actor, Type: typ,
+			Details: details, Attachments: []Asset{}, CreatedAt: now})
+		return nil
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return nil, nil
+
+	if done != nil && *done != curDone {
+		if err := addLog("criterion_check",
+			marshalDetails(criterionCheckDetails{Criterion: text, Done: *done})); err != nil {
+			return nil, nil, err
+		}
 	}
-	return s.GetTask(taskID)
+	if abandoned != nil && *abandoned != curAbandoned {
+		var diff criteriaDiff
+		if *abandoned {
+			diff.Abandoned = []string{text}
+		} else {
+			diff.Restored = []string{text}
+		}
+		if err := addLog("criteria_change", marshalDetails(diff)); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+	t, err := s.GetTask(taskID)
+	return t, logs, err
 }
 
 // ---- Logs ----
 
-const logCols = "id, task_id, user_id, type, text, from_status, to_status, created_at"
+const logCols = "id, task_id, user_id, type, text, from_status, to_status, details, created_at"
 
 func scanLog(sc scanner) (*LogItem, error) {
 	var l LogItem
-	var from, to sql.NullString
-	if err := sc.Scan(&l.ID, &l.TaskID, &l.UserID, &l.Type, &l.Text, &from, &to, &l.CreatedAt); err != nil {
+	var from, to, details sql.NullString
+	if err := sc.Scan(&l.ID, &l.TaskID, &l.UserID, &l.Type, &l.Text, &from, &to, &details, &l.CreatedAt); err != nil {
 		return nil, err
 	}
 	if from.Valid {
@@ -1204,6 +1428,9 @@ func scanLog(sc scanner) (*LogItem, error) {
 	if to.Valid {
 		v := to.String
 		l.ToStatus = &v
+	}
+	if details.Valid && details.String != "" {
+		l.Details = json.RawMessage(details.String)
 	}
 	l.Attachments = []Asset{}
 	return &l, nil

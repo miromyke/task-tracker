@@ -92,6 +92,7 @@ msgid "abandoned"
 msgstr "abandoned"
 
 #: src/lib/constants.ts
+#: src/pages/Task.tsx
 msgid "Abandoned"
 msgstr "Abandoned"
 
@@ -135,6 +136,10 @@ msgstr "Add member"
 #: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Add task"
+
+#: src/pages/Task.tsx
+msgid "Added"
+msgstr "Added"
 
 #: src/components/DayCarousel.tsx
 msgid "added a file"
@@ -200,6 +205,10 @@ msgstr "Archive this task?"
 #: src/components/KanbanBoard.tsx
 msgid "Archived"
 msgstr "Archived"
+
+#: src/pages/Task.tsx
+msgid "archived this task"
+msgstr "archived this task"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -290,6 +299,10 @@ msgid "Change password"
 msgstr "Change password"
 
 #: src/pages/Task.tsx
+msgid "changed the assignee"
+msgstr "changed the assignee"
+
+#: src/pages/Task.tsx
 msgid "changed the due date"
 msgstr "changed the due date"
 
@@ -300,6 +313,10 @@ msgstr "changed the status"
 #: src/pages/Task.tsx
 msgid "Check off all success criteria before marking this done."
 msgstr "Check off all success criteria before marking this done."
+
+#: src/pages/Task.tsx
+msgid "checked off a criterion"
+msgstr "checked off a criterion"
 
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
@@ -611,6 +628,10 @@ msgstr "No tasks"
 msgid "No tasks in {activeLabel}."
 msgstr "No tasks in {activeLabel}."
 
+#: src/pages/Task.tsx
+msgid "none"
+msgstr "none"
+
 #: src/components/DayCarousel.tsx
 msgid "Nothing logged on this day."
 msgstr "Nothing logged on this day."
@@ -695,6 +716,14 @@ msgstr "Remove criterion"
 msgid "Remove tag"
 msgstr "Remove tag"
 
+#: src/pages/Task.tsx
+msgid "removed the assignee"
+msgstr "removed the assignee"
+
+#: src/pages/Task.tsx
+msgid "renamed this task"
+msgstr "renamed this task"
+
 #: src/components/UserManagement.tsx
 msgid "Reset"
 msgstr "Reset"
@@ -703,6 +732,10 @@ msgstr "Reset"
 #: src/pages/Task.tsx
 msgid "Restore criterion"
 msgstr "Restore criterion"
+
+#: src/pages/Task.tsx
+msgid "Restored"
+msgstr "Restored"
 
 #: src/components/UserManagement.tsx
 msgid "Save"
@@ -836,10 +869,18 @@ msgstr "Unarchive project"
 msgid "Unarchive task"
 msgstr "Unarchive task"
 
+#: src/pages/Task.tsx
+msgid "unarchived this task"
+msgstr "unarchived this task"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Unassigned"
 msgstr "Unassigned"
+
+#: src/pages/Task.tsx
+msgid "unchecked a criterion"
+msgstr "unchecked a criterion"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Up next"
@@ -852,6 +893,18 @@ msgstr "Update password"
 #: src/components/DayCarousel.tsx
 msgid "updated"
 msgstr "updated"
+
+#: src/pages/Task.tsx
+msgid "updated the checklist"
+msgstr "updated the checklist"
+
+#: src/pages/Task.tsx
+msgid "updated the description"
+msgstr "updated the description"
+
+#: src/pages/Task.tsx
+msgid "updated the tags"
+msgstr "updated the tags"
 
 #: src/pages/Task.tsx
 msgid "updated this task"

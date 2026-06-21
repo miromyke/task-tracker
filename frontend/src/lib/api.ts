@@ -89,14 +89,44 @@ export interface Asset {
   createdAt: string;
 }
 
+// LogDetails is the structured, language-neutral payload on a log entry. Each
+// action type populates only its relevant fields; older entries have no details
+// and the UI falls back to a generic narration.
+export interface LogDetails {
+  // status_change → blocked
+  reason?: string;
+  blockedByTaskId?: number;
+  // due_date_change, title_change (from/to)
+  from?: string | null;
+  to?: string | null;
+  // assignee_change
+  fromUser?: number | null;
+  toUser?: number | null;
+  // archive
+  archived?: boolean;
+  // criterion_check
+  criterion?: string;
+  done?: boolean;
+  // tags_change / criteria_change (top-level diff)
+  added?: string[];
+  removed?: string[];
+  abandoned?: string[];
+  restored?: string[];
+  // legacy "edit" entry (nested diff)
+  fields?: string[];
+  tags?: { added?: string[]; removed?: string[] };
+  criteria?: { added?: string[]; abandoned?: string[]; restored?: string[] };
+}
+
 export interface LogItem {
   id: number;
   taskId: number;
   userId: number;
-  type: string; // created | note | status_change | due_date_change | edit
+  type: string; // created|note|status_change|due_date_change|assignee_change|title_change|description_change|tags_change|criteria_change|criterion_check|archive (legacy: edit)
   text: string;
   fromStatus: string | null;
   toStatus: string | null;
+  details?: LogDetails | null;
   attachments: Asset[];
   createdAt: string;
 }
@@ -265,7 +295,7 @@ export const api = {
   updateTask: (id: number, patch: TaskUpdate) =>
     req<{ task: Task; newLogs: LogItem[] }>(`/tasks/${id}`, jsonBody("PATCH", patch)),
   setCriterion: (taskId: number, criterionId: number, patch: { done?: boolean; abandoned?: boolean }) =>
-    req<{ task: Task }>(`/tasks/${taskId}/criteria/${criterionId}`, jsonBody("PATCH", patch)),
+    req<{ task: Task; newLogs: LogItem[] }>(`/tasks/${taskId}/criteria/${criterionId}`, jsonBody("PATCH", patch)),
   addLog: (taskId: number, text: string, files: File[]) => {
     const fd = new FormData();
     fd.append("text", text);

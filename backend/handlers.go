@@ -729,7 +729,7 @@ func (s *Server) handleSetCriterion(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	t, err := s.store.SetCriterion(taskID, cid, req.Done, req.Abandoned)
+	t, logs, err := s.store.SetCriterion(taskID, cid, currentUser(r).ID, req.Done, req.Abandoned)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -738,7 +738,7 @@ func (s *Server) handleSetCriterion(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "criterion not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"task": t})
+	writeJSON(w, http.StatusOK, map[string]any{"task": t, "newLogs": logs})
 }
 
 func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {

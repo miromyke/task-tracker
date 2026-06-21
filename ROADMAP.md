@@ -3,27 +3,7 @@
 Captured 2026-06-21. These are planned, not finalized — details may change. Notes
 reference the current implementation so the work has a starting point.
 
-## 1. Split Tasks / Calendar / Files into separate pages
-
-Today these are three tabs driven by a `view` state inside `frontend/src/pages/Projects.tsx`
-(the `TabsList`). Refactor them into three real routes (e.g. `/`, `/calendar`,
-`/files`) so each is its own page.
-
-- **Navigation stays outside and is reused** — the nav (and likely the shared
-  layout shell in `AppLayout.tsx`) wraps all three; only the content area swaps.
-- Decide what's shared vs per-page for the project sidebar + tag filter
-  (currently the `aside` in Projects.tsx). See feature 2 for the Tasks-page layout.
-
-## 2. Tasks page: pulse + project filter in one container, board below
-
-On the Tasks page, group the **activity pulse** (`PulseCard`) and the **project
-filter** into a single top container, then place the **kanban board below it**
-full-width so the board gets more vertical space (it's the primary surface).
-
-- Currently the pulse is a card above the board and the project/tag filter lives
-  in the left `aside`. This consolidates the chrome into one header block.
-
-## 3. Activity log: record structured action details
+## 3. Activity log: record structured action details ✅ Done
 
 The activity log should capture the specifics of each action, not just a generic
 summary. Currently `log_items` carries `text` + `from_status`/`to_status`, and:
@@ -42,6 +22,21 @@ Record details per action type:
 Likely needs a structured `details` payload on `log_items` (e.g. a JSON column)
 rather than English text, so it survives translation and stays queryable. Keep the
 "actor: message" / no-gendered-verb rendering rule.
+
+Implemented: added a nullable JSON `details` column to `log_items` (migrated via
+`addColumnIfMissing`). The lumped `edit` entry was fully decomposed — `UpdateTask`
+now emits one dedicated, structured entry per action: `status_change` (blocked
+`{reason, blockedByTaskId}`), `due_date_change` `{from, to}`, `assignee_change`
+`{fromUser, toUser}`, `title_change` `{from, to}`, `description_change` (action
+only — descriptions are long/markdown), `tags_change` `{added, removed}`,
+`criteria_change` `{added, abandoned, restored}`, and `archive` `{archived}`. The
+inline checklist also logs now: `SetCriterion` records `criterion_check`
+`{criterion, done}` when an item is checked/unchecked, and a single-item
+`criteria_change` when abandoned/restored (matching the dialog vocabulary); both
+return `newLogs` so the feed updates live. The task activity feed renders each via
+`LogDetailView` (blocker link, due/title/assignee from→to with resolved names,
++/− tag and checklist chips, the checked criterion text); legacy `edit` rows fall
+back to their old bundled rendering. Strings extracted + translated to Ukrainian.
 
 ## 4. Files: soft delete with admin purge
 
@@ -65,17 +60,3 @@ polling or SSE (avoid heavy infra unless needed).
   renders as a link to the task page.
 - **Reference files** — link an uploaded file/asset inline (picker or token) that
   renders as a link/preview to that file.
-
-## 6. Make archiving more deliberate ✅ Done
-
-The archived state should be **more visible**, and the archive **action should be
-less easy** to trigger by accident.
-
-- More visible: today an archived item is just dimmed with a small badge — make the
-  status clearer (e.g. stronger banner/treatment on the task page and cards).
-- Less easy: today archive is a single icon-button click — guard it (confirmation
-  dialog, or move it behind an overflow menu) so it isn't a one-tap mistake.
-
-Implemented: a reusable `ConfirmDialog` now guards the archive direction on both the
-task page and the project (unarchive stays one click); the task page shows an amber
-archived banner; and archived cards get a dashed muted border + clearer badge.
