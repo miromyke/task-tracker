@@ -1,7 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { LogOut, Upload } from "lucide-react";
-import { AcornIcon } from "@phosphor-icons/react";
+import { Link, useLocation } from "react-router-dom";
+import { FolderKanban, LogOut, MessageCircle, Upload } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
 import { api } from "@/lib/api";
@@ -10,7 +9,14 @@ import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ChangePasswordDialog, ManageUsersDialog } from "@/components/UserManagement";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -124,14 +130,61 @@ function AccountDialog() {
   );
 }
 
+// NavLink is a nav link that adapts to the layout: on the desktop rail it's an
+// icon-only square with a hover tooltip; on the mobile top bar it shows the label
+// as inline text (tooltips don't work on touch) with no tooltip.
+function NavLink({
+  to,
+  label,
+  active,
+  children,
+}: {
+  to: string;
+  label: string;
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to={to}
+          aria-label={label}
+          className={cn(
+            "flex h-9 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-9 sm:justify-center sm:px-0",
+            active && "bg-muted text-foreground"
+          )}
+        >
+          {children}
+          <span className="sm:hidden">{label}</span>
+        </Link>
+      </TooltipTrigger>
+      {/* Tooltip only on the desktop rail; the mobile bar shows the label inline. */}
+      <TooltipContent side="right" className="hidden sm:block">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function AppLayout({ children }: { children: ReactNode }) {
+  const { t } = useLingui();
+  const { pathname } = useLocation();
+  const chatActive = pathname.startsWith("/chat");
   return (
     <div className="flex h-full flex-col sm:flex-row">
       {/* Mobile: top bar. Desktop (sm+): left rail. */}
       <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
-        <Link to="/" className="flex items-center font-semibold">
-          <AcornIcon weight="fill" className="h-8 w-8 text-foreground" />
-        </Link>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-1 sm:flex-col sm:gap-2">
+            <NavLink to="/" label={t`Projects`} active={!chatActive}>
+              <FolderKanban className="h-5 w-5" />
+            </NavLink>
+            <NavLink to="/chat" label={t`Chat`} active={chatActive}>
+              <MessageCircle className="h-5 w-5" />
+            </NavLink>
+          </div>
+        </TooltipProvider>
         <AccountDialog />
       </nav>
 

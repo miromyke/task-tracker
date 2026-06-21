@@ -54,10 +54,17 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/tasks/{id}/log", s.requireAuth(s.handleAddLog))
 
 	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
+	mux.HandleFunc("GET /api/assets/{id}", s.requireAuth(s.handleGetAsset))
 	mux.HandleFunc("POST /api/projects/{id}/assets", s.requireAuth(s.handleUploadAssets))
 	mux.HandleFunc("POST /api/assets/{id}/delete", s.requireAuth(s.handleRequestAssetDeletion))
 	mux.HandleFunc("POST /api/assets/{id}/restore", s.requireAdmin(s.handleRestoreAsset))
 	mux.HandleFunc("DELETE /api/assets/{id}", s.requireAdmin(s.handlePurgeAsset))
+
+	mux.HandleFunc("GET /api/channels", s.requireAuth(s.handleListChannels))
+	mux.HandleFunc("POST /api/channels", s.requireAuth(s.handleCreateChannel))
+	mux.HandleFunc("PATCH /api/channels/{id}", s.requireAuth(s.handleUpdateChannel))
+	mux.HandleFunc("GET /api/channels/{id}/messages", s.requireAuth(s.handleListMessages))
+	mux.HandleFunc("POST /api/channels/{id}/messages", s.requireAuth(s.handlePostMessage))
 
 	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
@@ -830,6 +837,26 @@ func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"assets": assets, "hasMore": hasMore})
 }
 
+// handleGetAsset returns a single asset's metadata by id, used to resolve inline
+// file references (#file<id>) in chat messages.
+func (s *Server) handleGetAsset(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	asset, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if asset == nil {
+		writeErr(w, http.StatusNotFound, "asset not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, asset)
+}
+
 // handleUploadAssets stores one or more files directly on a project (no task or
 // log), powering the "Add files" action on the Files page.
 func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
@@ -996,6 +1023,148 @@ func (s *Server) handleListTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, tags)
+}
+
+// ---- chat handlers ----
+
+// maxMessageLen caps a single chat message's text.
+const maxMessageLen = 4000
+
+func (s *Server) handleListChannels(w http.ResponseWriter, r *http.Request) {
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	channels, err := s.store.ListChannels(includeArchived)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, channels)
+}
+
+func (s *Server) handleCreateChannel(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeErr(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	c, err := s.store.CreateChannel(name, strings.TrimSpace(req.Description), currentUser(r).ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, c)
+}
+
+// handleUpdateChannel currently supports archiving/unarchiving a channel.
+func (s *Server) handleUpdateChannel(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	ch, err := s.store.GetChannel(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ch == nil {
+		writeErr(w, http.StatusNotFound, "channel not found")
+		return
+	}
+	var req struct {
+		Archived *bool `json:"archived"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if req.Archived != nil {
+		if err := s.store.SetChannelArchived(id, *req.Archived); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	updated, err := s.store.GetChannel(id)
+	if err != nil || updated == nil {
+		writeErr(w, http.StatusInternalServerError, "reload failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	ch, err := s.store.GetChannel(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ch == nil {
+		writeErr(w, http.StatusNotFound, "channel not found")
+		return
+	}
+	q := r.URL.Query()
+	after, _ := strconv.ParseInt(q.Get("after"), 10, 64)
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	msgs, err := s.store.ListMessages(id, after, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, msgs)
+}
+
+func (s *Server) handlePostMessage(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	ch, err := s.store.GetChannel(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if ch == nil {
+		writeErr(w, http.StatusNotFound, "channel not found")
+		return
+	}
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	text := strings.TrimSpace(req.Text)
+	if text == "" {
+		writeErr(w, http.StatusBadRequest, "message is required")
+		return
+	}
+	if len(text) > maxMessageLen {
+		writeErr(w, http.StatusBadRequest, "message too long")
+		return
+	}
+	m, err := s.store.CreateMessage(id, currentUser(r).ID, text)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, m)
 }
 
 // ---- uploads & static ----

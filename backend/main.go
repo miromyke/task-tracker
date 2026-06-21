@@ -34,6 +34,9 @@ func main() {
 	if err := bootstrapAdmin(store, cfg); err != nil {
 		log.Fatalf("bootstrap admin: %v", err)
 	}
+	if err := seedDefaultChannel(store, cfg); err != nil {
+		log.Fatalf("seed channel: %v", err)
+	}
 
 	srv := NewServer(cfg, store)
 	httpServer := &http.Server{
@@ -58,6 +61,24 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(ctx)
+}
+
+// seedDefaultChannel creates a "general" chat channel on first boot (when no
+// channels exist yet) so the chat view is never empty. Attributed to the admin.
+func seedDefaultChannel(store *Store, cfg *Config) error {
+	n, err := store.CountChannels()
+	if err != nil || n > 0 {
+		return err
+	}
+	admin, err := store.GetUserByUsername(cfg.AdminUser)
+	if err != nil {
+		return err
+	}
+	if admin == nil {
+		return nil // admin not set up; skip seeding
+	}
+	_, err = store.CreateChannel("general", "Team-wide chat", admin.ID)
+	return err
 }
 
 // bootstrapAdmin guarantees an admin account exists. APP_ADMIN_PASSWORD, when

@@ -313,6 +313,14 @@ msgstr "changed the due date"
 msgid "changed the status"
 msgstr "changed the status"
 
+#: src/pages/Chat.tsx
+msgid "Channels"
+msgstr "Channels"
+
+#: src/components/AppLayout.tsx
+msgid "Chat"
+msgstr "Chat"
+
 #: src/pages/Task.tsx
 msgid "Check off all success criteria before marking this done."
 msgstr "Check off all success criteria before marking this done."
@@ -379,6 +387,7 @@ msgid "Could not upload files"
 msgstr "Could not upload files"
 
 #: src/components/TaskFormDialog.tsx
+#: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "Create"
 msgstr "Create"
@@ -428,6 +437,7 @@ msgid "Deletion requested by {requesterName}"
 msgstr "Deletion requested by {requesterName}"
 
 #: src/components/TaskFormDialog.tsx
+#: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
 msgstr "Description"
@@ -472,6 +482,10 @@ msgstr "Due date pushed back"
 #: src/pages/Projects.tsx
 msgid "e.g. Kitchen Remodel"
 msgstr "e.g. Kitchen Remodel"
+
+#: src/pages/Chat.tsx
+msgid "e.g. planning"
+msgstr "e.g. planning"
 
 #: src/components/TaskFormDialog.tsx
 msgid "e.g. roof"
@@ -587,6 +601,10 @@ msgstr "Manage users"
 #~ msgid "Members"
 #~ msgstr "Members"
 
+#: src/pages/Chat.tsx
+msgid "Message… use @ to mention, # to link a task"
+msgstr "Message… use @ to mention, # to link a task"
+
 #: src/pages/Calendar.tsx
 #~ msgid "More"
 #~ msgstr "More"
@@ -603,13 +621,19 @@ msgstr "moved this back to To do"
 msgid "moved to To do"
 msgstr "moved to To do"
 
+#: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "Name"
 msgstr "Name"
 
+#: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "New"
 msgstr "New"
+
+#: src/pages/Chat.tsx
+msgid "New channel"
+msgstr "New channel"
 
 #: src/components/UserManagement.tsx
 msgid "New password"
@@ -635,9 +659,17 @@ msgstr "New temp password"
 msgid "No comments yet. Post the first update below."
 msgstr "No comments yet. Post the first update below."
 
+#: src/pages/Chat.tsx
+msgid "No files uploaded yet."
+msgstr "No files uploaded yet."
+
 #: src/components/FilesView.tsx
 msgid "No files yet."
 msgstr "No files yet."
+
+#: src/pages/Chat.tsx
+msgid "No messages yet. Say hello!"
+msgstr "No messages yet. Say hello!"
 
 #: src/components/BlockTaskDialog.tsx
 msgid "No other tasks to block on"
@@ -726,6 +758,7 @@ msgstr "Project"
 #~ msgid "Project not found."
 #~ msgstr "Project not found."
 
+#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Projects"
@@ -738,6 +771,10 @@ msgstr "Projects"
 #: src/components/TaskFormDialog.tsx
 msgid "Reason"
 msgstr "Reason"
+
+#: src/pages/Chat.tsx
+msgid "Reference a file"
+msgstr "Reference a file"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Remove criterion"
@@ -779,6 +816,10 @@ msgstr "Save"
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Save changes"
+
+#: src/pages/Chat.tsx
+msgid "Select a channel to start chatting."
+msgstr "Select a channel to start chatting."
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
@@ -940,6 +981,10 @@ msgstr "Unassigned"
 #: src/pages/Task.tsx
 msgid "unchecked a criterion"
 msgstr "unchecked a criterion"
+
+#: src/pages/Chat.tsx
+msgid "Unknown"
+msgstr "Unknown"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Up next"

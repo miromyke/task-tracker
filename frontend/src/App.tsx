@@ -6,6 +6,7 @@ import { EnvBadge } from "@/components/EnvBadge";
 import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
 import { TaskPage } from "@/pages/Task";
+import { ChatPage } from "@/pages/Chat";
 
 // Old per-project routes now map onto the overview's project filter.
 function ProjectRedirect() {
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectRedirect />} />
           <Route path="/projects/:id/board" element={<ProjectRedirect />} />
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/tasks/:id" element={<TaskPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

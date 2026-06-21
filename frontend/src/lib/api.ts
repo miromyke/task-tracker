@@ -171,6 +171,27 @@ export interface Pulse {
   days: PulseDay[];
 }
 
+export interface Channel {
+  id: number;
+  name: string;
+  description: string;
+  createdBy: number;
+  createdAt: string;
+  archived: boolean;
+  messageCount: number;
+  lastMessageAt: string | null;
+}
+
+// A chat message. `text` holds raw reference tokens (@username, #<taskId>,
+// #file<assetId>) resolved at render time by MessageText.
+export interface Message {
+  id: number;
+  channelId: number;
+  userId: number;
+  text: string;
+  createdAt: string;
+}
+
 export interface TaskUpdate {
   title?: string;
   description?: string;
@@ -323,12 +344,31 @@ export const api = {
         page: opts.page ? String(opts.page) : undefined,
       })}`
     ),
+  // Single asset by id — resolves inline #file references in chat messages.
+  getAsset: (id: number) => req<Asset>(`/assets/${id}`),
   // Soft-delete: move an asset into the admin purge queue. Returns the updated row.
   requestDeleteAsset: (id: number) => req<Asset>(`/assets/${id}/delete`, { method: "POST" }),
   // Admin: cancel a pending deletion.
   restoreAsset: (id: number) => req<Asset>(`/assets/${id}/restore`, { method: "POST" }),
   // Admin: permanently delete a queued asset (row + bytes).
   purgeAsset: (id: number) => req<void>(`/assets/${id}`, { method: "DELETE" }),
+
+  // chat
+  listChannels: (includeArchived = false) =>
+    req<Channel[]>(`/channels${qs({ archived: includeArchived ? "1" : undefined })}`),
+  createChannel: (name: string, description: string) =>
+    req<Channel>("/channels", jsonBody("POST", { name, description })),
+  setChannelArchived: (id: number, archived: boolean) =>
+    req<Channel>(`/channels/${id}`, jsonBody("PATCH", { archived })),
+  listMessages: (channelId: number, opts: { after?: number; limit?: number } = {}) =>
+    req<Message[]>(
+      `/channels/${channelId}/messages${qs({
+        after: opts.after ? String(opts.after) : undefined,
+        limit: opts.limit ? String(opts.limit) : undefined,
+      })}`
+    ),
+  postMessage: (channelId: number, text: string) =>
+    req<Message>(`/channels/${channelId}/messages`, jsonBody("POST", { text })),
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),

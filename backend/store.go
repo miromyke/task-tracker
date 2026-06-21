@@ -191,6 +191,32 @@ type Asset struct {
 	DeletionRequestedBy *int64  `json:"deletionRequestedBy"`
 }
 
+// Channel is a global chat channel. Like projects, channels are shared (everyone
+// sees every channel) and reversibly archived rather than deleted. MessageCount
+// and LastMessageAt are denormalized for the channel-list display.
+type Channel struct {
+	ID            int64   `json:"id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	CreatedBy     int64   `json:"createdBy"`
+	CreatedAt     string  `json:"createdAt"`
+	Archived      bool    `json:"archived"`
+	MessageCount  int     `json:"messageCount"`
+	LastMessageAt *string `json:"lastMessageAt"`
+}
+
+// Message is one chat message. Text stores raw reference tokens (@username,
+// #<taskID>, #file<assetID>) that the frontend resolves at render time, so the
+// stored text stays language-neutral and survives renames. Append-only: messages
+// are never edited or deleted.
+type Message struct {
+	ID        int64  `json:"id"`
+	ChannelID int64  `json:"channelId"`
+	UserID    int64  `json:"userId"`
+	Text      string `json:"text"`
+	CreatedAt string `json:"createdAt"`
+}
+
 // TaskChanges describes a partial update; only fields that are set are applied.
 type TaskChanges struct {
 	Title       *string
@@ -306,6 +332,21 @@ CREATE TABLE IF NOT EXISTS assets (
   duration    REAL,
   created_at  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS channels (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_by  INTEGER NOT NULL REFERENCES users(id),
+  created_at  TEXT NOT NULL,
+  archived_at TEXT
+);
+CREATE TABLE IF NOT EXISTS messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel_id INTEGER NOT NULL REFERENCES channels(id),
+  user_id    INTEGER NOT NULL REFERENCES users(id),
+  text       TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_logs_task ON log_items(task_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
@@ -313,6 +354,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_criteria_task ON task_criteria(task_id);
+CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id, id);
 `
 
 func (s *Store) Migrate() error {
@@ -1714,6 +1756,141 @@ func (s *Store) assetsByLogIDs(ids []int64) (map[int64][]Asset, error) {
 		}
 	}
 	return out, rows.Err()
+}
+
+// ---- Channels & messages (global chat) ----
+
+const channelCols = "id, name, description, created_by, created_at, archived_at"
+
+func scanChannel(sc scanner) (*Channel, error) {
+	var c Channel
+	var archived sql.NullString
+	if err := sc.Scan(&c.ID, &c.Name, &c.Description, &c.CreatedBy, &c.CreatedAt, &archived); err != nil {
+		return nil, err
+	}
+	c.Archived = archived.Valid
+	return &c, nil
+}
+
+// ListChannels returns channels with their message count and last-message time,
+// most-recently-active first (channels with no messages fall back to creation
+// time). Archived channels are omitted unless includeArchived is set.
+func (s *Store) ListChannels(includeArchived bool) ([]Channel, error) {
+	q := `
+		SELECT c.id, c.name, c.description, c.created_by, c.created_at, c.archived_at,
+		       (SELECT COUNT(*) FROM messages m WHERE m.channel_id = c.id) AS cnt,
+		       (SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id) AS last_at
+		FROM channels c`
+	if !includeArchived {
+		q += " WHERE c.archived_at IS NULL"
+	}
+	q += " ORDER BY COALESCE((SELECT MAX(m.created_at) FROM messages m WHERE m.channel_id = c.id), c.created_at) DESC, c.id DESC"
+	rows, err := s.db.Query(q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Channel{}
+	for rows.Next() {
+		var c Channel
+		var archived, lastAt sql.NullString
+		if err := rows.Scan(&c.ID, &c.Name, &c.Description, &c.CreatedBy, &c.CreatedAt, &archived, &c.MessageCount, &lastAt); err != nil {
+			return nil, err
+		}
+		c.Archived = archived.Valid
+		if lastAt.Valid {
+			c.LastMessageAt = &lastAt.String
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) GetChannel(id int64) (*Channel, error) {
+	c, err := scanChannel(s.db.QueryRow("SELECT "+channelCols+" FROM channels WHERE id=?", id))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return c, err
+}
+
+func (s *Store) CreateChannel(name, desc string, by int64) (*Channel, error) {
+	now := nowUTC()
+	res, err := s.db.Exec("INSERT INTO channels (name, description, created_by, created_at) VALUES (?,?,?,?)",
+		name, desc, by, now)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	return s.GetChannel(id)
+}
+
+// SetChannelArchived archives or unarchives a channel (stamping archived_at).
+func (s *Store) SetChannelArchived(id int64, archived bool) error {
+	var at any
+	if archived {
+		at = nowUTC()
+	}
+	_, err := s.db.Exec("UPDATE channels SET archived_at=? WHERE id=?", at, id)
+	return err
+}
+
+// CountChannels reports how many channels exist (used to seed a default one).
+func (s *Store) CountChannels() (int, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM channels").Scan(&n)
+	return n, err
+}
+
+func (s *Store) CreateMessage(channelID, userID int64, text string) (*Message, error) {
+	now := nowUTC()
+	res, err := s.db.Exec("INSERT INTO messages (channel_id, user_id, text, created_at) VALUES (?,?,?,?)",
+		channelID, userID, text, now)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	return &Message{ID: id, ChannelID: channelID, UserID: userID, Text: text, CreatedAt: now}, nil
+}
+
+// ListMessages returns a channel's messages oldest-first. afterID > 0 returns only
+// messages newer than that id (the polling delta); afterID == 0 returns the most
+// recent `limit` messages (initial load), still ordered oldest→newest for display.
+func (s *Store) ListMessages(channelID, afterID int64, limit int) ([]Message, error) {
+	var rows *sql.Rows
+	var err error
+	if afterID > 0 {
+		rows, err = s.db.Query(
+			"SELECT id, channel_id, user_id, text, created_at FROM messages WHERE channel_id=? AND id>? ORDER BY id ASC LIMIT ?",
+			channelID, afterID, limit)
+	} else {
+		// Take the newest `limit` rows, then flip to chronological order below.
+		rows, err = s.db.Query(
+			"SELECT id, channel_id, user_id, text, created_at FROM messages WHERE channel_id=? ORDER BY id DESC LIMIT ?",
+			channelID, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Message{}
+	for rows.Next() {
+		var m Message
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.Text, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if afterID == 0 {
+		// The initial load fetched newest-first; reverse to oldest→newest.
+		for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+			out[i], out[j] = out[j], out[i]
+		}
+	}
+	return out, nil
 }
 
 func (s *Store) ListTags() ([]string, error) {

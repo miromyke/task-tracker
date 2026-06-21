@@ -65,7 +65,7 @@ lightbox gains a trash action (confirm → submit for deletion); admins get a
 who requested it (resolved name), a Restore action, and a permanent-delete action
 (confirm, irreversible). Strings extracted + translated to Ukrainian.
 
-## 5. Global chat with channels
+## 5. Global chat with channels ✅ Done
 
 A new global chat feature — channels people can talk in. Keep it simple ("nothing
 too fancy"). New backend tables (channels, messages) + a chat UI; realtime via
@@ -76,3 +76,68 @@ polling or SSE (avoid heavy infra unless needed).
   renders as a link to the task page.
 - **Reference files** — link an uploaded file/asset inline (picker or token) that
   renders as a link/preview to that file.
+
+Implemented: two new tables — `channels` (name, description, created_by,
+`archived_at` for reversible archive, mirroring projects) and `messages`
+(channel_id, user_id, text, created_at). Messages are **append-only** (no
+edit/delete, matching the app philosophy) and store **raw reference tokens** in
+`text` — `@username`, `#<taskId>`, `#file<assetId>` — resolved at render time so
+the stored text stays language-neutral and never goes stale on rename. A default
+`general` channel is seeded on first boot (`seedDefaultChannel` in main.go). New
+endpoints (all `requireAuth`): `GET/POST /api/channels`, `PATCH /api/channels/{id}`
+(archive), `GET/POST /api/channels/{id}/messages` (the GET takes `?after=<id>` for
+the polling delta and `?limit=`), plus `GET /api/assets/{id}` to resolve referenced
+files by id. Realtime is **short polling** (3s interval + refetch on window focus),
+chosen over SSE to avoid connection/broadcast infra. Chat lives at a dedicated
+**`/chat`** route with a `MessageCircle` icon in the left rail (it's global, not
+project-scoped, so it isn't a Projects tab). Frontend: `pages/Chat.tsx` (channel
+sidebar + message pane + composer) with a lightweight `@`/`#` autocomplete popover
+(caret-token detection → user/task match → insert token; Tab/Enter accepts) and a
+paperclip file-reference picker reusing `listAssets`; `components/MessageText.tsx`
+tokenizes a message into mention chips, task links (`/tasks/:id`), and file
+links/thumbnails, falling back to plain text for unresolved refs. Strings extracted
++ translated to Ukrainian. Out of scope for v1 (deferred): edit/delete messages,
+threads/reactions, unread badges, typing indicators, in-chat file uploads, per-channel
+membership.
+
+## 6. Chat: show referenced task/file names, not ids
+
+When a message references a task or file, render the **name/title only** — not the
+numeric id. Today `components/MessageText.tsx` renders a task ref as `#<id> <title>`
+(`TaskRef`) and the inserted token in the composer shows the raw `#<id>` / `#file<id>`
+text. Drop the `#id` prefix from the rendered chip (link still goes to `/tasks/:id`),
+and consider showing a friendly label in the composer too (e.g. a chip that displays
+the title while the underlying stored token stays `#<id>`). Files already render by
+filename; keep that. Falls back to the raw token only when the ref can't be resolved.
+
+## 7. Chat: upload a file directly
+
+Let users attach a brand-new file in the chat composer (not just reference an existing
+upload). Today the composer only inserts a `#file<id>` token via the picker over
+`listAssets`. Add an upload path (reuse `saveUpload` + the `assets` table, like the
+task-note composer in `handleAddLog`). Since chat isn't project-scoped, this needs
+asset `project_id` to be optional — **see item 9** (shared prerequisite). On upload,
+record the asset and insert its `#file<id>` token (or attach it to the message
+directly). Respect the same inline-render/`nosniff` safety rules as other uploads.
+
+## 8. Files: drop the "approval" framing from deletion
+
+The soft-delete UI currently surfaces the admin-purge workflow to everyone —
+"Submitted for deletion", "submit for deletion", language about an admin approving
+the purge. Simplify the member-facing copy so deleting a file reads like a normal
+delete (e.g. "Delete" / "Deleted"), without exposing the approval/queue mechanics.
+The two-stage soft-delete + admin purge can stay under the hood (`assets`
+`deletion_requested_at`, the admin-only pending tab in `FilesView.tsx`); this is a
+copy/UX change, not a model change. Decide what, if anything, a member sees after they
+delete (likely: the file just disappears from their grid).
+
+## 9. Files: make the project optional on upload
+
+Allow uploading a file **without** attaching it to a project — make the project
+reference optional in the Files view. Today `assets.project_id` is `NOT NULL` and
+`AddProjectAssets` / `POST /api/projects/{id}/assets` require a project; the Files grid
+filters by the selected project. Make `project_id` nullable (migration via
+`addColumnIfMissing` is additive, but dropping NOT NULL needs care on SQLite — likely a
+new nullable column path or table rebuild), add an upload endpoint that doesn't require
+a project, and show project-less files under an "All files" / "No project" bucket. This
+is the shared prerequisite for **item 7** (chat uploads have no project).
