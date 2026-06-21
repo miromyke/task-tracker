@@ -71,8 +71,8 @@ INSERT INTO assets (project_id, uploaded_by, kind, mime, filename, path, created
 		t.Fatalf("existing asset project_id = %v, want 1", a.ProjectID)
 	}
 
-	// A project-less insert now works and reads back as null.
-	out, err := s.AddAssets(nil, 1, []SavedFile{{Path: "/api/uploads/y", Filename: "b.png", Mime: "image/png", Kind: "image"}})
+	// A project-less insert now works and reads back as null, carrying its source.
+	out, err := s.AddAssets(nil, 1, "chat", []SavedFile{{Path: "/api/uploads/y", Filename: "b.png", Mime: "image/png", Kind: "image"}})
 	if err != nil {
 		t.Fatalf("orphan insert: %v", err)
 	}
@@ -82,6 +82,9 @@ INSERT INTO assets (project_id, uploaded_by, kind, mime, filename, path, created
 	}
 	if got.ProjectID != nil {
 		t.Fatalf("orphan project_id = %v, want nil", *got.ProjectID)
+	}
+	if got.Source != "chat" {
+		t.Fatalf("orphan source = %q, want \"chat\"", got.Source)
 	}
 
 	// Running migrate again is a no-op (idempotent).

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
@@ -87,6 +88,33 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
   );
 }
 
+// UploadContext renders where a file came from — a link to its task or the chat,
+// the project name, or a plain "Files" for a direct upload. Context is inferred
+// from the asset's ids (task/project) and its source marker ("chat").
+function UploadContext({ asset, projectName }: { asset: Asset; projectName?: string }) {
+  const linkCls = "underline decoration-white/30 underline-offset-2 hover:text-white";
+  if (asset.taskId) {
+    return (
+      <Link to={`/tasks/${asset.taskId}`} className={linkCls}>
+        <Trans>Task</Trans>
+      </Link>
+    );
+  }
+  if (asset.projectId) {
+    return projectName ? (
+      <span>
+        <Trans>Project: {projectName}</Trans>
+      </span>
+    ) : (
+      <Trans>Project</Trans>
+    );
+  }
+  if (asset.source === "chat") {
+    return <Trans>Chat</Trans>;
+  }
+  return <Trans>Files</Trans>;
+}
+
 // Fullscreen viewer for a single asset, with prev/next across the loaded list.
 // In the live grid it offers a plain "Delete" action (a soft-delete under the
 // hood); in the admin pending queue it offers restore and permanent delete.
@@ -96,6 +124,8 @@ function Lightbox({
   pending,
   isAdmin,
   requesterName,
+  uploaderName,
+  projectName,
   onClose,
   onMove,
   onRequestDelete,
@@ -107,6 +137,8 @@ function Lightbox({
   pending: boolean;
   isAdmin: boolean;
   requesterName?: string;
+  uploaderName?: string;
+  projectName?: string;
   onClose: () => void;
   onMove: (dir: 1 | -1) => void;
   onRequestDelete: (a: Asset) => void;
@@ -139,6 +171,14 @@ function Lightbox({
             <DialogTitle className="truncate text-sm font-semibold">{asset.filename}</DialogTitle>
             <div className="text-xs text-white/60">
               {formatBytes(asset.size)} · {formatDateTime(asset.createdAt)}
+              {uploaderName && (
+                <>
+                  {" · "}
+                  <Trans>Uploaded by {uploaderName}</Trans>
+                </>
+              )}
+              {" · "}
+              <UploadContext asset={asset} projectName={projectName} />
               {pending && asset.deletionRequestedAt && (
                 <>
                   {" · "}
@@ -539,6 +579,12 @@ export function FilesView({
           requesterName={
             assets[lightbox].deletionRequestedBy
               ? usersById?.get(assets[lightbox].deletionRequestedBy!)?.name
+              : undefined
+          }
+          uploaderName={usersById?.get(assets[lightbox].uploadedBy)?.name}
+          projectName={
+            assets[lightbox].projectId
+              ? projects.find((p) => p.id === assets[lightbox].projectId)?.name
               : undefined
           }
           onClose={() => setLightbox(null)}

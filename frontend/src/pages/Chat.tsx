@@ -263,7 +263,7 @@ function Composer({
     if (files.length === 0) return;
     setUploading(true);
     try {
-      const assets = await api.uploadOrphanAssets(files);
+      const assets = await api.uploadOrphanAssets(files, "chat");
       insertFiles(assets);
     } finally {
       setUploading(false);

@@ -314,6 +314,7 @@ msgid "Channels"
 msgstr "Канали"
 
 #: src/components/AppLayout.tsx
+#: src/components/FilesView.tsx
 msgid "Chat"
 msgstr "Чат"
 
@@ -770,6 +771,10 @@ msgstr "Проєкт"
 #~ msgid "Project not found."
 #~ msgstr "Проєкт не знайдено."
 
+#: src/components/FilesView.tsx
+msgid "Project: {projectName}"
+msgstr "Проєкт: {projectName}"
+
 #: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Projects"
@@ -905,6 +910,7 @@ msgid "Tags"
 msgstr "Теги"
 
 #: src/components/DayCarousel.tsx
+#: src/components/FilesView.tsx
 msgid "Task"
 msgstr "Задача"
 
@@ -1041,6 +1047,10 @@ msgstr "Завантажити"
 #: src/pages/Chat.tsx
 msgid "Upload a file"
 msgstr "Завантажити файл"
+
+#: src/components/FilesView.tsx
+msgid "Uploaded by {uploaderName}"
+msgstr "Завантажено: {uploaderName}"
 
 #: src/components/AppLayout.tsx
 msgid "Uploading…"

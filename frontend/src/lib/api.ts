@@ -76,6 +76,9 @@ export interface Asset {
   projectId: number | null;
   taskId: number | null;
   logId: number | null;
+  // Where a project-less upload came from when it isn't derivable from the ids:
+  // "chat" for a chat-composer upload, "" for a direct Files-page upload.
+  source: string;
   uploadedBy: number;
   kind: AssetKind;
   mime: string;
@@ -335,9 +338,11 @@ export const api = {
     return req<Asset[]>(`/projects/${projectId}/assets`, { method: "POST", body: fd });
   },
   // Upload files with no project attached (the "No project" bucket / chat uploads).
-  uploadOrphanAssets: (files: File[]) => {
+  // source ("chat") records provenance for the Files page; omit for a plain upload.
+  uploadOrphanAssets: (files: File[], source?: "chat") => {
     const fd = new FormData();
     for (const f of files) fd.append("files", f);
+    if (source) fd.append("source", source);
     return req<Asset[]>(`/assets`, { method: "POST", body: fd });
   },
   // projectId: a number scopes to that project; "none" returns only project-less

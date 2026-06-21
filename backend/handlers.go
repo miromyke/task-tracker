@@ -887,7 +887,7 @@ func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pid := projectID
-	assets, err := s.store.AddAssets(&pid, currentUser(r).ID, saved)
+	assets, err := s.store.AddAssets(&pid, currentUser(r).ID, "", saved)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -903,7 +903,14 @@ func (s *Server) handleUploadOrphanAssets(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	assets, err := s.store.AddAssets(nil, currentUser(r).ID, saved)
+	// "chat" when uploaded from the chat composer, "" for a direct Files-page
+	// upload — recorded so the Files page can show provenance. Only "chat" is
+	// honored; anything else is treated as a plain upload.
+	source := ""
+	if r.FormValue("source") == "chat" {
+		source = "chat"
+	}
+	assets, err := s.store.AddAssets(nil, currentUser(r).ID, source, saved)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

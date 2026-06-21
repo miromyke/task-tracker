@@ -174,7 +174,25 @@ new nullable column path or table rebuild), add an upload endpoint that doesn't 
 a project, and show project-less files under an "All files" / "No project" bucket. This
 is the shared prerequisite for **item 7** (chat uploads have no project).
 
-## 10. Files: collect & show upload metadata (who / when / context)
+Implemented: `assets.project_id` is now nullable. Fresh DBs get it from the updated
+canonical schema; existing DBs are migrated by `migrateAssetsProjectNullable` — SQLite
+can't drop a NOT NULL in place, so it rebuilds the table (no other table references
+`assets`, so the drop/rename is FK-safe) once, idempotently, after the `deletion_*`
+columns are added. The Go `Asset.ProjectID` became `*int64` (scanned via
+`sql.NullInt64`); `AddProjectAssets` is now `AddAssets(projectID *int64, …)` and inserts
+`NULL` when nil. New endpoint `POST /api/assets` (`handleUploadOrphanAssets`, any signed-in
+user) uploads project-less files; the shared multipart parsing was extracted into
+`readMultipartUploads`. `ListAssets` gained a project-less bucket: a negative `projectID`
+→ `project_id IS NULL`, surfaced over the API as `?project=none`. Project-less files also
+appear in the existing "All files" view (projectID 0 returns NULL rows too). Frontend:
+`Asset.projectId` is `number | null`; `api.uploadOrphanAssets` + a `"No project"` option
+in the Files upload picker (`AddFilesDialog`) let you upload without a project. A focused
+migration regression test (`migrate_assets_test.go`) covers the NOT NULL→nullable rebuild,
+row survival, orphan insert, and idempotency. Strings extracted + translated to Ukrainian.
+
+This **unblocks item 7** (chat file uploads).
+
+## 10. Files: collect & show upload metadata (who / when / context) ✅ Done
 
 Surface the provenance of each uploaded file: **who** uploaded it, **when**, and **in
 what context** — chat, a task (`#<id>`), or a direct Files-page upload. Some of this is
@@ -197,20 +215,16 @@ maybe a context chip on the grid), with the context resolving to a link where it
 sense (task page, channel). Decide whether to add an explicit context column vs. infer
 it from the existing `task_id`/`project_id` + a new chat link.
 
-Implemented: `assets.project_id` is now nullable. Fresh DBs get it from the updated
-canonical schema; existing DBs are migrated by `migrateAssetsProjectNullable` — SQLite
-can't drop a NOT NULL in place, so it rebuilds the table (no other table references
-`assets`, so the drop/rename is FK-safe) once, idempotently, after the `deletion_*`
-columns are added. The Go `Asset.ProjectID` became `*int64` (scanned via
-`sql.NullInt64`); `AddProjectAssets` is now `AddAssets(projectID *int64, …)` and inserts
-`NULL` when nil. New endpoint `POST /api/assets` (`handleUploadOrphanAssets`, any signed-in
-user) uploads project-less files; the shared multipart parsing was extracted into
-`readMultipartUploads`. `ListAssets` gained a project-less bucket: a negative `projectID`
-→ `project_id IS NULL`, surfaced over the API as `?project=none`. Project-less files also
-appear in the existing "All files" view (projectID 0 returns NULL rows too). Frontend:
-`Asset.projectId` is `number | null`; `api.uploadOrphanAssets` + a `"No project"` option
-in the Files upload picker (`AddFilesDialog`) let you upload without a project. A focused
-migration regression test (`migrate_assets_test.go`) covers the NOT NULL→nullable rebuild,
-row survival, orphan insert, and idempotency. Strings extracted + translated to Ukrainian.
-
-This **unblocks item 7** (chat file uploads).
+Implemented: kept it simple — **"chat" as a generic source**, not a per-channel/message
+link. Added a nullable `source` column to `assets` (`addColumnIfMissing`, run *after* the
+project-nullable rebuild so the fixed-column rebuild can't drop it). The chat composer's
+upload now posts `source=chat` to `POST /api/assets`; `handleUploadOrphanAssets` reads it
+(only `"chat"` is honored) and `AddAssets(projectID, userID, source, files)` persists it.
+Direct Files-page uploads pass `""`. Context is otherwise **inferred** from existing ids —
+no message/channel backfill — so `task_id` ⇒ Task, `project_id` ⇒ Project, `source=="chat"`
+⇒ Chat, else ⇒ Files. Frontend: `Asset.source` added; the Files lightbox metadata line now
+reads "<size> · <date> · Uploaded by <name> · <context>" — uploader resolved via
+`usersById`, context rendered by a new `UploadContext` component (Task → `/tasks/:id`
+link; Project shows the project name; Chat and Files are plain text — no reason to link
+them). The migration test asserts the orphan insert round-trips its `source`. Strings extracted + translated to
+Ukrainian (genderless "Завантажено: <name>" per the log-display rule).

@@ -174,6 +174,10 @@ type Asset struct {
 	ProjectID  *int64   `json:"projectId"`
 	TaskID     *int64   `json:"taskId"`
 	LogID      *int64   `json:"logId"`
+	// Source records where a project-less upload originated when it isn't otherwise
+	// derivable — currently "chat" for files uploaded from the chat composer, ""
+	// for a direct Files-page upload. Task/project context is read from the ids above.
+	Source     string   `json:"source"`
 	UploadedBy int64    `json:"uploadedBy"`
 	Kind       string   `json:"kind"` // image | video | document | other
 	Mime       string   `json:"mime"`
@@ -401,7 +405,13 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("assets", "deletion_requested_by", "INTEGER"); err != nil {
 		return err
 	}
-	return s.migrateAssetsProjectNullable()
+	if err := s.migrateAssetsProjectNullable(); err != nil {
+		return err
+	}
+	// source is added after the project-nullable rebuild (which copies a fixed
+	// column set) so the rebuild can't drop it. Marks where an upload came from
+	// (e.g. "chat") when it isn't derivable from the task/project ids.
+	return s.addColumnIfMissing("assets", "source", "TEXT NOT NULL DEFAULT ''")
 }
 
 // migrateAssetsProjectNullable drops the NOT NULL constraint on assets.project_id
@@ -1603,8 +1613,9 @@ func (s *Store) AddNote(taskID, userID, projectID int64, text string, files []Sa
 
 // AddAssets records files uploaded straight to the Files page (not tied to a task
 // or log entry). projectID may be nil for a project-less upload (e.g. from chat).
-// Returns the created rows.
-func (s *Store) AddAssets(projectID *int64, userID int64, files []SavedFile) ([]Asset, error) {
+// source marks where a project-less upload came from ("chat", or "" for a direct
+// Files-page upload) for provenance display. Returns the created rows.
+func (s *Store) AddAssets(projectID *int64, userID int64, source string, files []SavedFile) ([]Asset, error) {
 	now := nowUTC()
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -1615,15 +1626,15 @@ func (s *Store) AddAssets(projectID *int64, userID int64, files []SavedFile) ([]
 	out := []Asset{}
 	for _, f := range files {
 		res, err := tx.Exec(
-			`INSERT INTO assets (project_id, uploaded_by, kind, mime, filename, path, size, created_at)
-			 VALUES (?,?,?,?,?,?,?,?)`,
-			nullInt(projectID), userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
+			`INSERT INTO assets (project_id, source, uploaded_by, kind, mime, filename, path, size, created_at)
+			 VALUES (?,?,?,?,?,?,?,?,?)`,
+			nullInt(projectID), source, userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
 		if err != nil {
 			return nil, err
 		}
 		id, _ := res.LastInsertId()
 		out = append(out, Asset{
-			ID: id, ProjectID: projectID, UploadedBy: userID, Kind: f.Kind, Mime: f.Mime,
+			ID: id, ProjectID: projectID, Source: source, UploadedBy: userID, Kind: f.Kind, Mime: f.Mime,
 			Filename: f.Filename, Path: f.Path, Size: f.Size, CreatedAt: now,
 		})
 	}
@@ -1666,7 +1677,7 @@ func (s *Store) ListLogs(taskID int64) ([]LogItem, error) {
 
 // ---- Assets ----
 
-const assetCols = "id, project_id, task_id, log_id, uploaded_by, kind, mime, filename, path, thumb_path, size, width, height, duration, created_at, deletion_requested_at, deletion_requested_by"
+const assetCols = "id, project_id, task_id, log_id, source, uploaded_by, kind, mime, filename, path, thumb_path, size, width, height, duration, created_at, deletion_requested_at, deletion_requested_by"
 
 func scanAsset(sc scanner) (*Asset, error) {
 	var a Asset
@@ -1674,7 +1685,7 @@ func scanAsset(sc scanner) (*Asset, error) {
 	var thumb, delAt sql.NullString
 	var width, height sql.NullInt64
 	var duration sql.NullFloat64
-	if err := sc.Scan(&a.ID, &projectID, &taskID, &logID, &a.UploadedBy, &a.Kind, &a.Mime,
+	if err := sc.Scan(&a.ID, &projectID, &taskID, &logID, &a.Source, &a.UploadedBy, &a.Kind, &a.Mime,
 		&a.Filename, &a.Path, &thumb, &a.Size, &width, &height, &duration, &a.CreatedAt,
 		&delAt, &delBy); err != nil {
 		return nil, err
@@ -1713,7 +1724,7 @@ func scanAsset(sc scanner) (*Asset, error) {
 
 // assetColsQ is assetCols with the assets table aliased as `a`, for queries that
 // join other tables (column names like id/project_id would otherwise be ambiguous).
-const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at, a.deletion_requested_at, a.deletion_requested_by"
+const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.source, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at, a.deletion_requested_at, a.deletion_requested_by"
 
 // ListAssets returns uploaded files newest-first, optionally scoped by project,
 // kind, and task tag. projectID == 0 means all projects; a negative projectID
