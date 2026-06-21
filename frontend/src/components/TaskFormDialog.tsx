@@ -3,6 +3,7 @@ import { Ban, Loader2, Plus, RotateCcw, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type CriterionInput, type Project, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
+import { BlockedBySelect, useBlockCandidates } from "@/components/BlockTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,11 +45,18 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
   const [dueDate, setDueDate] = useState("");
   const [status, setStatus] = useState<Status>("todo");
   const [project, setProject] = useState<string>("");
+  const [blockedBy, setBlockedBy] = useState("");
+  const [blockedReason, setBlockedReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Only offer the picker when creating without a fixed project.
   const showProjectPicker = !editing && !projectId && !!projects?.length;
+
+  // Candidate "blocked by" tasks come from the form's target project; loaded only
+  // while the status is "blocked".
+  const formProjectId = projectId || Number(project) || undefined;
+  const blockCandidates = useBlockCandidates(formProjectId, task?.id, open && status === "blocked");
 
   useEffect(() => {
     if (!open) return;
@@ -61,6 +69,8 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     setDueDate(task?.dueDate ?? "");
     setStatus(task?.status ?? "todo");
     setProject(projectId ? String(projectId) : "");
+    setBlockedBy(task?.blockedByTaskId ? String(task.blockedByTaskId) : "");
+    setBlockedReason(task?.blockedReason ?? "");
     setError(null);
   }, [open, task, projectId]);
 
@@ -134,6 +144,8 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
       .filter((c) => c.id != null || c.text);
     // A task needs at least one live (non-abandoned) success criterion.
     if (finalCriteria.every((c) => c.abandoned)) return setError(t`Add at least one success criterion`);
+    // A blocked task must reference the task that blocks it.
+    if (status === "blocked" && !blockedBy) return setError(t`Select the task that blocks this one`);
     setBusy(true);
     setError(null);
     const base = {
@@ -143,6 +155,8 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
       assigneeId: assignee === NONE ? null : Number(assignee),
       dueDate: dueDate || null,
       status,
+      blockedByTaskId: status === "blocked" ? Number(blockedBy) : null,
+      blockedReason: status === "blocked" ? blockedReason.trim() : "",
     };
     try {
       let saved: Task;
@@ -401,6 +415,30 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
               </Select>
             </div>
           </div>
+
+          {status === "blocked" && (
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/40">
+              <div className="space-y-2">
+                <Label>
+                  <Trans>Blocked by</Trans>
+                </Label>
+                <BlockedBySelect candidates={blockCandidates} value={blockedBy} onChange={setBlockedBy} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="blocked-reason">
+                  <Trans>Reason</Trans>{" "}
+                  <span className="font-normal text-muted-foreground">
+                    <Trans>(optional)</Trans>
+                  </span>
+                </Label>
+                <Textarea
+                  id="blocked-reason"
+                  value={blockedReason}
+                  onChange={(e) => setBlockedReason(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

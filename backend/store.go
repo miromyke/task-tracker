@@ -15,6 +15,10 @@ import (
 // success criteria are still unchecked. Handlers map this to a 400.
 var errCriteriaUnmet = errors.New("all success criteria must be checked before marking as done")
 
+// errBlockedRef is returned when a task is moved to "blocked" without a valid
+// reference to the (other, existing) task that blocks it. Handlers map this to a 400.
+var errBlockedRef = errors.New("a blocked task must reference another existing task that blocks it")
+
 // ---- Models ----
 
 type User struct {
@@ -43,6 +47,7 @@ type Project struct {
 	CreatedBy   int64  `json:"createdBy"`
 	CreatedAt   string `json:"createdAt"`
 	TaskCount   int    `json:"taskCount"`
+	Archived    bool   `json:"archived"`
 }
 
 type Task struct {
@@ -60,6 +65,14 @@ type Task struct {
 	CreatedBy     int64  `json:"createdBy"`
 	CreatedAt     string `json:"createdAt"`
 	UpdatedAt     string `json:"updatedAt"`
+	// Archived hides a task from the default board/list without abandoning it.
+	// Reversible; archived tasks keep their status and full history.
+	Archived bool `json:"archived"`
+	// Blocked-task fields are populated only while Status == "blocked".
+	// BlockedByTaskID references the task that blocks this one (required when
+	// blocked); BlockedReason is an optional free-text explanation.
+	BlockedByTaskID *int64 `json:"blockedByTaskId"`
+	BlockedReason   string `json:"blockedReason"`
 }
 
 // Criterion is one item on a task's success-criteria checklist (its definition
@@ -130,6 +143,14 @@ type TaskChanges struct {
 	SetDueDate  bool
 	DueDate     *string // nil/empty with SetDueDate=true clears the due date
 	Status      *string
+	SetArchived bool
+	Archived    bool
+	// SetBlockedBy reports whether the request carried a blockedByTaskId; the value
+	// (nil clears it). BlockedReason is non-nil when the request set a reason. These
+	// only take effect when the resulting status is "blocked".
+	SetBlockedBy    bool
+	BlockedByTaskID *int64
+	BlockedReason   *string
 }
 
 // ---- Store ----
@@ -165,7 +186,8 @@ CREATE TABLE IF NOT EXISTS projects (
   name        TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   created_by  INTEGER NOT NULL REFERENCES users(id),
-  created_at  TEXT NOT NULL
+  created_at  TEXT NOT NULL,
+  archived_at TEXT
 );
 CREATE TABLE IF NOT EXISTS tasks (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -178,7 +200,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   postpone_count INTEGER NOT NULL DEFAULT 0,
   created_by  INTEGER NOT NULL REFERENCES users(id),
   created_at  TEXT NOT NULL,
-  updated_at  TEXT NOT NULL
+  updated_at  TEXT NOT NULL,
+  archived_at TEXT,
+  blocked_by_task_id INTEGER REFERENCES tasks(id),
+  blocked_reason     TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS task_tags (
   task_id INTEGER NOT NULL REFERENCES tasks(id),
@@ -249,7 +274,19 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("users", "disabled", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("users", "password_hash", "TEXT")
+	if err := s.addColumnIfMissing("users", "password_hash", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("projects", "archived_at", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("tasks", "archived_at", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("tasks", "blocked_by_task_id", "INTEGER"); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("tasks", "blocked_reason", "TEXT NOT NULL DEFAULT ''")
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -449,11 +486,18 @@ func (s *Store) SetAvatar(id int64, path string) error {
 
 // ---- Projects ----
 
-func (s *Store) ListProjects() ([]Project, error) {
-	rows, err := s.db.Query(`
-		SELECT p.id, p.name, p.description, p.created_by, p.created_at,
-		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) AS cnt
-		FROM projects p ORDER BY p.created_at DESC`)
+// ListProjects returns projects newest-first. The task count excludes archived
+// tasks. When includeArchived is false, archived projects are omitted entirely.
+func (s *Store) ListProjects(includeArchived bool) ([]Project, error) {
+	q := `
+		SELECT p.id, p.name, p.description, p.created_by, p.created_at, p.archived_at,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.archived_at IS NULL) AS cnt
+		FROM projects p`
+	if !includeArchived {
+		q += " WHERE p.archived_at IS NULL"
+	}
+	q += " ORDER BY p.created_at DESC"
+	rows, err := s.db.Query(q)
 	if err != nil {
 		return nil, err
 	}
@@ -461,22 +505,36 @@ func (s *Store) ListProjects() ([]Project, error) {
 	out := []Project{}
 	for rows.Next() {
 		var p Project
-		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedAt, &p.TaskCount); err != nil {
+		var archived sql.NullString
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedAt, &archived, &p.TaskCount); err != nil {
 			return nil, err
 		}
+		p.Archived = archived.Valid
 		out = append(out, p)
 	}
 	return out, rows.Err()
 }
 
 func (s *Store) GetProject(id int64) (*Project, error) {
-	row := s.db.QueryRow("SELECT id, name, description, created_by, created_at FROM projects WHERE id=?", id)
+	row := s.db.QueryRow("SELECT id, name, description, created_by, created_at, archived_at FROM projects WHERE id=?", id)
 	var p Project
-	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedAt)
+	var archived sql.NullString
+	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.CreatedBy, &p.CreatedAt, &archived)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
+	p.Archived = archived.Valid
 	return &p, err
+}
+
+// SetProjectArchived archives or unarchives a project (stamping archived_at).
+func (s *Store) SetProjectArchived(id int64, archived bool) error {
+	var at any
+	if archived {
+		at = nowUTC()
+	}
+	_, err := s.db.Exec("UPDATE projects SET archived_at=? WHERE id=?", at, id)
+	return err
 }
 
 func (s *Store) CreateProject(name, desc string, by int64) (*Project, error) {
@@ -492,14 +550,18 @@ func (s *Store) CreateProject(name, desc string, by int64) (*Project, error) {
 
 // ---- Tasks ----
 
-const taskCols = "id, project_id, title, description, assignee_id, due_date, status, postpone_count, created_by, created_at, updated_at"
+const taskCols = `id, project_id, title, description, assignee_id, due_date, status,
+	postpone_count, created_by, created_at, updated_at, archived_at,
+	blocked_by_task_id, blocked_reason`
 
 func scanTask(sc scanner) (*Task, error) {
 	var t Task
 	var assignee sql.NullInt64
-	var due sql.NullString
+	var due, archived sql.NullString
+	var blockedBy sql.NullInt64
 	if err := sc.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Description,
-		&assignee, &due, &t.Status, &t.PostponeCount, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		&assignee, &due, &t.Status, &t.PostponeCount, &t.CreatedBy, &t.CreatedAt, &t.UpdatedAt,
+		&archived, &blockedBy, &t.BlockedReason); err != nil {
 		return nil, err
 	}
 	t.Tags = []string{}
@@ -512,13 +574,22 @@ func scanTask(sc scanner) (*Task, error) {
 		v := due.String
 		t.DueDate = &v
 	}
+	t.Archived = archived.Valid
+	if blockedBy.Valid {
+		v := blockedBy.Int64
+		t.BlockedByTaskID = &v
+	}
 	return &t, nil
 }
 
-func (s *Store) ListTasks(projectID int64, status, tag string) ([]Task, error) {
+func (s *Store) ListTasks(projectID int64, status, tag string, includeArchived bool) ([]Task, error) {
 	// projectID == 0 means "all projects".
 	q := "SELECT " + taskCols + " FROM tasks WHERE 1=1"
 	args := []any{}
+	if !includeArchived {
+		// Hide archived tasks and any task belonging to an archived project.
+		q += " AND tasks.archived_at IS NULL AND project_id IN (SELECT id FROM projects WHERE archived_at IS NULL)"
+	}
 	if projectID != 0 {
 		q += " AND project_id=?"
 		args = append(args, projectID)
@@ -774,6 +845,19 @@ func sameCriteria(a, b []Criterion) bool {
 	return true
 }
 
+// taskExistsTx reports whether a task with the given id exists. Used to validate
+// a blocked task's reference to the task that blocks it.
+func taskExistsTx(tx *sql.Tx, id *int64) bool {
+	if id == nil {
+		return false
+	}
+	var n int
+	if err := tx.QueryRow("SELECT COUNT(*) FROM tasks WHERE id=?", *id).Scan(&n); err != nil {
+		return false
+	}
+	return n > 0
+}
+
 // txTaskTags returns a task's tags (alphabetical) within a transaction.
 func txTaskTags(tx *sql.Tx, taskID int64) ([]string, error) {
 	rows, err := tx.Query("SELECT tag FROM task_tags WHERE task_id=? ORDER BY tag", taskID)
@@ -839,7 +923,7 @@ func setTaskTags(tx *sql.Tx, taskID int64, tags []string) error {
 	return nil
 }
 
-func (s *Store) CreateTask(projectID int64, title, desc string, tags, criteria []string, assignee *int64, due *string, status string, by int64) (*Task, error) {
+func (s *Store) CreateTask(projectID int64, title, desc string, tags, criteria []string, assignee *int64, due *string, status string, blockedBy *int64, blockedReason string, by int64) (*Task, error) {
 	now := nowUTC()
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -847,10 +931,19 @@ func (s *Store) CreateTask(projectID int64, title, desc string, tags, criteria [
 	}
 	defer tx.Rollback()
 
+	if status == "blocked" {
+		if !taskExistsTx(tx, blockedBy) {
+			return nil, errBlockedRef
+		}
+	} else {
+		// Block fields only persist while blocked.
+		blockedBy, blockedReason = nil, ""
+	}
+
 	res, err := tx.Exec(`INSERT INTO tasks
-		(project_id, title, description, assignee_id, due_date, status, created_by, created_at, updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?)`,
-		projectID, title, desc, nullInt(assignee), nullStr(due), status, by, now, now)
+		(project_id, title, description, assignee_id, due_date, status, blocked_by_task_id, blocked_reason, created_by, created_at, updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		projectID, title, desc, nullInt(assignee), nullStr(due), status, nullInt(blockedBy), blockedReason, by, now, now)
 	if err != nil {
 		return nil, err
 	}
@@ -958,7 +1051,38 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 		statusChanged = true
 	}
 
+	// Resolve blocked-task fields. They persist only while the resulting status is
+	// "blocked"; any other status clears them. A blocked task must reference a
+	// different, existing task.
+	if nt.Status == "blocked" {
+		blockedBy := cur.BlockedByTaskID
+		if ch.SetBlockedBy {
+			blockedBy = ch.BlockedByTaskID
+		}
+		if blockedBy == nil || *blockedBy == taskID || !taskExistsTx(tx, blockedBy) {
+			return nil, nil, errBlockedRef
+		}
+		nt.BlockedByTaskID = blockedBy
+		if ch.BlockedReason != nil {
+			nt.BlockedReason = strings.TrimSpace(*ch.BlockedReason)
+		}
+	} else {
+		nt.BlockedByTaskID = nil
+		nt.BlockedReason = ""
+	}
+
+	// Archive / unarchive — organizational state, not logged as task history.
+	newArchived := cur.Archived
+	if ch.SetArchived {
+		newArchived = ch.Archived
+	}
+	nt.Archived = newArchived
+
 	now := nowUTC()
+	var archivedAt any
+	if newArchived {
+		archivedAt = now
+	}
 
 	// Reconcile the checklist (if the edit carries one) before the done-gate, so
 	// the gate sees the final set the caller intends.
@@ -980,8 +1104,9 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 
 	nt.UpdatedAt = now
 	if _, err := tx.Exec(
-		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, postpone_count=?, updated_at=? WHERE id=?`,
-		nt.Title, nt.Description, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, nt.PostponeCount, now, taskID); err != nil {
+		`UPDATE tasks SET title=?, description=?, assignee_id=?, due_date=?, status=?, postpone_count=?, archived_at=?, blocked_by_task_id=?, blocked_reason=?, updated_at=? WHERE id=?`,
+		nt.Title, nt.Description, nullInt(nt.AssigneeID), nullStr(nt.DueDate), nt.Status, nt.PostponeCount,
+		archivedAt, nullInt(nt.BlockedByTaskID), nt.BlockedReason, now, taskID); err != nil {
 		return nil, nil, err
 	}
 	if tagsChanged {
@@ -1006,7 +1131,13 @@ func (s *Store) UpdateTask(taskID, actor int64, ch TaskChanges) (*Task, []LogIte
 	}
 
 	if statusChanged {
-		if err := addLog("status_change", "", &fromS, &toS); err != nil {
+		// Capture the reason on a block transition so it survives in the history
+		// (the task's blocked_reason is cleared again once it's unblocked).
+		text := ""
+		if toS == "blocked" {
+			text = nt.BlockedReason
+		}
+		if err := addLog("status_change", text, &fromS, &toS); err != nil {
 			return nil, nil, err
 		}
 	}

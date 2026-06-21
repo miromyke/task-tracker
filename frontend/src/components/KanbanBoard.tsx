@@ -10,7 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { CalendarClock, CheckCircle2, ListChecks, RotateCcw } from "lucide-react";
+import { Archive, Ban, CalendarClock, CheckCircle2, ListChecks, RotateCcw } from "lucide-react";
 import { Plural, Trans, useLingui } from "@lingui/react/macro";
 import type { Status, Task, User } from "@/lib/api";
 import { STATUS_DOT, STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
@@ -23,13 +23,23 @@ import { cn } from "@/lib/utils";
 interface BoardProps {
   tasks: Task[];
   usersById: Map<number, User>;
+  taskTitleById: Map<number, string>;
   onCardClick: (id: number) => void;
   onMove: (task: Task, to: Status) => void;
 }
 
-function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User> }) {
+function CardBody({
+  task,
+  usersById,
+  taskTitleById,
+}: {
+  task: Task;
+  usersById: Map<number, User>;
+  taskTitleById: Map<number, string>;
+}) {
   const { t } = useLingui();
   const assignee = task.assigneeId ? usersById.get(task.assigneeId) : undefined;
+  const blockerTitle = task.blockedByTaskId ? taskTitleById.get(task.blockedByTaskId) : undefined;
   const done = task.status === "done";
   const closed = done || task.status === "abandoned";
   const overdueDays = task.dueDate ? daysOverdue(task.dueDate) : 0;
@@ -44,7 +54,21 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
   return (
     <>
       <div className="mb-2 text-sm font-medium leading-snug">{task.title}</div>
+      {task.status === "blocked" && blockerTitle && (
+        <div className="mb-2 inline-flex max-w-full items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <Ban className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">
+            <Trans>Blocked by {blockerTitle}</Trans>
+          </span>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
+        {task.archived && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            <Archive className="h-3.5 w-3.5" />
+            <Trans>Archived</Trans>
+          </span>
+        )}
         {task.dueDate &&
           (openOverdue || closedOverdue ? (
             <span
@@ -105,7 +129,17 @@ function CardBody({ task, usersById }: { task: Task; usersById: Map<number, User
 
 /* ---------- Desktop: 4 columns, drag to move ---------- */
 
-function DraggableCard({ task, usersById, onClick }: { task: Task; usersById: Map<number, User>; onClick: () => void }) {
+function DraggableCard({
+  task,
+  usersById,
+  taskTitleById,
+  onClick,
+}: {
+  task: Task;
+  usersById: Map<number, User>;
+  taskTitleById: Map<number, string>;
+  onClick: () => void;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
   return (
     <div
@@ -115,10 +149,11 @@ function DraggableCard({ task, usersById, onClick }: { task: Task; usersById: Ma
       onClick={onClick}
       className={cn(
         "cursor-grab touch-none rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing",
+        task.archived && "opacity-60",
         isDragging && "opacity-40"
       )}
     >
-      <CardBody task={task} usersById={usersById} />
+      <CardBody task={task} usersById={usersById} taskTitleById={taskTitleById} />
     </div>
   );
 }
@@ -127,11 +162,13 @@ function Column({
   status,
   tasks,
   usersById,
+  taskTitleById,
   onCardClick,
 }: {
   status: Status;
   tasks: Task[];
   usersById: Map<number, User>;
+  taskTitleById: Map<number, string>;
   onCardClick: (id: number) => void;
 }) {
   const { i18n } = useLingui();
@@ -151,7 +188,13 @@ function Column({
         )}
       >
         {tasks.map((t) => (
-          <DraggableCard key={t.id} task={t} usersById={usersById} onClick={() => onCardClick(t.id)} />
+          <DraggableCard
+            key={t.id}
+            task={t}
+            usersById={usersById}
+            taskTitleById={taskTitleById}
+            onClick={() => onCardClick(t.id)}
+          />
         ))}
         {tasks.length === 0 && (
           <p className="px-1 py-4 text-center text-xs text-muted-foreground">
@@ -163,7 +206,7 @@ function Column({
   );
 }
 
-function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
+function DesktopBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: BoardProps) {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -180,13 +223,14 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveTask(null)}>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-5 gap-3">
         {STATUS_ORDER.map((s) => (
           <Column
             key={s}
             status={s}
             tasks={tasks.filter((t) => t.status === s)}
             usersById={usersById}
+            taskTitleById={taskTitleById}
             onCardClick={onCardClick}
           />
         ))}
@@ -194,7 +238,7 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
       <DragOverlay>
         {activeTask ? (
           <div className="w-64 rotate-1 rounded-lg border bg-card p-3 shadow-md">
-            <CardBody task={activeTask} usersById={usersById} />
+            <CardBody task={activeTask} usersById={usersById} taskTitleById={taskTitleById} />
           </div>
         ) : null}
       </DragOverlay>
@@ -204,7 +248,7 @@ function DesktopBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
 
 /* ---------- Mobile: status tabs, one column ---------- */
 
-function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
+function MobileBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: BoardProps) {
   const { i18n } = useLingui();
   const [active, setActive] = useState<Status>("in_progress");
   const colTasks = tasks.filter((t) => t.status === active);
@@ -240,9 +284,9 @@ function MobileBoard({ tasks, usersById, onCardClick, onMove }: BoardProps) {
           </p>
         ) : (
           colTasks.map((t) => (
-            <div key={t.id} className="rounded-lg border bg-card p-3 shadow-sm">
+            <div key={t.id} className={cn("rounded-lg border bg-card p-3 shadow-sm", t.archived && "opacity-60")}>
               <div onClick={() => onCardClick(t.id)}>
-                <CardBody task={t} usersById={usersById} />
+                <CardBody task={t} usersById={usersById} taskTitleById={taskTitleById} />
               </div>
               <div className="mt-2 flex items-center justify-end border-t pt-2">
                 <Select value={t.status} onValueChange={(v) => onMove(t, v as Status)}>

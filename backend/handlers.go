@@ -42,6 +42,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/projects", s.requireAuth(s.handleListProjects))
 	mux.HandleFunc("POST /api/projects", s.requireAuth(s.handleCreateProject))
 	mux.HandleFunc("GET /api/projects/{id}", s.requireAuth(s.handleGetProject))
+	mux.HandleFunc("PATCH /api/projects/{id}", s.requireAuth(s.handleUpdateProject))
 	mux.HandleFunc("GET /api/projects/{id}/pulse", s.requireAuth(s.handleProjectPulse))
 	mux.HandleFunc("GET /api/projects/{id}/tasks", s.requireAuth(s.handleListTasks))
 	mux.HandleFunc("POST /api/projects/{id}/tasks", s.requireAuth(s.handleCreateTask))
@@ -97,7 +98,7 @@ func pathInt(r *http.Request, key string) (int64, bool) {
 
 func validStatus(s string) bool {
 	switch s {
-	case "todo", "in_progress", "done", "abandoned":
+	case "todo", "in_progress", "blocked", "done", "abandoned":
 		return true
 	}
 	return false
@@ -409,12 +410,50 @@ func (s *Server) handleAvatar(w http.ResponseWriter, r *http.Request) {
 // ---- project handlers ----
 
 func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := s.store.ListProjects()
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	projects, err := s.store.ListProjects(includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, projects)
+}
+
+// handleUpdateProject currently supports archiving/unarchiving a project.
+func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	proj, err := s.store.GetProject(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if proj == nil {
+		writeErr(w, http.StatusNotFound, "project not found")
+		return
+	}
+	var req struct {
+		Archived *bool `json:"archived"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if req.Archived != nil {
+		if err := s.store.SetProjectArchived(id, *req.Archived); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	updated, err := s.store.GetProject(id)
+	if err != nil || updated == nil {
+		writeErr(w, http.StatusInternalServerError, "reload failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
@@ -464,7 +503,8 @@ func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	tasks, err := s.store.ListTasks(id, r.URL.Query().Get("status"), r.URL.Query().Get("tag"))
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	tasks, err := s.store.ListTasks(id, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -474,7 +514,8 @@ func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 
 // handleListAllTasks lists tasks across every project (for the projects overview).
 func (s *Server) handleListAllTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := s.store.ListTasks(0, r.URL.Query().Get("status"), r.URL.Query().Get("tag"))
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	tasks, err := s.store.ListTasks(0, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -498,13 +539,15 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Title       string   `json:"title"`
-		Description string   `json:"description"`
-		Tags        []string `json:"tags"`
-		Criteria    []string `json:"criteria"`
-		AssigneeID  *int64   `json:"assigneeId"`
-		DueDate     *string  `json:"dueDate"`
-		Status      string   `json:"status"`
+		Title           string   `json:"title"`
+		Description     string   `json:"description"`
+		Tags            []string `json:"tags"`
+		Criteria        []string `json:"criteria"`
+		AssigneeID      *int64   `json:"assigneeId"`
+		DueDate         *string  `json:"dueDate"`
+		Status          string   `json:"status"`
+		BlockedByTaskID *int64   `json:"blockedByTaskId"`
+		BlockedReason   string   `json:"blockedReason"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
@@ -524,7 +567,11 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), tags, req.Criteria,
-		req.AssigneeID, req.DueDate, req.Status, currentUser(r).ID)
+		req.AssigneeID, req.DueDate, req.Status, req.BlockedByTaskID, strings.TrimSpace(req.BlockedReason), currentUser(r).ID)
+	if errors.Is(err, errBlockedRef) {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -626,9 +673,31 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 			ch.Status = &str
 		}
 	}
+	if v, ok := raw["archived"]; ok {
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			ch.SetArchived = true
+			ch.Archived = b
+		}
+	}
+	if v, ok := raw["blockedByTaskId"]; ok {
+		ch.SetBlockedBy = true
+		if string(v) != "null" {
+			var n int64
+			if json.Unmarshal(v, &n) == nil {
+				ch.BlockedByTaskID = &n
+			}
+		}
+	}
+	if v, ok := raw["blockedReason"]; ok {
+		var str string
+		if json.Unmarshal(v, &str) == nil {
+			ch.BlockedReason = &str
+		}
+	}
 
 	t, logs, err := s.store.UpdateTask(id, currentUser(r).ID, ch)
-	if errors.Is(err, errCriteriaUnmet) {
+	if errors.Is(err, errCriteriaUnmet) || errors.Is(err, errBlockedRef) {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}

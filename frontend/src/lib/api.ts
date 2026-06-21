@@ -1,6 +1,6 @@
 // ---- Types (mirror the Go backend JSON) ----
 
-export type Status = "todo" | "in_progress" | "done" | "abandoned";
+export type Status = "todo" | "in_progress" | "blocked" | "done" | "abandoned";
 
 export type Role = "admin" | "member";
 
@@ -20,6 +20,7 @@ export interface Project {
   createdBy: number;
   createdAt: string;
   taskCount: number;
+  archived: boolean;
 }
 
 export interface Criterion {
@@ -45,6 +46,10 @@ export interface Task {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+  archived: boolean;
+  // Populated only while status === "blocked".
+  blockedByTaskId: number | null;
+  blockedReason: string;
 }
 
 // CriterionInput is a checklist item in a task edit. Existing items keep their
@@ -140,6 +145,9 @@ export interface TaskUpdate {
   assigneeId?: number | null;
   dueDate?: string | null;
   status?: Status;
+  archived?: boolean;
+  blockedByTaskId?: number | null;
+  blockedReason?: string;
 }
 
 // ---- HTTP layer ----
@@ -210,20 +218,35 @@ export const api = {
   },
 
   // projects
-  listProjects: () => req<Project[]>("/projects"),
+  listProjects: (includeArchived = false) =>
+    req<Project[]>(`/projects${qs({ archived: includeArchived ? "1" : undefined })}`),
   createProject: (name: string, description: string) =>
     req<Project>("/projects", jsonBody("POST", { name, description })),
   getProject: (id: number) => req<Project>(`/projects/${id}`),
+  setProjectArchived: (id: number, archived: boolean) =>
+    req<Project>(`/projects/${id}`, jsonBody("PATCH", { archived })),
   // Activity pulse across all projects, or one when projectId is given.
   getPulse: (projectId?: number) =>
     req<Pulse>(`/pulse${qs({ project: projectId ? String(projectId) : undefined })}`),
 
   // tasks
-  listTasks: (projectId: number, opts: { status?: string; tag?: string } = {}) =>
-    req<Task[]>(`/projects/${projectId}/tasks${qs(opts)}`),
+  listTasks: (projectId: number, opts: { status?: string; tag?: string; includeArchived?: boolean } = {}) =>
+    req<Task[]>(
+      `/projects/${projectId}/tasks${qs({
+        status: opts.status,
+        tag: opts.tag,
+        archived: opts.includeArchived ? "1" : undefined,
+      })}`
+    ),
   // Tasks across all projects.
-  listAllTasks: (opts: { status?: string; tag?: string } = {}) =>
-    req<Task[]>(`/tasks${qs(opts)}`),
+  listAllTasks: (opts: { status?: string; tag?: string; includeArchived?: boolean } = {}) =>
+    req<Task[]>(
+      `/tasks${qs({
+        status: opts.status,
+        tag: opts.tag,
+        archived: opts.includeArchived ? "1" : undefined,
+      })}`
+    ),
   createTask: (
     projectId: number,
     body: {
@@ -234,6 +257,8 @@ export const api = {
       assigneeId: number | null;
       dueDate: string | null;
       status: Status;
+      blockedByTaskId?: number | null;
+      blockedReason?: string;
     }
   ) => req<Task>(`/projects/${projectId}/tasks`, jsonBody("POST", body)),
   getTask: (id: number) => req<{ task: Task; logs: LogItem[] }>(`/tasks/${id}`),

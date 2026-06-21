@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarDays, FolderKanban, Images, Loader2, Plus, X } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, FolderKanban, Images, Loader2, Plus, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { PulseCard } from "@/components/PulseCard";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { BlockTaskDialog } from "@/components/BlockTaskDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { FilesView } from "@/components/FilesView";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
@@ -91,11 +92,13 @@ function ProjectTile({
   label,
   count,
   active,
+  archived,
   onClick,
 }: {
   label: React.ReactNode;
   count: number;
   active: boolean;
+  archived?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -106,10 +109,14 @@ function ProjectTile({
         "flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full",
         active
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-foreground hover:border-border hover:bg-muted"
+          : "border-border bg-card text-foreground hover:border-border hover:bg-muted",
+        archived && !active && "opacity-60"
       )}
     >
-      <span className="truncate font-medium">{label}</span>
+      <span className="flex min-w-0 items-center gap-1.5 truncate font-medium">
+        {archived && <Archive className="h-3.5 w-3.5 shrink-0 opacity-70" />}
+        <span className="truncate">{label}</span>
+      </span>
       <span className={cn("text-xs tabular-nums", active ? "text-white/60" : "text-muted-foreground")}>{count}</span>
     </button>
   );
@@ -131,11 +138,13 @@ export function ProjectsPage() {
   const [tag, setTag] = useState<string>(ALL);
   const [view, setView] = useState<"board" | "calendar" | "files">("board");
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [blockTask, setBlockTask] = useState<Task | null>(null);
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
-      api.listProjects(),
-      api.listAllTasks(),
+      api.listProjects(showArchived),
+      api.listAllTasks({ includeArchived: showArchived }),
       api.listUsers(),
       api.listTags(),
     ]);
@@ -154,7 +163,8 @@ export function ProjectsPage() {
   useEffect(() => {
     setLoading(true);
     loadBase().finally(() => setLoading(false));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showArchived]);
 
   // Pulse is scoped server-side, so refetch whenever the selection changes.
   useEffect(() => {
@@ -166,6 +176,9 @@ export function ProjectsPage() {
   }
 
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+  // Title lookup over all loaded tasks so blocked cards can name their blocker
+  // even when the tag filter hides it from the board.
+  const taskTitleById = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks]);
   const visibleTasks = useMemo(
     () =>
       tasks.filter(
@@ -175,9 +188,17 @@ export function ProjectsPage() {
   );
 
   async function onMove(task: Task, to: Status) {
+    if (task.status === to) return;
     // Guard the done-gate up front so the card never visibly jumps and snaps back.
     if (to === "done" && !criteriaMet(task)) {
       setMoveError(t`"${task.title}" still has unchecked success criteria — open it to finish them first.`);
+      return;
+    }
+    // Blocking needs a required reference (and optional reason): collect it first
+    // rather than moving the card optimistically.
+    if (to === "blocked") {
+      setMoveError(null);
+      setBlockTask(task);
       return;
     }
     setMoveError(null);
@@ -188,6 +209,24 @@ export function ProjectsPage() {
     } catch {
       loadBase();
     }
+  }
+
+  // Apply a block once the dialog has gathered the blocking task + reason.
+  async function applyBlock(blockedByTaskId: number, reason: string) {
+    if (!blockTask) return;
+    const res = await api.updateTask(blockTask.id, { status: "blocked", blockedByTaskId, blockedReason: reason });
+    setTasks((prev) => prev.map((t) => (t.id === res.task.id ? res.task : t)));
+    api.getPulse(selectedId ?? undefined).then(setPulse);
+  }
+
+  // Archive / unarchive the selected project. When archiving while archived items
+  // are hidden, the project drops out of the list, so deselect it.
+  async function toggleArchiveSelected() {
+    if (!selectedProject) return;
+    const nowArchived = !selectedProject.archived;
+    await api.setProjectArchived(selectedProject.id, nowArchived);
+    if (nowArchived && !showArchived) select(null);
+    await loadBase();
   }
 
   // The view switch (Tasks/Calendar/Files): shown in a desktop top strip over the
@@ -285,10 +324,20 @@ export function ProjectsPage() {
               label={p.name}
               count={p.taskCount}
               active={selectedId === p.id}
+              archived={p.archived}
               onClick={() => select(p.id)}
             />
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setShowArchived((v) => !v)}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <Archive className="h-3.5 w-3.5" />
+          {showArchived ? <Trans>Hide archived</Trans> : <Trans>Show archived</Trans>}
+        </button>
 
         {view !== "files" && (
           <div className="mt-4 lg:mt-6">
@@ -326,6 +375,17 @@ export function ProjectsPage() {
           <div className="flex shrink-0 items-center gap-2">
             {/* Tasks / Calendar / Files — desktop shows these in the top strip above. */}
             <div className="lg:hidden">{viewTabs}</div>
+            {selectedProject && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleArchiveSelected}
+                title={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
+                aria-label={selectedProject.archived ? t`Unarchive project` : t`Archive project`}
+              >
+                {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              </Button>
+            )}
             {view === "board" && (
               <Button onClick={() => setFormOpen(true)}>
                 <Plus className="h-4 w-4" />
@@ -364,6 +424,7 @@ export function ProjectsPage() {
             <KanbanBoard
               tasks={visibleTasks}
               usersById={usersById}
+              taskTitleById={taskTitleById}
               onCardClick={(taskId) => navigate(`/tasks/${taskId}`)}
               onMove={onMove}
             />
@@ -380,6 +441,14 @@ export function ProjectsPage() {
         users={users}
         tags={tags}
         onSaved={() => loadBase()}
+      />
+
+      <BlockTaskDialog
+        open={!!blockTask}
+        onOpenChange={(o) => !o && setBlockTask(null)}
+        projectId={blockTask?.projectId}
+        currentTaskId={blockTask?.id}
+        onConfirm={applyBlock}
       />
     </div>
   );

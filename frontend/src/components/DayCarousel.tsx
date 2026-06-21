@@ -51,6 +51,8 @@ function statusActionMsg(toStatus: string | null): MessageDescriptor {
       return msg`completed`;
     case "abandoned":
       return msg`abandoned`;
+    case "blocked":
+      return msg`blocked`;
     case "in_progress":
       return msg`started`;
     case "todo":
