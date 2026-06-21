@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/context/auth";
 import { AppLayout } from "@/components/AppLayout";
+import { EnvBadge } from "@/components/EnvBadge";
 import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
 import { TaskPage } from "@/pages/Task";
@@ -32,6 +33,7 @@ function RequireAuth() {
 export default function App() {
   return (
     <AuthProvider>
+      <EnvBadge />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>

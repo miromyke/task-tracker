@@ -29,11 +29,15 @@ func NewServer(cfg *Config, store *Store) *Server {
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /api/config", s.handleConfig)
 	mux.HandleFunc("POST /api/login", s.handleLogin)
 	mux.HandleFunc("POST /api/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/me", s.requireAuth(s.handleMe))
+	mux.HandleFunc("POST /api/me/password", s.requireAuth(s.handleChangePassword))
 	mux.HandleFunc("GET /api/users", s.requireAuth(s.handleListUsers))
 	mux.HandleFunc("POST /api/users/avatar", s.requireAuth(s.handleAvatar))
+	mux.HandleFunc("POST /api/users", s.requireAdmin(s.handleCreateUser))
+	mux.HandleFunc("PATCH /api/users/{id}", s.requireAdmin(s.handleUpdateUser))
 
 	mux.HandleFunc("GET /api/projects", s.requireAuth(s.handleListProjects))
 	mux.HandleFunc("POST /api/projects", s.requireAuth(s.handleCreateProject))
@@ -183,26 +187,180 @@ func (s *Server) saveUpload(file multipart.File, header *multipart.FileHeader) (
 
 // ---- auth handlers ----
 
+// handleConfig exposes non-sensitive deployment info to the client (used to show
+// a "sandbox" badge). Unauthenticated so it also renders on the login screen.
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"env": s.cfg.Env})
+}
+
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Username string `json:"username"`
+		Password string `json:"password"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 	username := strings.TrimSpace(req.Username)
-	if _, allowed := s.cfg.AllowedUsers[username]; !allowed {
-		writeErr(w, http.StatusUnauthorized, "unknown username")
-		return
-	}
 	user, err := s.store.GetUserByUsername(username)
-	if err != nil || user == nil {
-		writeErr(w, http.StatusUnauthorized, "unknown username")
+	// Verify a hash even when the user is missing/unset, so timing doesn't reveal
+	// which usernames exist. Always report the same generic error.
+	hash := ""
+	if user != nil && user.PasswordHash != nil {
+		hash = *user.PasswordHash
+	}
+	ok := checkPassword(hash, req.Password)
+	if err != nil || user == nil || user.Disabled || user.PasswordHash == nil || !ok {
+		writeErr(w, http.StatusUnauthorized, "invalid username or password")
 		return
 	}
 	s.setSession(w, username)
 	writeJSON(w, http.StatusOK, user)
+}
+
+func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	me := currentUser(r)
+	var req struct {
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if me.PasswordHash == nil || !checkPassword(*me.PasswordHash, req.CurrentPassword) {
+		writeErr(w, http.StatusForbidden, "current password is incorrect")
+		return
+	}
+	if len(req.NewPassword) < minPasswordLen {
+		writeErr(w, http.StatusBadRequest, "password too short")
+		return
+	}
+	hash, err := hashPassword(req.NewPassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.store.SetPassword(me.ID, hash); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Username string `json:"username"`
+		Name     string `json:"name"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	username := strings.TrimSpace(req.Username)
+	name := strings.TrimSpace(req.Name)
+	if username == "" {
+		writeErr(w, http.StatusBadRequest, "username is required")
+		return
+	}
+	if name == "" {
+		name = username
+	}
+	if len(req.Password) < minPasswordLen {
+		writeErr(w, http.StatusBadRequest, "password too short")
+		return
+	}
+	role := roleMember
+	if req.Role == roleAdmin {
+		role = roleAdmin
+	}
+	if existing, _ := s.store.GetUserByUsername(username); existing != nil {
+		writeErr(w, http.StatusConflict, "username already taken")
+		return
+	}
+	hash, err := hashPassword(req.Password)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	user, err := s.store.CreateUser(username, name, role, hash)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, user)
+}
+
+func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "bad id")
+		return
+	}
+	target, err := s.store.GetUser(id)
+	if err != nil || target == nil {
+		writeErr(w, http.StatusNotFound, "user not found")
+		return
+	}
+	var req struct {
+		Password *string `json:"password"`
+		Role     *string `json:"role"`
+		Disabled *bool   `json:"disabled"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	// Guard against self-lockout: an admin can't demote or disable themselves.
+	self := currentUser(r).ID == target.ID
+	if req.Password != nil {
+		if len(*req.Password) < minPasswordLen {
+			writeErr(w, http.StatusBadRequest, "password too short")
+			return
+		}
+		hash, err := hashPassword(*req.Password)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if err := s.store.SetPassword(id, hash); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if req.Role != nil {
+		if self {
+			writeErr(w, http.StatusBadRequest, "cannot change your own role")
+			return
+		}
+		role := roleMember
+		if *req.Role == roleAdmin {
+			role = roleAdmin
+		}
+		if err := s.store.SetRole(id, role); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if req.Disabled != nil {
+		if self {
+			writeErr(w, http.StatusBadRequest, "cannot disable yourself")
+			return
+		}
+		if err := s.store.SetDisabled(id, *req.Disabled); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	updated, err := s.store.GetUser(id)
+	if err != nil || updated == nil {
+		writeErr(w, http.StatusInternalServerError, "reload failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {

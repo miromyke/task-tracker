@@ -2,11 +2,15 @@
 
 export type Status = "todo" | "in_progress" | "done" | "abandoned";
 
+export type Role = "admin" | "member";
+
 export interface User {
   id: number;
   username: string;
   name: string;
   avatarPath: string | null;
+  role: Role;
+  disabled: boolean;
 }
 
 export interface Project {
@@ -182,13 +186,23 @@ function qs(params: Record<string, string | undefined>): string {
 }
 
 export const api = {
+  // deployment info (unauthenticated)
+  config: () => req<{ env: string }>("/config"),
+
   // auth
-  login: (username: string) => req<User>("/login", jsonBody("POST", { username })),
+  login: (username: string, password: string) =>
+    req<User>("/login", jsonBody("POST", { username, password })),
   logout: () => req<{ ok: boolean }>("/logout", { method: "POST" }),
   me: () => req<User>("/me"),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    req<{ ok: boolean }>("/me/password", jsonBody("POST", { currentPassword, newPassword })),
 
   // users
   listUsers: () => req<User[]>("/users"),
+  createUser: (body: { username: string; name: string; password: string; role: Role }) =>
+    req<User>("/users", jsonBody("POST", body)),
+  updateUser: (id: number, body: { password?: string; role?: Role; disabled?: boolean }) =>
+    req<User>(`/users/${id}`, jsonBody("PATCH", body)),
   uploadAvatar: (file: File) => {
     const fd = new FormData();
     fd.append("image", file);

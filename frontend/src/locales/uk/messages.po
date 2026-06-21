@@ -126,6 +126,10 @@ msgstr "Додати критерій"
 msgid "Add files"
 msgstr "Додати файли"
 
+#: src/components/UserManagement.tsx
+msgid "Add member"
+msgstr "Додати учасника"
+
 #: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Додати задачу"
@@ -137,6 +141,10 @@ msgstr "додано файл"
 #: src/components/DayCarousel.tsx
 #~ msgid "added a photo"
 #~ msgstr "додано фото"
+
+#: src/components/UserManagement.tsx
+msgid "admin"
+msgstr "адмін"
 
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
@@ -218,6 +226,10 @@ msgstr "Скасувати"
 msgid "Change avatar"
 msgstr "Змінити аватар"
 
+#: src/components/UserManagement.tsx
+msgid "Change password"
+msgstr "Змінити пароль"
+
 #: src/pages/Task.tsx
 msgid "changed the due date"
 msgstr "змінено термін"
@@ -251,9 +263,21 @@ msgstr "Виконано вчасно"
 msgid "completed this task"
 msgstr "завершено цю задачу"
 
+#: src/components/UserManagement.tsx
+msgid "Confirm new password"
+msgstr "Підтвердьте новий пароль"
+
 #: src/pages/Login.tsx
 msgid "Continue"
 msgstr "Продовжити"
+
+#: src/components/UserManagement.tsx
+msgid "Could not add member"
+msgstr "Не вдалося додати учасника"
+
+#: src/components/UserManagement.tsx
+msgid "Could not change password"
+msgstr "Не вдалося змінити пароль"
 
 #: src/pages/Login.tsx
 msgid "Could not log in"
@@ -288,6 +312,10 @@ msgstr "створено цю задачу"
 msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 msgstr "Критерії не можна редагувати після додавання — лише облишити. Усі решта критеріїв мають бути виконані, перш ніж задачу можна позначити готовою."
 
+#: src/components/UserManagement.tsx
+msgid "Current password"
+msgstr "Поточний пароль"
+
 #: src/components/AppLayout.tsx
 msgid "Dark"
 msgstr "Темна"
@@ -297,9 +325,21 @@ msgstr "Темна"
 msgid "Description"
 msgstr "Опис"
 
+#: src/components/UserManagement.tsx
+msgid "Disable"
+msgstr "Вимкнути"
+
+#: src/components/UserManagement.tsx
+msgid "disabled"
+msgstr "вимкнено"
+
 #: src/pages/Projects.tsx
 msgid "Dismiss"
 msgstr "Закрити"
+
+#: src/components/UserManagement.tsx
+msgid "Display name"
+msgstr "Ім'я для показу"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -342,6 +382,10 @@ msgstr "Редагувати задачу"
 #: src/pages/Task.tsx
 msgid "edited this task"
 msgstr "відредаговано задачу"
+
+#: src/components/UserManagement.tsx
+msgid "Enable"
+msgstr "Увімкнути"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
@@ -412,6 +456,10 @@ msgstr "Вийти"
 msgid "logged a note"
 msgstr "залишено нотатку"
 
+#: src/components/UserManagement.tsx
+msgid "Manage users"
+msgstr "Керування користувачами"
+
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Members"
 #~ msgstr "Учасники"
@@ -440,6 +488,10 @@ msgstr "Назва"
 msgid "New"
 msgstr "Новий"
 
+#: src/components/UserManagement.tsx
+msgid "New password"
+msgstr "Новий пароль"
+
 #: src/pages/Projects.tsx
 msgid "New project"
 msgstr "Новий проєкт"
@@ -447,6 +499,10 @@ msgstr "Новий проєкт"
 #: src/components/TaskFormDialog.tsx
 msgid "New task"
 msgstr "Нова задача"
+
+#: src/components/UserManagement.tsx
+msgid "New temp password"
+msgstr "Новий тимчасовий пароль"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Next due"
@@ -479,6 +535,18 @@ msgstr "Цього дня нічого не записано."
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
 #~ msgstr "Відкрити дошку"
+
+#: src/pages/Login.tsx
+msgid "Password"
+msgstr "Пароль"
+
+#: src/components/UserManagement.tsx
+msgid "Password changed."
+msgstr "Пароль змінено."
+
+#: src/components/UserManagement.tsx
+msgid "Passwords do not match"
+msgstr "Паролі не збігаються"
 
 #: src/components/PulseCard.tsx
 #~ msgid "past 14 days"
@@ -531,10 +599,18 @@ msgstr "Видалити критерій"
 msgid "Remove tag"
 msgstr "Видалити тег"
 
+#: src/components/UserManagement.tsx
+msgid "Reset"
+msgstr "Скинути"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Restore criterion"
 msgstr "Відновити критерій"
+
+#: src/components/UserManagement.tsx
+msgid "Save"
+msgstr "Зберегти"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -608,6 +684,10 @@ msgstr "Задачі"
 msgid "Tasks for {0}"
 msgstr "Задачі для {0}"
 
+#: src/components/UserManagement.tsx
+msgid "Temp password"
+msgstr "Тимчасовий пароль"
+
 #: src/components/AppLayout.tsx
 msgid "Theme"
 msgstr "Тема"
@@ -637,6 +717,10 @@ msgstr "Без виконавця"
 #~ msgid "Up next"
 #~ msgstr "На черзі"
 
+#: src/components/UserManagement.tsx
+msgid "Update password"
+msgstr "Оновити пароль"
+
 #: src/components/DayCarousel.tsx
 msgid "updated"
 msgstr "оновлено"
@@ -657,6 +741,7 @@ msgstr "Завантажити"
 msgid "Uploading…"
 msgstr "Завантаження…"
 
+#: src/components/UserManagement.tsx
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Імʼя користувача"

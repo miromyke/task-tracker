@@ -8,6 +8,13 @@
 	reverse_proxy app:8080
 }
 
+# Production sandbox instance — separate DB, same image. Requires a
+# sandbox.{$DOMAIN} DNS A record pointing at this VM.
+sandbox.{$DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app-sandbox:8080
+}
+
 # Send www → apex so both resolve to one canonical URL.
 www.{$DOMAIN} {
 	redir https://{$DOMAIN}{uri} permanent

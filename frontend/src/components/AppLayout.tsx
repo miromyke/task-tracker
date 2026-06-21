@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { activateLocale, LOCALES, type Locale } from "@/i18n";
 import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ChangePasswordDialog, ManageUsersDialog } from "@/components/UserManagement";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -112,6 +113,8 @@ function AccountDialog() {
           <Upload className="h-4 w-4" />
           {busy ? <Trans>Uploading…</Trans> : <Trans>Change avatar</Trans>}
         </Button>
+        <ChangePasswordDialog />
+        {user.role === "admin" && <ManageUsersDialog />}
         <Button variant="ghost" className="text-red-600 hover:text-red-600" onClick={() => logout()}>
           <LogOut className="h-4 w-4" />
           <Trans>Log out</Trans>

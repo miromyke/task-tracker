@@ -22,7 +22,19 @@ type User struct {
 	Username   string  `json:"username"`
 	Name       string  `json:"name"`
 	AvatarPath *string `json:"avatarPath"`
+	Role       string  `json:"role"`     // "admin" | "member"
+	Disabled   bool    `json:"disabled"` // soft-disabled: cannot log in
+	// PasswordHash is never serialized to clients. Nil means "not set up yet"
+	// (the account exists but cannot log in until an admin sets a password).
+	PasswordHash *string `json:"-"`
 }
+
+func (u *User) IsAdmin() bool { return u.Role == roleAdmin }
+
+const (
+	roleAdmin  = "admin"
+	roleMember = "member"
+)
 
 type Project struct {
 	ID          int64  `json:"id"`
@@ -228,7 +240,16 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("tasks", "postpone_count", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("task_criteria", "abandoned", "INTEGER NOT NULL DEFAULT 0")
+	if err := s.addColumnIfMissing("task_criteria", "abandoned", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("users", "role", "TEXT NOT NULL DEFAULT 'member'"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("users", "disabled", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("users", "password_hash", "TEXT")
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -316,35 +337,74 @@ func dueDisplay(p *string) string {
 
 // ---- Users ----
 
-const userCols = "id, username, name, avatar_path"
+const userCols = "id, username, name, avatar_path, role, disabled, password_hash"
 
 type scanner interface{ Scan(dest ...any) error }
 
 func scanUser(sc scanner) (*User, error) {
 	var u User
-	var avatar sql.NullString
-	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &avatar); err != nil {
+	var avatar, hash sql.NullString
+	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &avatar, &u.Role, &u.Disabled, &hash); err != nil {
 		return nil, err
 	}
 	if avatar.Valid {
 		v := avatar.String
 		u.AvatarPath = &v
 	}
+	if hash.Valid {
+		v := hash.String
+		u.PasswordHash = &v
+	}
 	return &u, nil
 }
 
-func (s *Store) SeedUsers(users map[string]string) error {
+// EnsureAdmin upserts the bootstrap admin. The user is always promoted to admin
+// and re-enabled; the password is set only when passwordHash is non-empty, so an
+// empty APP_ADMIN_PASSWORD on a later boot never wipes an existing password.
+func (s *Store) EnsureAdmin(username, name, passwordHash string) error {
 	now := nowUTC()
-	for username, name := range users {
-		_, err := s.db.Exec(
-			`INSERT INTO users (username, name, created_at) VALUES (?,?,?)
-			 ON CONFLICT(username) DO UPDATE SET name=excluded.name`,
-			username, name, now)
-		if err != nil {
-			return err
-		}
+	var hash any
+	if passwordHash != "" {
+		hash = passwordHash
 	}
-	return nil
+	_, err := s.db.Exec(
+		`INSERT INTO users (username, name, role, disabled, password_hash, created_at)
+		 VALUES (?,?,?,0,?,?)
+		 ON CONFLICT(username) DO UPDATE SET
+		   role='admin',
+		   disabled=0,
+		   password_hash=COALESCE(excluded.password_hash, users.password_hash)`,
+		username, name, roleAdmin, hash, now)
+	return err
+}
+
+// CreateUser inserts a new member with the given password hash.
+func (s *Store) CreateUser(username, name, role, passwordHash string) (*User, error) {
+	now := nowUTC()
+	res, err := s.db.Exec(
+		`INSERT INTO users (username, name, role, disabled, password_hash, created_at)
+		 VALUES (?,?,?,0,?,?)`,
+		username, name, role, passwordHash, now)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+	return s.GetUser(id)
+}
+
+func (s *Store) SetPassword(id int64, passwordHash string) error {
+	_, err := s.db.Exec("UPDATE users SET password_hash=? WHERE id=?", passwordHash, id)
+	return err
+}
+
+func (s *Store) SetRole(id int64, role string) error {
+	_, err := s.db.Exec("UPDATE users SET role=? WHERE id=?", role, id)
+	return err
+}
+
+func (s *Store) SetDisabled(id int64, disabled bool) error {
+	_, err := s.db.Exec("UPDATE users SET disabled=? WHERE id=?", disabled, id)
+	return err
 }
 
 func (s *Store) GetUserByUsername(username string) (*User, error) {

@@ -126,6 +126,10 @@ msgstr "Add criterion"
 msgid "Add files"
 msgstr "Add files"
 
+#: src/components/UserManagement.tsx
+msgid "Add member"
+msgstr "Add member"
+
 #: src/pages/Projects.tsx
 msgid "Add task"
 msgstr "Add task"
@@ -137,6 +141,10 @@ msgstr "added a file"
 #: src/components/DayCarousel.tsx
 #~ msgid "added a photo"
 #~ msgstr "added a photo"
+
+#: src/components/UserManagement.tsx
+msgid "admin"
+msgstr "admin"
 
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
@@ -218,6 +226,10 @@ msgstr "Cancel"
 msgid "Change avatar"
 msgstr "Change avatar"
 
+#: src/components/UserManagement.tsx
+msgid "Change password"
+msgstr "Change password"
+
 #: src/pages/Task.tsx
 msgid "changed the due date"
 msgstr "changed the due date"
@@ -251,9 +263,21 @@ msgstr "Completed on time"
 msgid "completed this task"
 msgstr "completed this task"
 
+#: src/components/UserManagement.tsx
+msgid "Confirm new password"
+msgstr "Confirm new password"
+
 #: src/pages/Login.tsx
 msgid "Continue"
 msgstr "Continue"
+
+#: src/components/UserManagement.tsx
+msgid "Could not add member"
+msgstr "Could not add member"
+
+#: src/components/UserManagement.tsx
+msgid "Could not change password"
+msgstr "Could not change password"
 
 #: src/pages/Login.tsx
 msgid "Could not log in"
@@ -288,6 +312,10 @@ msgstr "created this task"
 msgid "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 msgstr "Criteria can't be edited once added — only abandoned. All remaining criteria must be checked before a task can be marked done."
 
+#: src/components/UserManagement.tsx
+msgid "Current password"
+msgstr "Current password"
+
 #: src/components/AppLayout.tsx
 msgid "Dark"
 msgstr "Dark"
@@ -297,9 +325,21 @@ msgstr "Dark"
 msgid "Description"
 msgstr "Description"
 
+#: src/components/UserManagement.tsx
+msgid "Disable"
+msgstr "Disable"
+
+#: src/components/UserManagement.tsx
+msgid "disabled"
+msgstr "disabled"
+
 #: src/pages/Projects.tsx
 msgid "Dismiss"
 msgstr "Dismiss"
+
+#: src/components/UserManagement.tsx
+msgid "Display name"
+msgstr "Display name"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -342,6 +382,10 @@ msgstr "Edit task"
 #: src/pages/Task.tsx
 msgid "edited this task"
 msgstr "edited this task"
+
+#: src/components/UserManagement.tsx
+msgid "Enable"
+msgstr "Enable"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
@@ -412,6 +456,10 @@ msgstr "Log out"
 msgid "logged a note"
 msgstr "logged a note"
 
+#: src/components/UserManagement.tsx
+msgid "Manage users"
+msgstr "Manage users"
+
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Members"
 #~ msgstr "Members"
@@ -440,6 +488,10 @@ msgstr "Name"
 msgid "New"
 msgstr "New"
 
+#: src/components/UserManagement.tsx
+msgid "New password"
+msgstr "New password"
+
 #: src/pages/Projects.tsx
 msgid "New project"
 msgstr "New project"
@@ -447,6 +499,10 @@ msgstr "New project"
 #: src/components/TaskFormDialog.tsx
 msgid "New task"
 msgstr "New task"
+
+#: src/components/UserManagement.tsx
+msgid "New temp password"
+msgstr "New temp password"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Next due"
@@ -479,6 +535,18 @@ msgstr "Nothing logged on this day."
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
 #~ msgstr "Open board"
+
+#: src/pages/Login.tsx
+msgid "Password"
+msgstr "Password"
+
+#: src/components/UserManagement.tsx
+msgid "Password changed."
+msgstr "Password changed."
+
+#: src/components/UserManagement.tsx
+msgid "Passwords do not match"
+msgstr "Passwords do not match"
 
 #: src/components/PulseCard.tsx
 #~ msgid "past 14 days"
@@ -531,10 +599,18 @@ msgstr "Remove criterion"
 msgid "Remove tag"
 msgstr "Remove tag"
 
+#: src/components/UserManagement.tsx
+msgid "Reset"
+msgstr "Reset"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Restore criterion"
 msgstr "Restore criterion"
+
+#: src/components/UserManagement.tsx
+msgid "Save"
+msgstr "Save"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
@@ -608,6 +684,10 @@ msgstr "Tasks"
 msgid "Tasks for {0}"
 msgstr "Tasks for {0}"
 
+#: src/components/UserManagement.tsx
+msgid "Temp password"
+msgstr "Temp password"
+
 #: src/components/AppLayout.tsx
 msgid "Theme"
 msgstr "Theme"
@@ -637,6 +717,10 @@ msgstr "Unassigned"
 #~ msgid "Up next"
 #~ msgstr "Up next"
 
+#: src/components/UserManagement.tsx
+msgid "Update password"
+msgstr "Update password"
+
 #: src/components/DayCarousel.tsx
 msgid "updated"
 msgstr "updated"
@@ -657,6 +741,7 @@ msgstr "Upload"
 msgid "Uploading…"
 msgstr "Uploading…"
 
+#: src/components/UserManagement.tsx
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Username"

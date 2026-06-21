@@ -31,8 +31,8 @@ func main() {
 	if err := store.Migrate(); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
-	if err := store.SeedUsers(cfg.AllowedUsers); err != nil {
-		log.Fatalf("seed users: %v", err)
+	if err := bootstrapAdmin(store, cfg); err != nil {
+		log.Fatalf("bootstrap admin: %v", err)
 	}
 
 	srv := NewServer(cfg, store)
@@ -43,8 +43,8 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("listening on :%s (tz=%s db=%s uploads=%s users=%d)",
-			cfg.Port, cfg.Location.String(), cfg.DBPath, cfg.UploadsDir, len(cfg.AllowedUsers))
+		log.Printf("listening on :%s (tz=%s db=%s uploads=%s admin=%s)",
+			cfg.Port, cfg.Location.String(), cfg.DBPath, cfg.UploadsDir, cfg.AdminUser)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("server: %v", err)
 		}
@@ -58,4 +58,29 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = httpServer.Shutdown(ctx)
+}
+
+// bootstrapAdmin guarantees an admin account exists. APP_ADMIN_PASSWORD, when
+// set, is hashed and (re)applied — the lockout-recovery path. If the admin does
+// not yet exist and no password is given, it logs a warning: the account is
+// created but cannot log in until a password is provided.
+func bootstrapAdmin(store *Store, cfg *Config) error {
+	var hash string
+	if cfg.AdminPassword != "" {
+		h, err := hashPassword(cfg.AdminPassword)
+		if err != nil {
+			return err
+		}
+		hash = h
+	}
+	if err := store.EnsureAdmin(cfg.AdminUser, cfg.AdminName, hash); err != nil {
+		return err
+	}
+	if hash == "" {
+		u, err := store.GetUserByUsername(cfg.AdminUser)
+		if err == nil && u != nil && u.PasswordHash == nil {
+			log.Printf("WARNING: admin %q has no password; set APP_ADMIN_PASSWORD to enable login", cfg.AdminUser)
+		}
+	}
+	return nil
 }

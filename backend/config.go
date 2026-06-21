@@ -15,9 +15,12 @@ type Config struct {
 	UploadsDir   string
 	StaticDir    string
 	Secret       []byte
-	AllowedUsers map[string]string // username -> display name
-	Location     *time.Location
-	Dev          bool
+	Location      *time.Location
+	Dev           bool
+	Env           string // deployment label, e.g. "sandbox"; empty for production
+	AdminUser     string // bootstrap admin username
+	AdminName     string // bootstrap admin display name
+	AdminPassword string // bootstrap admin password; (re)applied on boot when set
 }
 
 func env(key, def string) string {
@@ -35,6 +38,7 @@ func LoadConfig() *Config {
 		UploadsDir: env("UPLOADS_DIR", "./data/uploads"),
 		StaticDir:  env("STATIC_DIR", ""),
 		Dev:        os.Getenv("APP_DEV") == "1",
+		Env:        strings.TrimSpace(os.Getenv("APP_ENV")),
 	}
 
 	if s := os.Getenv("APP_SECRET"); s != "" {
@@ -46,23 +50,15 @@ func LoadConfig() *Config {
 		log.Printf("WARNING: APP_SECRET not set; generated an ephemeral secret (all sessions reset on restart)")
 	}
 
-	// APP_USERS format: "alice:Alice Smith,bob:Bob" (display name optional).
-	c.AllowedUsers = map[string]string{}
-	for _, part := range strings.Split(env("APP_USERS", "admin:Admin"), ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		username, name, found := strings.Cut(part, ":")
-		username = strings.TrimSpace(username)
-		if username == "" {
-			continue
-		}
-		if !found || strings.TrimSpace(name) == "" {
-			name = username
-		}
-		c.AllowedUsers[username] = strings.TrimSpace(name)
+	// Bootstrap admin. This is the only account defined outside the app; every
+	// other member is created in-app by an admin. APP_ADMIN_PASSWORD is the
+	// lockout-recovery path: when set, it is (re)applied to the admin on boot.
+	c.AdminUser = strings.TrimSpace(env("APP_ADMIN_USER", "admin"))
+	c.AdminName = strings.TrimSpace(os.Getenv("APP_ADMIN_NAME"))
+	if c.AdminName == "" {
+		c.AdminName = c.AdminUser
 	}
+	c.AdminPassword = os.Getenv("APP_ADMIN_PASSWORD")
 
 	tz := env("APP_TZ", "UTC")
 	loc, err := time.LoadLocation(tz)

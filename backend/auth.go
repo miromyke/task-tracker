@@ -9,13 +9,29 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
+
+// hashPassword returns a bcrypt hash of the given plaintext password.
+func hashPassword(password string) (string, error) {
+	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(b), err
+}
+
+// checkPassword reports whether plaintext matches the stored bcrypt hash.
+func checkPassword(hash, password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}
 
 type ctxKey int
 
 const userCtxKey ctxKey = 1
 
 const cookieName = "reno_session"
+
+// minPasswordLen is the minimum length for a user password.
+const minPasswordLen = 6
 
 // signToken builds an HMAC-signed token: base64(payload).base64(sig).
 func (s *Server) signToken(username string) string {
@@ -46,9 +62,6 @@ func (s *Server) verifyToken(tok string) (string, bool) {
 	}
 	username, _, ok := strings.Cut(string(payloadB), "|")
 	if !ok {
-		return "", false
-	}
-	if _, allowed := s.cfg.AllowedUsers[username]; !allowed {
 		return "", false
 	}
 	return username, true
@@ -88,13 +101,24 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		user, err := s.store.GetUserByUsername(username)
-		if err != nil || user == nil {
+		if err != nil || user == nil || user.Disabled {
 			writeErr(w, http.StatusUnauthorized, "unknown user")
 			return
 		}
 		ctx := context.WithValue(r.Context(), userCtxKey, user)
 		next(w, r.WithContext(ctx))
 	}
+}
+
+// requireAdmin wraps requireAuth and additionally rejects non-admin users.
+func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return s.requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if u := currentUser(r); u == nil || !u.IsAdmin() {
+			writeErr(w, http.StatusForbidden, "admin only")
+			return
+		}
+		next(w, r)
+	})
 }
 
 func currentUser(r *http.Request) *User {

@@ -13,6 +13,7 @@ export function LoginPage() {
   const { user, loading, login } = useAuth();
   const { t } = useLingui();
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,11 +21,11 @@ export function LoginPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!username.trim() || !password) return;
     setBusy(true);
     setError(null);
     try {
-      await login(username.trim());
+      await login(username.trim(), password);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t`Could not log in`);
     } finally {
@@ -53,8 +54,19 @@ export function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                <Trans>Password</Trans>
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={busy || !username.trim()}>
+            <Button type="submit" className="w-full" disabled={busy || !username.trim() || !password}>
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               <Trans>Continue</Trans>
             </Button>

@@ -3,8 +3,12 @@ services:
     build: .
     image: reno-planner
     environment:
-      # Comma-separated "username:Display Name" pairs (display name optional).
-      APP_USERS: ${APP_USERS:-mykhailo:Mykhailo,anna:Anna}
+      # Bootstrap admin. The only account defined outside the app; all other
+      # members are created in-app. APP_ADMIN_PASSWORD is (re)applied on boot,
+      # so it doubles as the lockout-recovery path.
+      APP_ADMIN_USER: ${APP_ADMIN_USER:-mykhailo}
+      APP_ADMIN_NAME: ${APP_ADMIN_NAME:-Mykhailo}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?set APP_ADMIN_PASSWORD in .env}
       # Secret used to sign session cookies. CHANGE THIS in production.
       APP_SECRET: ${APP_SECRET:-please-change-this-secret}
       # Timezone used to group activity into calendar days.
@@ -13,6 +17,26 @@ services:
       - reno_data:/data
     restart: unless-stopped
     # Not published to the host — only Caddy reaches it over the internal network.
+    expose:
+      - "8080"
+
+  # Production sandbox: same image, separate DB volume and session secret, served
+  # on sandbox.${DOMAIN}. Lets you test against prod without touching real data.
+  app-sandbox:
+    build: .
+    image: reno-planner
+    environment:
+      APP_ADMIN_USER: ${APP_ADMIN_USER:-mykhailo}
+      APP_ADMIN_NAME: ${APP_ADMIN_NAME:-Mykhailo}
+      # Defaults to the prod admin password, but keep its data/secret separate.
+      APP_ADMIN_PASSWORD: ${SANDBOX_ADMIN_PASSWORD:-${APP_ADMIN_PASSWORD:?set APP_ADMIN_PASSWORD in .env}}
+      APP_SECRET: ${SANDBOX_SECRET:-please-change-this-sandbox-secret}
+      APP_TZ: ${APP_TZ:-UTC}
+      # Drives the corner badge in the UI so you always know it's the sandbox.
+      APP_ENV: sandbox
+    volumes:
+      - reno_data_sandbox:/data
+    restart: unless-stopped
     expose:
       - "8080"
 
@@ -36,5 +60,6 @@ services:
 
 volumes:
   reno_data:
+  reno_data_sandbox:
   caddy_data:
   caddy_config:
