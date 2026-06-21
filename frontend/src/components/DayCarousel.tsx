@@ -177,6 +177,7 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
   }, [open, slideIndex, slides, currentDate, activeDates]);
 
   const slide = slides[slideIndex];
+  const isVideo = slide?.kind === "media" && slide.asset.kind === "video";
   const hasPrev = slideIndex > 0 || adjacentDate(activeDates, currentDate, -1) !== null;
   const hasNext = slideIndex < slides.length - 1 || adjacentDate(activeDates, currentDate, 1) !== null;
 
@@ -232,10 +233,13 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
               <div className="absolute inset-0">
                 {slide.asset.kind === "video" ? (
                   <video
+                    // Remount per asset so a freshly-focused video autoplays.
+                    key={slide.asset.path}
                     src={slide.asset.path}
                     controls
+                    autoPlay
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     className="absolute inset-0 z-10 m-auto max-h-full max-w-full object-contain"
                   />
                 ) : (
@@ -245,8 +249,16 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
                     className="absolute inset-0 m-auto max-h-full max-w-full object-contain"
                   />
                 )}
-                {/* caption overlay; pointer-events-none so it never blocks video controls */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
+                {/* caption overlay; pointer-events-none so it never blocks video controls.
+                    For video it sits at the top, leaving the bottom clear for controls. */}
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-x-0 z-20 p-5",
+                    slide.asset.kind === "video"
+                      ? "top-0 bg-gradient-to-b from-black/80 to-transparent pb-16"
+                      : "bottom-0 bg-gradient-to-t from-black/80 to-transparent pt-16"
+                  )}
+                >
                   <EventLine event={slide.event} />
                 </div>
               </div>
@@ -258,9 +270,21 @@ export function DayCarousel({ open, onOpenChange, initialDate, activeDates, tag,
               </div>
             )}
 
-            {/* mobile: tap zones — left third = back, right two-thirds = forward */}
-            <button type="button" aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 z-10 w-1/3 cursor-default sm:hidden" />
-            <button type="button" aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 z-10 w-2/3 cursor-default sm:hidden" />
+            {/* mobile: tap zones — left third = back, right two-thirds = forward.
+                On video slides they stop short of the bottom so the native
+                controls stay clickable instead of triggering navigation. */}
+            <button
+              type="button"
+              aria-label="Previous"
+              onClick={prev}
+              className={cn("absolute left-0 z-10 w-1/3 cursor-default sm:hidden", isVideo ? "bottom-16 top-0" : "inset-y-0")}
+            />
+            <button
+              type="button"
+              aria-label="Next"
+              onClick={next}
+              className={cn("absolute right-0 z-10 w-2/3 cursor-default sm:hidden", isVideo ? "bottom-16 top-0" : "inset-y-0")}
+            />
           </div>
         </div>
 
