@@ -675,6 +675,10 @@ msgstr "Ще немає повідомлень. Привітайтесь!"
 msgid "No other tasks to block on"
 msgstr "Немає інших задач для блокування"
 
+#: src/components/FilesView.tsx
+msgid "No project"
+msgstr "Без проєкту"
+
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
 #~ msgstr "Ще немає проєктів. Створіть перший, щоб почати."

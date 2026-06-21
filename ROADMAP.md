@@ -140,7 +140,7 @@ The two-stage soft-delete + admin purge can stay under the hood (`assets`
 copy/UX change, not a model change. Decide what, if anything, a member sees after they
 delete (likely: the file just disappears from their grid).
 
-## 9. Files: make the project optional on upload
+## 9. Files: make the project optional on upload ✅ Done
 
 Allow uploading a file **without** attaching it to a project — make the project
 reference optional in the Files view. Today `assets.project_id` is `NOT NULL` and
@@ -150,3 +150,21 @@ filters by the selected project. Make `project_id` nullable (migration via
 new nullable column path or table rebuild), add an upload endpoint that doesn't require
 a project, and show project-less files under an "All files" / "No project" bucket. This
 is the shared prerequisite for **item 7** (chat uploads have no project).
+
+Implemented: `assets.project_id` is now nullable. Fresh DBs get it from the updated
+canonical schema; existing DBs are migrated by `migrateAssetsProjectNullable` — SQLite
+can't drop a NOT NULL in place, so it rebuilds the table (no other table references
+`assets`, so the drop/rename is FK-safe) once, idempotently, after the `deletion_*`
+columns are added. The Go `Asset.ProjectID` became `*int64` (scanned via
+`sql.NullInt64`); `AddProjectAssets` is now `AddAssets(projectID *int64, …)` and inserts
+`NULL` when nil. New endpoint `POST /api/assets` (`handleUploadOrphanAssets`, any signed-in
+user) uploads project-less files; the shared multipart parsing was extracted into
+`readMultipartUploads`. `ListAssets` gained a project-less bucket: a negative `projectID`
+→ `project_id IS NULL`, surfaced over the API as `?project=none`. Project-less files also
+appear in the existing "All files" view (projectID 0 returns NULL rows too). Frontend:
+`Asset.projectId` is `number | null`; `api.uploadOrphanAssets` + a `"No project"` option
+in the Files upload picker (`AddFilesDialog`) let you upload without a project. A focused
+migration regression test (`migrate_assets_test.go`) covers the NOT NULL→nullable rebuild,
+row survival, orphan insert, and idempotency. Strings extracted + translated to Ukrainian.
+
+This **unblocks item 7** (chat file uploads).

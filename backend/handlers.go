@@ -56,6 +56,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
 	mux.HandleFunc("GET /api/assets/{id}", s.requireAuth(s.handleGetAsset))
 	mux.HandleFunc("POST /api/projects/{id}/assets", s.requireAuth(s.handleUploadAssets))
+	mux.HandleFunc("POST /api/assets", s.requireAuth(s.handleUploadOrphanAssets))
 	mux.HandleFunc("POST /api/assets/{id}/delete", s.requireAuth(s.handleRequestAssetDeletion))
 	mux.HandleFunc("POST /api/assets/{id}/restore", s.requireAdmin(s.handleRestoreAsset))
 	mux.HandleFunc("DELETE /api/assets/{id}", s.requireAdmin(s.handlePurgeAsset))
@@ -811,8 +812,14 @@ func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {
 // soft-deletion queue instead of the live grid; that queue is admin-only.
 func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	projectID, _ := strconv.ParseInt(q.Get("project"), 10, 64) // 0 = all projects
-	kind := q.Get("kind")                                      // image|video|document|other or ""
+	// "" / 0 = all projects; "none" = only project-less files (negative sentinel).
+	var projectID int64
+	if q.Get("project") == "none" {
+		projectID = -1
+	} else {
+		projectID, _ = strconv.ParseInt(q.Get("project"), 10, 64)
+	}
+	kind := q.Get("kind") // image|video|document|other or ""
 	tag := q.Get("tag")
 	pending := q.Get("pending") == "1"
 	if pending && !currentUser(r).IsAdmin() {
@@ -875,10 +882,44 @@ func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	saved, ok := s.readMultipartUploads(w, r)
+	if !ok {
+		return
+	}
+	pid := projectID
+	assets, err := s.store.AddAssets(&pid, currentUser(r).ID, saved)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, assets)
+}
+
+// handleUploadOrphanAssets stores one or more files with no project attached,
+// powering the "No project" upload path on the Files page (and, later, chat
+// uploads). Mirrors handleUploadAssets but passes a nil project id.
+func (s *Server) handleUploadOrphanAssets(w http.ResponseWriter, r *http.Request) {
+	saved, ok := s.readMultipartUploads(w, r)
+	if !ok {
+		return
+	}
+	assets, err := s.store.AddAssets(nil, currentUser(r).ID, saved)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, assets)
+}
+
+// readMultipartUploads parses the multipart form and persists each "files" entry
+// to the uploads volume, returning the saved metadata. It writes the HTTP error
+// and returns ok=false on any failure (including an empty upload) so callers can
+// just `if !ok { return }`.
+func (s *Server) readMultipartUploads(w http.ResponseWriter, r *http.Request) ([]SavedFile, bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		writeErr(w, http.StatusBadRequest, "upload too large or invalid form")
-		return
+		return nil, false
 	}
 
 	var saved []SavedFile
@@ -887,28 +928,22 @@ func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
 			file, err := header.Open()
 			if err != nil {
 				writeErr(w, http.StatusBadRequest, "could not read upload")
-				return
+				return nil, false
 			}
 			sf, err := s.saveUpload(file, header)
 			file.Close()
 			if err != nil {
 				writeErr(w, http.StatusInternalServerError, "could not save file")
-				return
+				return nil, false
 			}
 			saved = append(saved, *sf)
 		}
 	}
 	if len(saved) == 0 {
 		writeErr(w, http.StatusBadRequest, "at least one file is required")
-		return
+		return nil, false
 	}
-
-	assets, err := s.store.AddProjectAssets(projectID, currentUser(r).ID, saved)
-	if err != nil {
-		writeErr(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	writeJSON(w, http.StatusCreated, assets)
+	return saved, true
 }
 
 // handleRequestAssetDeletion soft-deletes an asset: any signed-in user can move a

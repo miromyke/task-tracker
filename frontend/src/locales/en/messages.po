@@ -679,6 +679,10 @@ msgstr "No messages yet. Say hello!"
 msgid "No other tasks to block on"
 msgstr "No other tasks to block on"
 
+#: src/components/FilesView.tsx
+msgid "No project"
+msgstr "No project"
+
 #: src/pages/Projects.tsx
 #~ msgid "No projects yet. Create your first one to get started."
 #~ msgstr "No projects yet. Create your first one to get started."

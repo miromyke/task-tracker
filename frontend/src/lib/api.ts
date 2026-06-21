@@ -73,7 +73,7 @@ export type AssetKind = "image" | "video" | "document" | "other";
 
 export interface Asset {
   id: number;
-  projectId: number;
+  projectId: number | null;
   taskId: number | null;
   logId: number | null;
   uploadedBy: number;
@@ -334,7 +334,17 @@ export const api = {
     for (const f of files) fd.append("files", f);
     return req<Asset[]>(`/projects/${projectId}/assets`, { method: "POST", body: fd });
   },
-  listAssets: (opts: { projectId?: number; kind?: string; tag?: string; pending?: boolean; page?: number } = {}) =>
+  // Upload files with no project attached (the "No project" bucket / chat uploads).
+  uploadOrphanAssets: (files: File[]) => {
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f);
+    return req<Asset[]>(`/assets`, { method: "POST", body: fd });
+  },
+  // projectId: a number scopes to that project; "none" returns only project-less
+  // files; omit for all projects.
+  listAssets: (
+    opts: { projectId?: number | "none"; kind?: string; tag?: string; pending?: boolean; page?: number } = {}
+  ) =>
     req<{ assets: Asset[]; hasMore: boolean }>(
       `/assets${qs({
         project: opts.projectId ? String(opts.projectId) : undefined,

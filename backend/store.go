@@ -166,11 +166,12 @@ type criteriaDiff struct {
 
 // Asset is an uploaded file (image, video, document, or other). Bytes live on
 // the uploads volume; this row holds the metadata. project_id is denormalized so
-// the Files page can filter without walking tasks/logs. thumb_path/width/height/
-// duration are reserved (e.g. for future video posters) and may be null.
+// the Files page can filter without walking tasks/logs; it's null for files not
+// tied to a project (e.g. chat uploads). thumb_path/width/height/duration are
+// reserved (e.g. for future video posters) and may be null.
 type Asset struct {
 	ID         int64    `json:"id"`
-	ProjectID  int64    `json:"projectId"`
+	ProjectID  *int64   `json:"projectId"`
 	TaskID     *int64   `json:"taskId"`
 	LogID      *int64   `json:"logId"`
 	UploadedBy int64    `json:"uploadedBy"`
@@ -317,7 +318,7 @@ CREATE TABLE IF NOT EXISTS log_items (
 );
 CREATE TABLE IF NOT EXISTS assets (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id  INTEGER NOT NULL REFERENCES projects(id),
+  project_id  INTEGER REFERENCES projects(id),
   task_id     INTEGER REFERENCES tasks(id),
   log_id      INTEGER REFERENCES log_items(id),
   uploaded_by INTEGER NOT NULL REFERENCES users(id),
@@ -397,7 +398,66 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("assets", "deletion_requested_at", "TEXT"); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("assets", "deletion_requested_by", "INTEGER")
+	if err := s.addColumnIfMissing("assets", "deletion_requested_by", "INTEGER"); err != nil {
+		return err
+	}
+	return s.migrateAssetsProjectNullable()
+}
+
+// migrateAssetsProjectNullable drops the NOT NULL constraint on assets.project_id
+// so files can be uploaded without a project (e.g. chat uploads). SQLite can't
+// alter a column constraint in place, so existing databases need a table rebuild;
+// no other table references assets, which makes the drop/rename FK-safe. Runs once
+// — once project_id is nullable this is a no-op. Must run after the deletion_*
+// columns are added so the rebuilt table carries the full, current column set.
+func (s *Store) migrateAssetsProjectNullable() error {
+	var notnull int
+	if err := s.db.QueryRow(
+		"SELECT \"notnull\" FROM pragma_table_info('assets') WHERE name='project_id'").Scan(&notnull); err != nil {
+		return err
+	}
+	if notnull == 0 {
+		return nil // already nullable (fresh DB or already migrated)
+	}
+	const rebuild = `
+CREATE TABLE assets_new (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id  INTEGER REFERENCES projects(id),
+  task_id     INTEGER REFERENCES tasks(id),
+  log_id      INTEGER REFERENCES log_items(id),
+  uploaded_by INTEGER NOT NULL REFERENCES users(id),
+  kind        TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  filename    TEXT NOT NULL,
+  path        TEXT NOT NULL,
+  thumb_path  TEXT,
+  size        INTEGER NOT NULL DEFAULT 0,
+  width       INTEGER,
+  height      INTEGER,
+  duration    REAL,
+  created_at  TEXT NOT NULL,
+  deletion_requested_at TEXT,
+  deletion_requested_by INTEGER
+);
+INSERT INTO assets_new
+  SELECT id, project_id, task_id, log_id, uploaded_by, kind, mime, filename, path,
+         thumb_path, size, width, height, duration, created_at,
+         deletion_requested_at, deletion_requested_by
+  FROM assets;
+DROP TABLE assets;
+ALTER TABLE assets_new RENAME TO assets;
+CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
+`
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(rebuild); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -1528,9 +1588,9 @@ func (s *Store) AddNote(taskID, userID, projectID int64, text string, files []Sa
 			return nil, err
 		}
 		aid, _ := ar.LastInsertId()
-		tid, lid := taskID, logID
+		pid, tid, lid := projectID, taskID, logID
 		li.Attachments = append(li.Attachments, Asset{
-			ID: aid, ProjectID: projectID, TaskID: &tid, LogID: &lid, UploadedBy: userID,
+			ID: aid, ProjectID: &pid, TaskID: &tid, LogID: &lid, UploadedBy: userID,
 			Kind: f.Kind, Mime: f.Mime, Filename: f.Filename, Path: f.Path, Size: f.Size, CreatedAt: now,
 		})
 	}
@@ -1541,9 +1601,10 @@ func (s *Store) AddNote(taskID, userID, projectID int64, text string, files []Sa
 	return li, nil
 }
 
-// AddProjectAssets records files uploaded straight to a project (not tied to a
-// task or log entry) — e.g. from the Files page. Returns the created rows.
-func (s *Store) AddProjectAssets(projectID, userID int64, files []SavedFile) ([]Asset, error) {
+// AddAssets records files uploaded straight to the Files page (not tied to a task
+// or log entry). projectID may be nil for a project-less upload (e.g. from chat).
+// Returns the created rows.
+func (s *Store) AddAssets(projectID *int64, userID int64, files []SavedFile) ([]Asset, error) {
 	now := nowUTC()
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -1556,7 +1617,7 @@ func (s *Store) AddProjectAssets(projectID, userID int64, files []SavedFile) ([]
 		res, err := tx.Exec(
 			`INSERT INTO assets (project_id, uploaded_by, kind, mime, filename, path, size, created_at)
 			 VALUES (?,?,?,?,?,?,?,?)`,
-			projectID, userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
+			nullInt(projectID), userID, f.Kind, f.Mime, f.Filename, f.Path, f.Size, now)
 		if err != nil {
 			return nil, err
 		}
@@ -1609,14 +1670,17 @@ const assetCols = "id, project_id, task_id, log_id, uploaded_by, kind, mime, fil
 
 func scanAsset(sc scanner) (*Asset, error) {
 	var a Asset
-	var taskID, logID, delBy sql.NullInt64
+	var projectID, taskID, logID, delBy sql.NullInt64
 	var thumb, delAt sql.NullString
 	var width, height sql.NullInt64
 	var duration sql.NullFloat64
-	if err := sc.Scan(&a.ID, &a.ProjectID, &taskID, &logID, &a.UploadedBy, &a.Kind, &a.Mime,
+	if err := sc.Scan(&a.ID, &projectID, &taskID, &logID, &a.UploadedBy, &a.Kind, &a.Mime,
 		&a.Filename, &a.Path, &thumb, &a.Size, &width, &height, &duration, &a.CreatedAt,
 		&delAt, &delBy); err != nil {
 		return nil, err
+	}
+	if projectID.Valid {
+		a.ProjectID = &projectID.Int64
 	}
 	if taskID.Valid {
 		a.TaskID = &taskID.Int64
@@ -1652,9 +1716,10 @@ func scanAsset(sc scanner) (*Asset, error) {
 const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at, a.deletion_requested_at, a.deletion_requested_by"
 
 // ListAssets returns uploaded files newest-first, optionally scoped by project,
-// kind, and task tag. projectID == 0 means all projects; empty kind/tag skip that
-// filter. pending selects the soft-deletion queue (assets awaiting purge) instead
-// of the live grid. limit/offset paginate.
+// kind, and task tag. projectID == 0 means all projects; a negative projectID
+// selects only project-less files; empty kind/tag skip that filter. pending
+// selects the soft-deletion queue (assets awaiting purge) instead of the live
+// grid. limit/offset paginate.
 func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limit, offset int) ([]Asset, error) {
 	q := "SELECT " + assetColsQ + " FROM assets a WHERE 1=1"
 	args := []any{}
@@ -1663,7 +1728,9 @@ func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limi
 	} else {
 		q += " AND a.deletion_requested_at IS NULL"
 	}
-	if projectID != 0 {
+	if projectID < 0 {
+		q += " AND a.project_id IS NULL"
+	} else if projectID != 0 {
 		q += " AND a.project_id = ?"
 		args = append(args, projectID)
 	}

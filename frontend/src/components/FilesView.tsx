@@ -30,6 +30,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+// Sentinel for the "No project" choice in the upload picker (Select needs a
+// non-empty string value).
+const NO_PROJECT = "none";
+
 // Kind filter tabs. "" = all kinds.
 const KIND_TABS: { value: AssetKind | ""; label: MessageDescriptor }[] = [
   { value: "", label: msg`All` },
@@ -278,13 +282,16 @@ function AddFilesDialog({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const pid = projectId || Number(project);
-    if (!pid) return setError(t`Pick a project`);
+    // projectId (page is scoped to a project) wins; otherwise use the picker,
+    // where NO_PROJECT means "upload without attaching to a project".
+    const choice = projectId ? String(projectId) : project;
+    if (!choice) return setError(t`Pick a project`);
     if (files.length === 0) return setError(t`Choose at least one file`);
     setBusy(true);
     setError(null);
     try {
-      await api.uploadAssets(pid, files);
+      if (choice === NO_PROJECT) await api.uploadOrphanAssets(files);
+      else await api.uploadAssets(Number(choice), files);
       onUploaded();
       onOpenChange(false);
     } catch (err) {
@@ -313,6 +320,9 @@ function AddFilesDialog({
                   <SelectValue placeholder={t`Select a project`} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_PROJECT}>
+                    <Trans>No project</Trans>
+                  </SelectItem>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.name}
