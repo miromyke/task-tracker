@@ -100,7 +100,7 @@ links/thumbnails, falling back to plain text for unresolved refs. Strings extrac
 threads/reactions, unread badges, typing indicators, in-chat file uploads, per-channel
 membership.
 
-## 6. Chat: show referenced task/file names, not ids
+## 6. Chat: show referenced task/file names, not ids ✅ Done
 
 When a message references a task or file, render the **name/title only** — not the
 numeric id. Today `components/MessageText.tsx` renders a task ref as `#<id> <title>`
@@ -109,6 +109,15 @@ text. Drop the `#id` prefix from the rendered chip (link still goes to `/tasks/:
 and consider showing a friendly label in the composer too (e.g. a chip that displays
 the title while the underlying stored token stays `#<id>`). Files already render by
 filename; keep that. Falls back to the raw token only when the ref can't be resolved.
+
+Implemented: `TaskRef` in `MessageText.tsx` now renders the task **title only** as a
+highlighted chip — a `Hash` icon + title on a `bg-primary/10` pill (matching the
+`@mention` chip styling) linking to `/tasks/:id`, with the numeric id dropped. When
+the task can't be resolved (deleted / not loaded) it falls back to the raw `#<id>`
+token as plain text instead of a dead link. Files keep rendering by filename. The
+composer's stored tokens stay raw `#<id>` (language-neutral, never goes stale); the
+`@`/`#` autocomplete dropdown still shows the id for disambiguation while typing.
+No new user-facing strings (the title is dynamic content), so no i18n extract needed.
 
 ## 7. Chat: upload a file directly
 

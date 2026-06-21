@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { Link } from "react-router-dom";
-import { FileText } from "lucide-react";
+import { FileText, Hash } from "lucide-react";
 import type { Asset, Task, User } from "@/lib/api";
 
 // Resolution maps passed down from the chat page. Messages store raw tokens; we
@@ -22,11 +22,14 @@ function Mention({ name }: { name: string }) {
   );
 }
 
-function TaskRef({ id, title }: { id: number; title?: string }) {
+function TaskRef({ id, title }: { id: number; title: string }) {
   return (
-    <Link to={`/tasks/${id}`} className="font-medium text-primary hover:underline">
-      #{id}
-      {title ? ` ${title}` : ""}
+    <Link
+      to={`/tasks/${id}`}
+      className="inline-flex items-center gap-0.5 rounded bg-primary/10 px-1 font-medium text-primary hover:underline"
+    >
+      <Hash className="h-3 w-3 shrink-0" />
+      <span className="truncate">{title}</span>
     </Link>
   );
 }
@@ -84,7 +87,9 @@ export function MessageText({ text, refs }: { text: string; refs: RefMaps }) {
       // #<id>
       const id = Number(token.slice(1));
       const task = refs.tasksById[id];
-      out.push(<TaskRef key={key++} id={id} title={task?.title} />);
+      out.push(
+        task ? <TaskRef key={key++} id={id} title={task.title} /> : <Fragment key={key++}>{token}</Fragment>
+      );
     }
   }
   if (last < text.length) out.push(<Fragment key={key++}>{text.slice(last)}</Fragment>);
