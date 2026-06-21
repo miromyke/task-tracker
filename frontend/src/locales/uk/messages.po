@@ -296,6 +296,10 @@ msgstr "Виконайте всі критерії успіху, перш ніж
 msgid "Choose at least one file"
 msgstr "Виберіть принаймні один файл"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Clear date"
+msgstr "Очистити дату"
+
 #: src/pages/Task.tsx
 msgid "Comments"
 msgstr "Коментарі"
@@ -625,6 +629,10 @@ msgstr "Паролі не збігаються"
 #: src/pages/Task.tsx
 #~ msgid "Photo"
 #~ msgstr "Фото"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Pick a date"
+msgstr "Виберіть дату"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx

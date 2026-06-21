@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Ban, Loader2, Plus, RotateCcw, X } from "lucide-react";
+import { Ban, Calendar as CalendarIcon, Loader2, Plus, RotateCcw, X } from "lucide-react";
+import { format, parse } from "date-fns";
+import { enUS, uk } from "date-fns/locale";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type CriterionInput, type Project, type Status, type Task, type User } from "@/lib/api";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/constants";
@@ -8,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatShortDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +49,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
   const tagInputRef = useRef<HTMLInputElement>(null);
   const [assignee, setAssignee] = useState<string>(NONE);
   const [dueDate, setDueDate] = useState("");
+  const [dueOpen, setDueOpen] = useState(false);
   const [status, setStatus] = useState<Status>("todo");
   const [project, setProject] = useState<string>("");
   const [blockedBy, setBlockedBy] = useState("");
@@ -369,10 +376,49 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="due">
+              <Label>
                 <Trans>Due date</Trans>
               </Label>
-              <Input id="due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <Popover open={dueOpen} onOpenChange={setDueOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full justify-start gap-2 font-normal", !dueDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    {dueDate ? formatShortDate(dueDate) : <Trans>Pick a date</Trans>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={i18n.locale === "uk" ? uk : enUS}
+                    selected={dueDate ? parse(dueDate, "yyyy-MM-dd", new Date()) : undefined}
+                    onSelect={(d) => {
+                      setDueDate(d ? format(d, "yyyy-MM-dd") : "");
+                      setDueOpen(false);
+                    }}
+                    initialFocus
+                  />
+                  {dueDate && (
+                    <div className="border-t p-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setDueDate("");
+                          setDueOpen(false);
+                        }}
+                      >
+                        <Trans>Clear date</Trans>
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

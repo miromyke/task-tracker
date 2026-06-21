@@ -296,6 +296,10 @@ msgstr "Check off all success criteria before marking this done."
 msgid "Choose at least one file"
 msgstr "Choose at least one file"
 
+#: src/components/TaskFormDialog.tsx
+msgid "Clear date"
+msgstr "Clear date"
+
 #: src/pages/Task.tsx
 msgid "Comments"
 msgstr "Comments"
@@ -625,6 +629,10 @@ msgstr "Passwords do not match"
 #: src/pages/Task.tsx
 #~ msgid "Photo"
 #~ msgstr "Photo"
+
+#: src/components/TaskFormDialog.tsx
+msgid "Pick a date"
+msgstr "Pick a date"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
