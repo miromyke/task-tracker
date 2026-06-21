@@ -119,7 +119,7 @@ composer's stored tokens stay raw `#<id>` (language-neutral, never goes stale); 
 `@`/`#` autocomplete dropdown still shows the id for disambiguation while typing.
 No new user-facing strings (the title is dynamic content), so no i18n extract needed.
 
-## 7. Chat: upload a file directly
+## 7. Chat: upload a file directly ✅ Done
 
 Let users attach a brand-new file in the chat composer (not just reference an existing
 upload). Today the composer only inserts a `#file<id>` token via the picker over
@@ -128,6 +128,17 @@ task-note composer in `handleAddLog`). Since chat isn't project-scoped, this nee
 asset `project_id` to be optional — **see item 9** (shared prerequisite). On upload,
 record the asset and insert its `#file<id>` token (or attach it to the message
 directly). Respect the same inline-render/`nosniff` safety rules as other uploads.
+
+Implemented: the chat composer gained an upload button (an `Upload` icon next to the
+existing paperclip reference-picker) backed by a hidden multi-file `<input>`. On pick
+it calls `api.uploadOrphanAssets` (the project-less `POST /api/assets` endpoint from
+item 9 — no project, since chat is global), then inserts the resulting `#file<id>`
+token(s) at the caret via a generalized `insertFiles` helper (the existing reference
+picker now routes through the same helper). A spinner disables the button while
+uploading. Uploads flow through the same `saveUpload` + `/api/uploads` serving path as
+every other upload, so the `nosniff`/inline-render safety rules are inherited for free.
+Sent messages resolve the new file via the existing `referencedFileIds` → `getAsset`
+lazy-resolution. Strings extracted + translated to Ukrainian.
 
 ## 8. Files: drop the "approval" framing from deletion
 

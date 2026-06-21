@@ -1034,6 +1034,10 @@ msgstr "updated this task"
 msgid "Upload"
 msgstr "Upload"
 
+#: src/pages/Chat.tsx
+msgid "Upload a file"
+msgstr "Upload a file"
+
 #: src/components/AppLayout.tsx
 msgid "Uploading…"
 msgstr "Uploading…"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FileText, Hash, Loader2, Paperclip, Play, Plus, Send, X } from "lucide-react";
+import { FileText, Hash, Loader2, Paperclip, Play, Plus, Send, Upload, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
   api,
@@ -201,8 +201,10 @@ function Composer({
   const { t } = useLingui();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [suggest, setSuggest] = useState<Suggest | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const matches = useMemo(() => {
     if (!suggest) return [];
@@ -243,13 +245,29 @@ function Composer({
     });
   }
 
-  function insertFile(asset: Asset) {
+  // Insert one or more #file<id> tokens at the caret (from the reference picker or
+  // a fresh upload).
+  function insertFiles(assets: Asset[]) {
+    if (assets.length === 0) return;
     const el = ref.current;
     const caret = el?.selectionStart ?? text.length;
-    const token = `#file${asset.id}`;
-    const next = `${text.slice(0, caret)}${token} ${text.slice(caret)}`;
+    const tokens = assets.map((a) => `#file${a.id}`).join(" ") + " ";
+    const next = `${text.slice(0, caret)}${tokens}${text.slice(caret)}`;
     setText(next);
     requestAnimationFrame(() => el?.focus());
+  }
+
+  async function onUploadFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ""; // allow re-picking the same file
+    if (files.length === 0) return;
+    setUploading(true);
+    try {
+      const assets = await api.uploadOrphanAssets(files);
+      insertFiles(assets);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function send() {
@@ -299,7 +317,18 @@ function Composer({
         </div>
       )}
       <div className="flex items-end gap-2">
-        <FilePickerDialog onPick={insertFile} />
+        <input ref={fileRef} type="file" multiple hidden onChange={onUploadFiles} />
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          title={t`Upload a file`}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+        </Button>
+        <FilePickerDialog onPick={(a) => insertFiles([a])} />
         <Textarea
           ref={ref}
           value={text}

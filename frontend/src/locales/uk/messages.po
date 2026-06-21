@@ -1030,6 +1030,10 @@ msgstr "оновлено задачу"
 msgid "Upload"
 msgstr "Завантажити"
 
+#: src/pages/Chat.tsx
+msgid "Upload a file"
+msgstr "Завантажити файл"
+
 #: src/components/AppLayout.tsx
 msgid "Uploading…"
 msgstr "Завантаження…"
