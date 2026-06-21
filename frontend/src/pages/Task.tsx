@@ -105,6 +105,15 @@ function LogEntry({ log, user }: { log: LogItem; user?: User }) {
   );
 }
 
+function MetaRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm">{children}</div>
+    </div>
+  );
+}
+
 export function TaskPage() {
   const { id } = useParams();
   const taskId = Number(id);
@@ -120,7 +129,6 @@ export function TaskPage() {
 
   const [noteText, setNoteText] = useState("");
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
-  const [noteFocused, setNoteFocused] = useState(false);
   const [posting, setPosting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -202,9 +210,8 @@ export function TaskPage() {
   }
 
   const assignee = task.assigneeId ? usersById.get(task.assigneeId) : undefined;
+  const creator = usersById.get(task.createdBy);
   const overdue = task.dueDate && isPast(task.dueDate) && task.status !== "done" && task.status !== "abandoned";
-  // Collapse the note input to a single line until it's focused or has content.
-  const noteExpanded = noteFocused || noteText.trim().length > 0 || noteFiles.length > 0;
 
   return (
     <div className="flex h-full flex-col gap-5">
@@ -215,7 +222,7 @@ export function TaskPage() {
         <ChevronLeft className="h-4 w-4" /> <Trans>Back to board</Trans>
       </Link>
 
-      <div className="mx-auto flex w-full max-w-3xl shrink-0 items-start justify-between gap-3">
+      <div className="flex shrink-0 items-start justify-between gap-3">
         <h1 className="text-xl font-bold leading-tight">{task.title}</h1>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
           <Pencil className="h-4 w-4" />
@@ -223,63 +230,120 @@ export function TaskPage() {
         </Button>
       </div>
 
-      {/* Single column: content scrolls within the available height; the note
-          input below stays put. */}
-      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
-          {/* Compact properties bar — scrolls together with the content */}
-          <div className="space-y-2 border-b pb-4">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-              <Select value={task.status} onValueChange={(v) => changeStatus(v as Status)}>
-                <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-1 shadow-none focus:ring-0 focus:ring-offset-0">
-                  <StatusBadge status={task.status} />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_ORDER.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {i18n._(STATUS_LABEL[s])}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Mobile-only compact properties bar — part of the header; desktop uses the rail */}
+      <div className="shrink-0 space-y-2 border-b pb-3 md:hidden">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+          <Select value={task.status} onValueChange={(v) => changeStatus(v as Status)}>
+            <SelectTrigger className="h-8 w-auto gap-1.5 border-0 bg-transparent px-1 shadow-none focus:ring-0 focus:ring-offset-0">
+              <StatusBadge status={task.status} />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_ORDER.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {i18n._(STATUS_LABEL[s])}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              <span className="text-border">|</span>
+          <span className="text-border">|</span>
 
-              {assignee ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-5 w-5 text-[9px]" />
-                  {assignee.name}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">
-                  <Trans>Unassigned</Trans>
-                </span>
-              )}
+          {assignee ? (
+            <span className="inline-flex items-center gap-1.5">
+              <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-5 w-5 text-[9px]" />
+              {assignee.name}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              <Trans>Unassigned</Trans>
+            </span>
+          )}
 
-              <span className="text-border">|</span>
+          <span className="text-border">|</span>
 
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" />
-                {task.dueDate ? (
-                  <span className={cn(overdue && "text-red-600")}>{formatShortDate(task.dueDate)}</span>
-                ) : (
-                  "—"
-                )}
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {task.dueDate ? (
+              <span className={cn(overdue && "text-red-600")}>{formatShortDate(task.dueDate)}</span>
+            ) : (
+              "—"
+            )}
+          </span>
+
+          {task.tags.length > 0 && (
+            <span className="flex flex-wrap items-center gap-1">
+              {task.tags.map((tg) => (
+                <Badge key={tg} className="border-transparent bg-accent text-accent-foreground">
+                  #{tg}
+                </Badge>
+              ))}
+            </span>
+          )}
+        </div>
+        {statusError && <p className="text-xs text-red-600">{statusError}</p>}
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row">
+        {/* Desktop properties rail (mobile uses the compact bar inside the column) */}
+        <Card className="hidden shrink-0 space-y-4 p-4 md:order-2 md:block md:w-[280px] md:self-start">
+          <MetaRow label={<Trans>Status</Trans>}>
+            <Select value={task.status} onValueChange={(v) => changeStatus(v as Status)}>
+              <SelectTrigger className="h-9">
+                <StatusBadge status={task.status} />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {i18n._(STATUS_LABEL[s])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {statusError && <p className="mt-1 text-xs text-red-600">{statusError}</p>}
+          </MetaRow>
+          <MetaRow label={<Trans>Tags</Trans>}>
+            <span className="flex flex-wrap gap-1">
+              {task.tags.map((tg) => (
+                <Badge key={tg} className="border-transparent bg-accent text-accent-foreground">
+                  #{tg}
+                </Badge>
+              ))}
+            </span>
+          </MetaRow>
+          <MetaRow label={<Trans>Assignee</Trans>}>
+            {assignee ? (
+              <span className="inline-flex items-center gap-2">
+                <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-6 w-6 text-[10px]" />
+                {assignee.name}
               </span>
+            ) : (
+              <span className="text-muted-foreground">
+                <Trans>Unassigned</Trans>
+              </span>
+            )}
+          </MetaRow>
+          <MetaRow label={<Trans>Due date</Trans>}>
+            {task.dueDate ? (
+              <span className={cn(overdue && "text-red-600")}>{formatShortDate(task.dueDate)}</span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </MetaRow>
+          <MetaRow label={<Trans>Created</Trans>}>
+            {formatShortDate(task.createdAt.slice(0, 10))}
+            {creator && (
+              <span className="text-muted-foreground">
+                {" "}
+                <Trans>by {creator.name}</Trans>
+              </span>
+            )}
+          </MetaRow>
+        </Card>
 
-              {task.tags.length > 0 && (
-                <span className="flex flex-wrap items-center gap-1">
-                  {task.tags.map((tg) => (
-                    <Badge key={tg} className="border-transparent bg-accent text-accent-foreground">
-                      #{tg}
-                    </Badge>
-                  ))}
-                </span>
-              )}
-            </div>
-            {statusError && <p className="text-xs text-red-600">{statusError}</p>}
-          </div>
-
+        {/* Main column: content scrolls within the available height; the note
+            input below stays put. */}
+        <div className="order-2 flex min-h-0 flex-1 flex-col md:order-1">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
           {task.description && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>}
 
           {(task.criteria ?? []).length > 0 &&
@@ -355,22 +419,13 @@ export function TaskPage() {
           </div>
 
           <Card className="mt-4 shrink-0 border-0 p-0 pr-1 shadow-none">
-            <form
-              onSubmit={postNote}
-              onFocus={() => setNoteFocused(true)}
-              onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) setNoteFocused(false);
-              }}
-              className="space-y-2"
-            >
+            <form onSubmit={postNote} className="space-y-2">
               <Textarea
                 placeholder={t`Log an update…`}
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
-                className={cn("transition-[min-height]", noteExpanded ? "min-h-[80px]" : "h-9 min-h-0")}
+                className="min-h-[60px]"
               />
-              {noteExpanded && (
-                <>
               {noteFiles.length > 0 && (
                 <div className="space-y-1">
                   {noteFiles.map((f, i) => (
@@ -409,10 +464,9 @@ export function TaskPage() {
                   <Trans>Post</Trans>
                 </Button>
               </div>
-                </>
-              )}
             </form>
           </Card>
+        </div>
       </div>
       <TaskFormDialog
         open={editOpen}
