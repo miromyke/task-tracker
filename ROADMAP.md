@@ -38,7 +38,7 @@ return `newLogs` so the feed updates live. The task activity feed renders each v
 +/− tag and checklist chips, the checked criterion text); legacy `edit` rows fall
 back to their old bundled rendering. Strings extracted + translated to Ukrainian.
 
-## 4. Files: soft delete with admin purge
+## 4. Files: soft delete with admin purge ✅ Done
 
 Allow deleting files, but don't remove them immediately:
 - A delete action moves the asset into a hidden **"Submitted for deletion"** tab
@@ -48,6 +48,22 @@ Allow deleting files, but don't remove them immediately:
   the file bytes from the uploads volume.
 - Non-admins only see the normal Files grid; the pending tab is admin-facing (or
   shows only what they requested). Decide visibility.
+
+Implemented: added nullable `deletion_requested_at` + `deletion_requested_by`
+columns to `assets` (migrated via `addColumnIfMissing`). `ListAssets` now takes a
+`pending` flag — the live grid filters `deletion_requested_at IS NULL`, the queue
+filters `IS NOT NULL`. New endpoints: `POST /api/assets/{id}/delete` (any signed-in
+user — soft-delete into the queue), `POST /api/assets/{id}/restore` (admin — clears
+the stamps), and `DELETE /api/assets/{id}` (admin — purges the row and unlinks the
+file bytes, plus any thumb, from the uploads volume). Purge is guarded: an asset
+must be in the queue first, so a stray DELETE can't wipe a live file; byte removal
+is best-effort (`filepath.Base` guards traversal). The `pending=1` list param is
+admin-only server-side. Visibility decision: the queue is **admin-only** — members
+see just the live grid but can submit any file for deletion. Frontend: the Files
+lightbox gains a trash action (confirm → submit for deletion); admins get a
+"Submitted for deletion" toggle showing the queue, where each item's lightbox shows
+who requested it (resolved name), a Restore action, and a permanent-delete action
+(confirm, irreversible). Strings extracted + translated to Ukrainian.
 
 ## 5. Global chat with channels
 

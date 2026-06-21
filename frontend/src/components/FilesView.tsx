@@ -1,10 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileText, Loader2, Play, Upload, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Loader2,
+  Play,
+  RotateCcw,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { Trans, useLingui, Plural } from "@lingui/react/macro";
 import { msg } from "@lingui/core/macro";
 import type { MessageDescriptor } from "@lingui/core";
-import { api, type Asset, type AssetKind, type Project } from "@/lib/api";
+import { api, type Asset, type AssetKind, type Project, type User } from "@/lib/api";
+import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -71,17 +84,32 @@ function AssetTile({ asset, onOpen }: { asset: Asset; onOpen: () => void }) {
 }
 
 // Fullscreen viewer for a single asset, with prev/next across the loaded list.
+// In the live grid it offers a "request deletion" action; in the pending queue it
+// offers restore and (for admins) permanent delete.
 function Lightbox({
   assets,
   index,
+  pending,
+  isAdmin,
+  requesterName,
   onClose,
   onMove,
+  onRequestDelete,
+  onRestore,
+  onPurge,
 }: {
   assets: Asset[];
   index: number;
+  pending: boolean;
+  isAdmin: boolean;
+  requesterName?: string;
   onClose: () => void;
   onMove: (dir: 1 | -1) => void;
+  onRequestDelete: (a: Asset) => void;
+  onRestore: (a: Asset) => void;
+  onPurge: (a: Asset) => void;
 }) {
+  const { t } = useLingui();
   const asset = assets[index];
 
   useEffect(() => {
@@ -107,6 +135,18 @@ function Lightbox({
             <DialogTitle className="truncate text-sm font-semibold">{asset.filename}</DialogTitle>
             <div className="text-xs text-white/60">
               {formatBytes(asset.size)} · {formatDateTime(asset.createdAt)}
+              {pending && asset.deletionRequestedAt && (
+                <>
+                  {" · "}
+                  <span className="text-amber-300/80">
+                    {requesterName ? (
+                      <Trans>Deletion requested by {requesterName}</Trans>
+                    ) : (
+                      <Trans>Deletion requested</Trans>
+                    )}
+                  </span>
+                </>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -117,6 +157,40 @@ function Lightbox({
             >
               <Download className="h-5 w-5" />
             </a>
+            {pending ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onRestore(asset)}
+                  className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+                  aria-label={t`Restore`}
+                  title={t`Restore`}
+                >
+                  <RotateCcw className="h-5 w-5" />
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => onPurge(asset)}
+                    className="rounded-full p-2 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                    aria-label={t`Delete permanently`}
+                    title={t`Delete permanently`}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onRequestDelete(asset)}
+                className="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
+                aria-label={t`Delete`}
+                title={t`Delete`}
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -288,8 +362,20 @@ function AddFilesDialog({
 // FilesView is the Files tab of the overview: a grid of uploaded assets scoped to
 // the page's selected project (projectId undefined = all projects). Project
 // selection and tag filtering are owned by the overview; tags don't apply here.
-export function FilesView({ projectId, projects }: { projectId?: number; projects: Project[] }) {
-  const { i18n } = useLingui();
+// Admins get a second "Submitted for deletion" view holding the soft-delete queue.
+export function FilesView({
+  projectId,
+  projects,
+  usersById,
+}: {
+  projectId?: number;
+  projects: Project[];
+  usersById?: Map<number, User>;
+}) {
+  const { i18n, t } = useLingui();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [pending, setPending] = useState(false);
   const [kind, setKind] = useState<AssetKind | "">("");
   const [assets, setAssets] = useState<Asset[]>([]);
   const [page, setPage] = useState(0);
@@ -299,13 +385,15 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState<Asset | null>(null);
+  const [confirmPurge, setConfirmPurge] = useState<Asset | null>(null);
 
-  // Reload from the first page whenever the project/kind filter or refresh changes.
+  // Reload from the first page whenever the view/project/kind filter changes.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     api
-      .listAssets({ projectId, kind: kind || undefined, page: 0 })
+      .listAssets({ projectId, kind: kind || undefined, pending, page: 0 })
       .then((r) => {
         if (cancelled) return;
         setAssets(r.assets);
@@ -318,12 +406,12 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
     return () => {
       cancelled = true;
     };
-  }, [projectId, kind, refreshKey]);
+  }, [projectId, kind, pending, refreshKey]);
 
   async function loadMore() {
     setLoadingMore(true);
     try {
-      const r = await api.listAssets({ projectId, kind: kind || undefined, page });
+      const r = await api.listAssets({ projectId, kind: kind || undefined, pending, page });
       setAssets((prev) => [...prev, ...r.assets]);
       setHasMore(r.hasMore);
       setPage((p) => p + 1);
@@ -338,6 +426,18 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
       const n = i + dir;
       return n >= 0 && n < assets.length ? n : i;
     });
+  }
+
+  // Drop an asset from the current view after it moves out of it (deleted,
+  // restored, or purged) and close the lightbox if it was showing.
+  function removeFromView(id: number) {
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+    setLightbox(null);
+  }
+
+  async function restore(a: Asset) {
+    await api.restoreAsset(a.id);
+    removeFromView(a.id);
   }
 
   return (
@@ -359,13 +459,40 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
             </button>
           ))}
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Upload className="h-4 w-4" />
-          <span className="hidden sm:inline">
-            <Trans>Add files</Trans>
-          </span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant={pending ? "default" : "outline"}
+              onClick={() => {
+                setPending((p) => !p);
+                setLightbox(null);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                <Trans>Submitted for deletion</Trans>
+              </span>
+            </Button>
+          )}
+          {!pending && (
+            <Button onClick={() => setAddOpen(true)}>
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                <Trans>Add files</Trans>
+              </span>
+            </Button>
+          )}
+        </div>
       </div>
+
+      {pending && assets.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          <Trans>
+            These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the
+            file for good.
+          </Trans>
+        </p>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">
@@ -373,7 +500,7 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
         </div>
       ) : assets.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">
-          <Trans>No files yet.</Trans>
+          {pending ? <Trans>Nothing submitted for deletion.</Trans> : <Trans>No files yet.</Trans>}
         </p>
       ) : (
         <>
@@ -393,9 +520,52 @@ export function FilesView({ projectId, projects }: { projectId?: number; project
         </>
       )}
 
-      {lightbox !== null && (
-        <Lightbox assets={assets} index={lightbox} onClose={() => setLightbox(null)} onMove={moveLightbox} />
+      {lightbox !== null && assets[lightbox] && (
+        <Lightbox
+          assets={assets}
+          index={lightbox}
+          pending={pending}
+          isAdmin={!!isAdmin}
+          requesterName={
+            assets[lightbox].deletionRequestedBy
+              ? usersById?.get(assets[lightbox].deletionRequestedBy!)?.name
+              : undefined
+          }
+          onClose={() => setLightbox(null)}
+          onMove={moveLightbox}
+          onRequestDelete={setConfirmDelete}
+          onRestore={(a) => void restore(a)}
+          onPurge={setConfirmPurge}
+        />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(o) => !o && setConfirmDelete(null)}
+        title={t`Submit this file for deletion?`}
+        description={t`It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good.`}
+        confirmLabel={t`Submit for deletion`}
+        destructive
+        onConfirm={async () => {
+          if (!confirmDelete) return;
+          await api.requestDeleteAsset(confirmDelete.id);
+          removeFromView(confirmDelete.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmPurge}
+        onOpenChange={(o) => !o && setConfirmPurge(null)}
+        title={t`Delete this file permanently?`}
+        description={t`This removes the file and its data for good. This cannot be undone.`}
+        confirmLabel={t`Delete permanently`}
+        destructive
+        onConfirm={async () => {
+          if (!confirmPurge) return;
+          await api.purgeAsset(confirmPurge.id);
+          removeFromView(confirmPurge.id);
+        }}
+      />
 
       <AddFilesDialog
         open={addOpen}

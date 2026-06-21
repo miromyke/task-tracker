@@ -55,6 +55,9 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /api/assets", s.requireAuth(s.handleListAssets))
 	mux.HandleFunc("POST /api/projects/{id}/assets", s.requireAuth(s.handleUploadAssets))
+	mux.HandleFunc("POST /api/assets/{id}/delete", s.requireAuth(s.handleRequestAssetDeletion))
+	mux.HandleFunc("POST /api/assets/{id}/restore", s.requireAdmin(s.handleRestoreAsset))
+	mux.HandleFunc("DELETE /api/assets/{id}", s.requireAdmin(s.handlePurgeAsset))
 
 	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
@@ -797,19 +800,25 @@ func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleListAssets powers the Files page: a paginated, newest-first list of
-// uploads, optionally scoped by project, kind, and tag.
+// uploads, optionally scoped by project, kind, and tag. pending=1 returns the
+// soft-deletion queue instead of the live grid; that queue is admin-only.
 func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	projectID, _ := strconv.ParseInt(q.Get("project"), 10, 64) // 0 = all projects
 	kind := q.Get("kind")                                      // image|video|document|other or ""
 	tag := q.Get("tag")
+	pending := q.Get("pending") == "1"
+	if pending && !currentUser(r).IsAdmin() {
+		writeErr(w, http.StatusForbidden, "admin only")
+		return
+	}
 	page, _ := strconv.Atoi(q.Get("page")) // 0-based
 	if page < 0 {
 		page = 0
 	}
 	const pageSize = 60
 	// Fetch one extra row to detect whether another page exists.
-	assets, err := s.store.ListAssets(projectID, kind, tag, pageSize+1, page*pageSize)
+	assets, err := s.store.ListAssets(projectID, kind, tag, pending, pageSize+1, page*pageSize)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -873,6 +882,111 @@ func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, assets)
+}
+
+// handleRequestAssetDeletion soft-deletes an asset: any signed-in user can move a
+// file into the "Submitted for deletion" queue, where an admin later purges or
+// restores it. The bytes stay on disk until a purge.
+func (s *Server) handleRequestAssetDeletion(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	asset, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if asset == nil {
+		writeErr(w, http.StatusNotFound, "asset not found")
+		return
+	}
+	if err := s.store.RequestAssetDeletion(id, currentUser(r).ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	updated, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// handleRestoreAsset (admin) cancels a pending deletion, returning the asset to
+// the live Files grid.
+func (s *Server) handleRestoreAsset(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	asset, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if asset == nil {
+		writeErr(w, http.StatusNotFound, "asset not found")
+		return
+	}
+	if err := s.store.RestoreAsset(id); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	updated, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+// handlePurgeAsset (admin) permanently removes an asset that's in the deletion
+// queue: it deletes the DB row and the file bytes from the uploads volume. Assets
+// must be submitted for deletion first, so a stray DELETE can't wipe a live file.
+func (s *Server) handlePurgeAsset(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	asset, err := s.store.GetAsset(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if asset == nil {
+		writeErr(w, http.StatusNotFound, "asset not found")
+		return
+	}
+	if asset.DeletionRequestedAt == nil {
+		writeErr(w, http.StatusBadRequest, "asset must be submitted for deletion first")
+		return
+	}
+	if err := s.store.DeleteAsset(id); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Best-effort byte removal. The row is already gone; a leftover file is a
+	// harmless orphan, so don't fail the request if the unlink errors.
+	removeUploadBytes(s.cfg.UploadsDir, asset.Path)
+	if asset.ThumbPath != nil {
+		removeUploadBytes(s.cfg.UploadsDir, *asset.ThumbPath)
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// removeUploadBytes deletes the file backing an asset path (e.g.
+// "/api/uploads/<name>") from the uploads directory. filepath.Base guards against
+// path traversal in the stored path.
+func removeUploadBytes(uploadsDir, assetPath string) {
+	name := filepath.Base(assetPath)
+	if name == "." || name == "/" || name == "" {
+		return
+	}
+	_ = os.Remove(filepath.Join(uploadsDir, name))
 }
 
 func (s *Server) handleListTags(w http.ResponseWriter, r *http.Request) {

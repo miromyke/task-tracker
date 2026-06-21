@@ -277,7 +277,7 @@ export function ProjectsPage() {
   );
 
   return (
-    <div className="flex flex-col gap-5 pt-1">
+    <div className="flex flex-col gap-10 pt-1">
       {/* Desktop: tabs in a top strip aligned over the content column. */}
       <div className="hidden lg:flex lg:flex-row lg:gap-12">
         <div className="lg:w-56 lg:shrink-0" aria-hidden />
@@ -417,7 +417,7 @@ export function ProjectsPage() {
         ) : view === "calendar" ? (
           <CalendarView projectId={selectedId ?? undefined} tag={tag === ALL ? undefined : tag} />
         ) : view === "files" ? (
-          <FilesView projectId={selectedId ?? undefined} projects={projects} />
+          <FilesView projectId={selectedId ?? undefined} projects={projects} usersById={usersById} />
         ) : (
           <>
             {moveError && (

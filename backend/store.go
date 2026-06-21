@@ -184,6 +184,11 @@ type Asset struct {
 	Height     *int     `json:"height"`
 	Duration   *float64 `json:"duration"`
 	CreatedAt  string   `json:"createdAt"`
+	// Soft-deletion: when DeletionRequestedAt is set the asset is hidden from the
+	// normal Files grid and waits in the admin-facing "Submitted for deletion" tab
+	// until an admin purges it (row + bytes) or restores it. Both nil otherwise.
+	DeletionRequestedAt *string `json:"deletionRequestedAt"`
+	DeletionRequestedBy *int64  `json:"deletionRequestedBy"`
 }
 
 // TaskChanges describes a partial update; only fields that are set are applied.
@@ -344,7 +349,13 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("tasks", "blocked_reason", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
-	return s.addColumnIfMissing("log_items", "details", "TEXT")
+	if err := s.addColumnIfMissing("log_items", "details", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("assets", "deletion_requested_at", "TEXT"); err != nil {
+		return err
+	}
+	return s.addColumnIfMissing("assets", "deletion_requested_by", "INTEGER")
 }
 
 // addColumnIfMissing adds a column to a table if it isn't there yet, so existing
@@ -1552,16 +1563,17 @@ func (s *Store) ListLogs(taskID int64) ([]LogItem, error) {
 
 // ---- Assets ----
 
-const assetCols = "id, project_id, task_id, log_id, uploaded_by, kind, mime, filename, path, thumb_path, size, width, height, duration, created_at"
+const assetCols = "id, project_id, task_id, log_id, uploaded_by, kind, mime, filename, path, thumb_path, size, width, height, duration, created_at, deletion_requested_at, deletion_requested_by"
 
 func scanAsset(sc scanner) (*Asset, error) {
 	var a Asset
-	var taskID, logID sql.NullInt64
-	var thumb sql.NullString
+	var taskID, logID, delBy sql.NullInt64
+	var thumb, delAt sql.NullString
 	var width, height sql.NullInt64
 	var duration sql.NullFloat64
 	if err := sc.Scan(&a.ID, &a.ProjectID, &taskID, &logID, &a.UploadedBy, &a.Kind, &a.Mime,
-		&a.Filename, &a.Path, &thumb, &a.Size, &width, &height, &duration, &a.CreatedAt); err != nil {
+		&a.Filename, &a.Path, &thumb, &a.Size, &width, &height, &duration, &a.CreatedAt,
+		&delAt, &delBy); err != nil {
 		return nil, err
 	}
 	if taskID.Valid {
@@ -1569,6 +1581,12 @@ func scanAsset(sc scanner) (*Asset, error) {
 	}
 	if logID.Valid {
 		a.LogID = &logID.Int64
+	}
+	if delAt.Valid {
+		a.DeletionRequestedAt = &delAt.String
+	}
+	if delBy.Valid {
+		a.DeletionRequestedBy = &delBy.Int64
 	}
 	if thumb.Valid {
 		a.ThumbPath = &thumb.String
@@ -1589,14 +1607,20 @@ func scanAsset(sc scanner) (*Asset, error) {
 
 // assetColsQ is assetCols with the assets table aliased as `a`, for queries that
 // join other tables (column names like id/project_id would otherwise be ambiguous).
-const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at"
+const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.uploaded_by, a.kind, a.mime, a.filename, a.path, a.thumb_path, a.size, a.width, a.height, a.duration, a.created_at, a.deletion_requested_at, a.deletion_requested_by"
 
 // ListAssets returns uploaded files newest-first, optionally scoped by project,
 // kind, and task tag. projectID == 0 means all projects; empty kind/tag skip that
-// filter. limit/offset paginate.
-func (s *Store) ListAssets(projectID int64, kind, tag string, limit, offset int) ([]Asset, error) {
+// filter. pending selects the soft-deletion queue (assets awaiting purge) instead
+// of the live grid. limit/offset paginate.
+func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limit, offset int) ([]Asset, error) {
 	q := "SELECT " + assetColsQ + " FROM assets a WHERE 1=1"
 	args := []any{}
+	if pending {
+		q += " AND a.deletion_requested_at IS NOT NULL"
+	} else {
+		q += " AND a.deletion_requested_at IS NULL"
+	}
 	if projectID != 0 {
 		q += " AND a.project_id = ?"
 		args = append(args, projectID)
@@ -1626,6 +1650,42 @@ func (s *Store) ListAssets(projectID int64, kind, tag string, limit, offset int)
 		out = append(out, *a)
 	}
 	return out, rows.Err()
+}
+
+// GetAsset returns a single asset by id, or (nil, nil) if it doesn't exist.
+func (s *Store) GetAsset(id int64) (*Asset, error) {
+	a, err := scanAsset(s.db.QueryRow("SELECT "+assetCols+" FROM assets WHERE id=?", id))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+// RequestAssetDeletion soft-deletes an asset: it leaves the row and bytes in
+// place but stamps who asked and when, moving it out of the live grid into the
+// admin purge queue. Idempotent — re-requesting just refreshes the stamp.
+func (s *Store) RequestAssetDeletion(id, userID int64) error {
+	_, err := s.db.Exec(
+		"UPDATE assets SET deletion_requested_at=?, deletion_requested_by=? WHERE id=?",
+		nowUTC(), userID, id)
+	return err
+}
+
+// RestoreAsset cancels a pending deletion, returning the asset to the live grid.
+func (s *Store) RestoreAsset(id int64) error {
+	_, err := s.db.Exec(
+		"UPDATE assets SET deletion_requested_at=NULL, deletion_requested_by=NULL WHERE id=?", id)
+	return err
+}
+
+// DeleteAsset permanently removes the asset row. Callers are responsible for
+// deleting the underlying file bytes.
+func (s *Store) DeleteAsset(id int64) error {
+	_, err := s.db.Exec("DELETE FROM assets WHERE id=?", id)
+	return err
 }
 
 // assetsByLogIDs returns the assets for the given log entries, grouped by log_id.

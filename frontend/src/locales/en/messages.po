@@ -407,6 +407,26 @@ msgstr "Current password"
 msgid "Dark"
 msgstr "Dark"
 
+#: src/components/FilesView.tsx
+msgid "Delete"
+msgstr "Delete"
+
+#: src/components/FilesView.tsx
+msgid "Delete permanently"
+msgstr "Delete permanently"
+
+#: src/components/FilesView.tsx
+msgid "Delete this file permanently?"
+msgstr "Delete this file permanently?"
+
+#: src/components/FilesView.tsx
+msgid "Deletion requested"
+msgstr "Deletion requested"
+
+#: src/components/FilesView.tsx
+msgid "Deletion requested by {requesterName}"
+msgstr "Deletion requested by {requesterName}"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Description"
@@ -516,6 +536,10 @@ msgstr "In progress"
 #: src/pages/Task.tsx
 msgid "It will be hidden from the board by default. You can unarchive it later from the task page."
 msgstr "It will be hidden from the board by default. You can unarchive it later from the task page."
+
+#: src/components/FilesView.tsx
+msgid "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
+msgstr "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
 
 #: src/components/AppLayout.tsx
 msgid "Language"
@@ -643,6 +667,10 @@ msgstr "Nothing logged on this day."
 #~ msgid "Nothing open — nice work."
 #~ msgstr "Nothing open — nice work."
 
+#: src/components/FilesView.tsx
+msgid "Nothing submitted for deletion."
+msgstr "Nothing submitted for deletion."
+
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
 #~ msgstr "Open board"
@@ -731,6 +759,10 @@ msgstr "renamed this task"
 msgid "Reset"
 msgstr "Reset"
 
+#: src/components/FilesView.tsx
+msgid "Restore"
+msgstr "Restore"
+
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Restore criterion"
@@ -781,6 +813,18 @@ msgstr "started working on this"
 #: src/pages/Task.tsx
 msgid "Status"
 msgstr "Status"
+
+#: src/components/FilesView.tsx
+msgid "Submit for deletion"
+msgstr "Submit for deletion"
+
+#: src/components/FilesView.tsx
+msgid "Submit this file for deletion?"
+msgstr "Submit this file for deletion?"
+
+#: src/components/FilesView.tsx
+msgid "Submitted for deletion"
+msgstr "Submitted for deletion"
 
 #: src/components/KanbanBoard.tsx
 #: src/components/TaskFormDialog.tsx
@@ -839,6 +883,14 @@ msgstr "The project and its tasks will be hidden from the default view. You can 
 #: src/components/AppLayout.tsx
 msgid "Theme"
 msgstr "Theme"
+
+#: src/components/FilesView.tsx
+msgid "These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the file for good."
+msgstr "These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the file for good."
+
+#: src/components/FilesView.tsx
+msgid "This removes the file and its data for good. This cannot be undone."
+msgstr "This removes the file and its data for good. This cannot be undone."
 
 #: src/pages/Task.tsx
 msgid "This task is archived — it's hidden from the board by default."

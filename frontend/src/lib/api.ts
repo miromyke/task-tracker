@@ -87,6 +87,10 @@ export interface Asset {
   height: number | null;
   duration: number | null;
   createdAt: string;
+  // Set when the asset is awaiting admin purge in the "Submitted for deletion"
+  // queue; null on live files.
+  deletionRequestedAt: string | null;
+  deletionRequestedBy: number | null;
 }
 
 // LogDetails is the structured, language-neutral payload on a log entry. Each
@@ -309,15 +313,22 @@ export const api = {
     for (const f of files) fd.append("files", f);
     return req<Asset[]>(`/projects/${projectId}/assets`, { method: "POST", body: fd });
   },
-  listAssets: (opts: { projectId?: number; kind?: string; tag?: string; page?: number } = {}) =>
+  listAssets: (opts: { projectId?: number; kind?: string; tag?: string; pending?: boolean; page?: number } = {}) =>
     req<{ assets: Asset[]; hasMore: boolean }>(
       `/assets${qs({
         project: opts.projectId ? String(opts.projectId) : undefined,
         kind: opts.kind,
         tag: opts.tag,
+        pending: opts.pending ? "1" : undefined,
         page: opts.page ? String(opts.page) : undefined,
       })}`
     ),
+  // Soft-delete: move an asset into the admin purge queue. Returns the updated row.
+  requestDeleteAsset: (id: number) => req<Asset>(`/assets/${id}/delete`, { method: "POST" }),
+  // Admin: cancel a pending deletion.
+  restoreAsset: (id: number) => req<Asset>(`/assets/${id}/restore`, { method: "POST" }),
+  // Admin: permanently delete a queued asset (row + bytes).
+  purgeAsset: (id: number) => req<void>(`/assets/${id}`, { method: "DELETE" }),
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),
