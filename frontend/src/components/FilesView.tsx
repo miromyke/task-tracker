@@ -274,7 +274,7 @@ function AddFilesDialog({
 
   useEffect(() => {
     if (!open) return;
-    setProject(projectId ? String(projectId) : "");
+    setProject(projectId ? String(projectId) : NO_PROJECT);
     setFiles([]);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
