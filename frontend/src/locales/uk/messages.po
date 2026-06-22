@@ -23,10 +23,8 @@ msgstr "\"{0}\" має невиконані критерії успіху — в
 msgid "(optional)"
 msgstr "(необов'язково)"
 
-#. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# вкладення} few {# вкладення} many {# вкладень} other {# вкладення}}"
 
@@ -35,10 +33,8 @@ msgstr "{0, plural, one {# вкладення} few {# вкладення} many {
 msgid "{0, plural, one {# file selected} other {# files selected}}"
 msgstr "{0, plural, one {вибрано # файл} few {вибрано # файли} many {вибрано # файлів} other {вибрано # файлів}}"
 
-#. placeholder {0}: d.count
 #. placeholder {0}: day.count
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# запис} few {# записи} many {# записів} other {# запису}}"
 
@@ -47,10 +43,8 @@ msgstr "{0, plural, one {# запис} few {# записи} many {# записі
 #~ msgid "{0, plural, one {# task} other {# tasks}}"
 #~ msgstr "{0, plural, one {# задача} few {# задачі} many {# задач} other {# задачі}}"
 
-#. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
@@ -107,24 +101,24 @@ msgstr "{overdueDays, plural, one {Прострочено на # день} few {
 #~ msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
 
 #: src/components/PulseCard.tsx
-msgid "1 month"
-msgstr "1 місяць"
+#~ msgid "1 month"
+#~ msgstr "1 місяць"
 
 #: src/components/PulseCard.tsx
-msgid "1 week"
-msgstr "1 тиждень"
+#~ msgid "1 week"
+#~ msgstr "1 тиждень"
 
 #: src/components/PulseCard.tsx
-msgid "2 weeks"
-msgstr "2 тижні"
+#~ msgid "2 weeks"
+#~ msgstr "2 тижні"
 
 #: src/components/PulseCard.tsx
-msgid "3 months"
-msgstr "3 місяці"
+#~ msgid "3 months"
+#~ msgstr "3 місяці"
 
 #: src/components/PulseCard.tsx
-msgid "6 months"
-msgstr "6 місяців"
+#~ msgid "6 months"
+#~ msgstr "6 місяців"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -147,6 +141,10 @@ msgstr "облишено цю задачу"
 #: src/components/AppLayout.tsx
 msgid "Account"
 msgstr "Обліковий запис"
+
+#: src/pages/Projects.tsx
+msgid "Actions"
+msgstr "Дії"
 
 #: src/components/CalendarView.tsx
 #: src/pages/Task.tsx
@@ -213,6 +211,10 @@ msgstr "Усі файли"
 #: src/pages/Projects.tsx
 msgid "All projects"
 msgstr "Усі проєкти"
+
+#: src/pages/Projects.tsx
+#~ msgid "All projects selected"
+#~ msgstr "Вибрано всі проєкти"
 
 #: src/pages/Projects.tsx
 msgid "All tags"
@@ -538,6 +540,7 @@ msgid "Docs"
 msgstr "Документи"
 
 #: src/lib/constants.ts
+#: src/pages/Projects.tsx
 msgid "Done"
 msgstr "Готово"
 
@@ -613,6 +616,10 @@ msgstr "Файли"
 #: src/pages/Projects.tsx
 msgid "Files for {0}"
 msgstr "Файли для {0}"
+
+#: src/pages/Projects.tsx
+msgid "Filter"
+msgstr "Фільтр"
 
 #: src/pages/Chat.tsx
 msgid "general"
@@ -787,8 +794,8 @@ msgid "No tasks"
 msgstr "Немає задач"
 
 #: src/components/KanbanBoard.tsx
-msgid "No tasks in {activeLabel}."
-msgstr "Немає задач у «{activeLabel}»."
+#~ msgid "No tasks in {activeLabel}."
+#~ msgstr "Немає задач у «{activeLabel}»."
 
 #: src/pages/Task.tsx
 msgid "none"
@@ -853,8 +860,13 @@ msgstr "Відкладено"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
+#: src/pages/Projects.tsx
 msgid "Project"
 msgstr "Проєкт"
+
+#: src/pages/Projects.tsx
+msgid "Project actions"
+msgstr "Дії проєкту"
 
 #: src/pages/ProjectBoard.tsx
 #: src/pages/ProjectOverview.tsx
@@ -870,9 +882,14 @@ msgstr "Проєкт: {projectName}"
 msgid "Projects"
 msgstr "Проєкти"
 
-#: src/components/PulseCard.tsx
+#: src/pages/Projects.tsx
 #~ msgid "Pulse"
-#~ msgstr "Пульс"
+#~ msgstr "Активність"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+#~ msgid "Pulse for {0}"
+#~ msgstr "Активність для {0}"
 
 #: src/components/BlockTaskDialog.tsx
 #: src/components/TaskFormDialog.tsx
@@ -932,6 +949,10 @@ msgstr "Виберіть канал, щоб почати спілкування.
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Виберіть проєкт"
+
+#: src/pages/Projects.tsx
+#~ msgid "Select project"
+#~ msgstr "Вибрати проєкт"
 
 #: src/components/BlockTaskDialog.tsx
 msgid "Select the blocking task"

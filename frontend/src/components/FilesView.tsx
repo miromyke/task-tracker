@@ -493,8 +493,8 @@ export function FilesView({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        {/* kind tabs */}
-        <div className="inline-flex rounded-md border p-0.5">
+        {/* kind tabs — desktop only; mobile keeps just the upload button. */}
+        <div className="hidden rounded-md border p-0.5 sm:inline-flex">
           {KIND_TABS.map(({ value, label }) => (
             <button
               key={value || "all"}
@@ -513,6 +513,7 @@ export function FilesView({
           {isAdmin && (
             <Button
               variant={pending ? "default" : "outline"}
+              className="hidden sm:inline-flex"
               onClick={() => {
                 setPending((p) => !p);
                 setLightbox(null);
@@ -527,9 +528,7 @@ export function FilesView({
           {!pending && (
             <Button onClick={() => setAddOpen(true)}>
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                <Trans>Add files</Trans>
-              </span>
+              <Trans>Add files</Trans>
             </Button>
           )}
         </div>

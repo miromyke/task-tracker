@@ -246,75 +246,89 @@ function DesktopBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: 
   );
 }
 
-/* ---------- Mobile: status tabs, one column ---------- */
+/* ---------- Mobile: same columns as desktop, horizontally scrollable ---------- */
+/* Tap-to-move (the per-card "Move:" select) replaces drag here — dragging would
+   fight the horizontal scroll. */
+
+function MobileColumnCard({
+  task,
+  usersById,
+  taskTitleById,
+  onCardClick,
+  onMove,
+}: {
+  task: Task;
+  usersById: Map<number, User>;
+  taskTitleById: Map<number, string>;
+  onCardClick: (id: number) => void;
+  onMove: (task: Task, to: Status) => void;
+}) {
+  const { i18n } = useLingui();
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-3 shadow-sm",
+        task.archived && "border-dashed border-muted-foreground/40 bg-muted/40 opacity-70"
+      )}
+    >
+      <div onClick={() => onCardClick(task.id)}>
+        <CardBody task={task} usersById={usersById} taskTitleById={taskTitleById} />
+      </div>
+      <div className="mt-2 flex items-center justify-end border-t pt-2">
+        <Select value={task.status} onValueChange={(v) => onMove(task, v as Status)}>
+          <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs text-muted-foreground shadow-none">
+            <span className="text-muted-foreground">
+              <Trans>Move:</Trans>
+            </span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_ORDER.map((s) => (
+              <SelectItem key={s} value={s}>
+                {i18n._(STATUS_LABEL[s])}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
 
 function MobileBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: BoardProps) {
   const { i18n } = useLingui();
-  const [active, setActive] = useState<Status>("in_progress");
-  const colTasks = tasks.filter((t) => t.status === active);
-  const activeLabel = i18n._(STATUS_LABEL[active]);
-
   return (
-    <div className="space-y-3">
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-        {STATUS_ORDER.map((s) => {
-          const count = tasks.filter((t) => t.status === s).length;
-          const on = active === s;
-          return (
-            <button
-              key={s}
-              onClick={() => setActive(s)}
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                on ? "border-transparent bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
-              )}
-            >
-              <span className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[s])} />
-              {i18n._(STATUS_LABEL[s])}
-              <span className={cn("text-xs", on ? "text-primary-foreground/70" : "text-muted-foreground")}>{count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="space-y-2">
-        {colTasks.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            <Trans>No tasks in {activeLabel}.</Trans>
-          </p>
-        ) : (
-          colTasks.map((t) => (
-            <div
-              key={t.id}
-              className={cn(
-                "rounded-lg border bg-card p-3 shadow-sm",
-                t.archived && "border-dashed border-muted-foreground/40 bg-muted/40 opacity-70"
-              )}
-            >
-              <div onClick={() => onCardClick(t.id)}>
-                <CardBody task={t} usersById={usersById} taskTitleById={taskTitleById} />
-              </div>
-              <div className="mt-2 flex items-center justify-end border-t pt-2">
-                <Select value={t.status} onValueChange={(v) => onMove(t, v as Status)}>
-                  <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs text-muted-foreground shadow-none">
-                    <span className="text-muted-foreground">
-                      <Trans>Move:</Trans>
-                    </span>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_ORDER.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {i18n._(STATUS_LABEL[s])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+    <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2">
+      {STATUS_ORDER.map((s) => {
+        const colTasks = tasks.filter((t) => t.status === s);
+        return (
+          <div key={s} className="flex w-[78vw] max-w-xs shrink-0 snap-start flex-col">
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[s])} />
+              <span className="text-sm font-semibold">{i18n._(STATUS_LABEL[s])}</span>
+              <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">{colTasks.length}</span>
             </div>
-          ))
-        )}
-      </div>
+            <div className="flex min-h-24 flex-1 flex-col gap-2 rounded-xl border border-dashed border-border bg-muted/40 p-2">
+              {colTasks.length === 0 ? (
+                <p className="px-1 py-4 text-center text-xs text-muted-foreground">
+                  <Trans>No tasks</Trans>
+                </p>
+              ) : (
+                colTasks.map((t) => (
+                  <MobileColumnCard
+                    key={t.id}
+                    task={t}
+                    usersById={usersById}
+                    taskTitleById={taskTitleById}
+                    onCardClick={onCardClick}
+                    onMove={onMove}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

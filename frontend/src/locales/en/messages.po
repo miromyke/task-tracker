@@ -23,10 +23,8 @@ msgstr "\"{0}\" still has unchecked success criteria — open it to finish them 
 msgid "(optional)"
 msgstr "(optional)"
 
-#. placeholder {0}: d.attachments
 #. placeholder {0}: day.attachments
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0, plural, one {# attachment} other {# attachments}}"
 msgstr "{0, plural, one {# attachment} other {# attachments}}"
 
@@ -35,10 +33,8 @@ msgstr "{0, plural, one {# attachment} other {# attachments}}"
 msgid "{0, plural, one {# file selected} other {# files selected}}"
 msgstr "{0, plural, one {# file selected} other {# files selected}}"
 
-#. placeholder {0}: d.count
 #. placeholder {0}: day.count
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0, plural, one {# log} other {# logs}}"
 msgstr "{0, plural, one {# log} other {# logs}}"
 
@@ -47,10 +43,8 @@ msgstr "{0, plural, one {# log} other {# logs}}"
 #~ msgid "{0, plural, one {# task} other {# tasks}}"
 #~ msgstr "{0, plural, one {# task} other {# tasks}}"
 
-#. placeholder {0}: formatShortDate(d.date)
 #. placeholder {0}: formatShortDate(date)
 #: src/components/CalendarView.tsx
-#: src/components/PulseCard.tsx
 msgid "{0} · {logs} · {atts}"
 msgstr "{0} · {logs} · {atts}"
 
@@ -107,24 +101,24 @@ msgstr "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
 #~ msgstr "{z, plural, one {# month} other {# months}}"
 
 #: src/components/PulseCard.tsx
-msgid "1 month"
-msgstr "1 month"
+#~ msgid "1 month"
+#~ msgstr "1 month"
 
 #: src/components/PulseCard.tsx
-msgid "1 week"
-msgstr "1 week"
+#~ msgid "1 week"
+#~ msgstr "1 week"
 
 #: src/components/PulseCard.tsx
-msgid "2 weeks"
-msgstr "2 weeks"
+#~ msgid "2 weeks"
+#~ msgstr "2 weeks"
 
 #: src/components/PulseCard.tsx
-msgid "3 months"
-msgstr "3 months"
+#~ msgid "3 months"
+#~ msgstr "3 months"
 
 #: src/components/PulseCard.tsx
-msgid "6 months"
-msgstr "6 months"
+#~ msgid "6 months"
+#~ msgstr "6 months"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -147,6 +141,10 @@ msgstr "abandoned this task"
 #: src/components/AppLayout.tsx
 msgid "Account"
 msgstr "Account"
+
+#: src/pages/Projects.tsx
+msgid "Actions"
+msgstr "Actions"
 
 #: src/components/CalendarView.tsx
 #: src/pages/Task.tsx
@@ -217,6 +215,10 @@ msgstr "All files"
 #: src/pages/Projects.tsx
 msgid "All projects"
 msgstr "All projects"
+
+#: src/pages/Projects.tsx
+#~ msgid "All projects selected"
+#~ msgstr "All projects selected"
 
 #: src/pages/Projects.tsx
 msgid "All tags"
@@ -542,6 +544,7 @@ msgid "Docs"
 msgstr "Docs"
 
 #: src/lib/constants.ts
+#: src/pages/Projects.tsx
 msgid "Done"
 msgstr "Done"
 
@@ -617,6 +620,10 @@ msgstr "Files"
 #: src/pages/Projects.tsx
 msgid "Files for {0}"
 msgstr "Files for {0}"
+
+#: src/pages/Projects.tsx
+msgid "Filter"
+msgstr "Filter"
 
 #: src/pages/Chat.tsx
 msgid "general"
@@ -791,8 +798,8 @@ msgid "No tasks"
 msgstr "No tasks"
 
 #: src/components/KanbanBoard.tsx
-msgid "No tasks in {activeLabel}."
-msgstr "No tasks in {activeLabel}."
+#~ msgid "No tasks in {activeLabel}."
+#~ msgstr "No tasks in {activeLabel}."
 
 #: src/pages/Task.tsx
 msgid "none"
@@ -857,8 +864,13 @@ msgstr "Postponed"
 
 #: src/components/FilesView.tsx
 #: src/components/TaskFormDialog.tsx
+#: src/pages/Projects.tsx
 msgid "Project"
 msgstr "Project"
+
+#: src/pages/Projects.tsx
+msgid "Project actions"
+msgstr "Project actions"
 
 #: src/pages/ProjectBoard.tsx
 #: src/pages/ProjectOverview.tsx
@@ -874,9 +886,14 @@ msgstr "Project: {projectName}"
 msgid "Projects"
 msgstr "Projects"
 
-#: src/components/PulseCard.tsx
+#: src/pages/Projects.tsx
 #~ msgid "Pulse"
 #~ msgstr "Pulse"
+
+#. placeholder {0}: selectedProject.name
+#: src/pages/Projects.tsx
+#~ msgid "Pulse for {0}"
+#~ msgstr "Pulse for {0}"
 
 #: src/components/BlockTaskDialog.tsx
 #: src/components/TaskFormDialog.tsx
@@ -936,6 +953,10 @@ msgstr "Select a channel to start chatting."
 #: src/components/TaskFormDialog.tsx
 msgid "Select a project"
 msgstr "Select a project"
+
+#: src/pages/Projects.tsx
+#~ msgid "Select project"
+#~ msgstr "Select project"
 
 #: src/components/BlockTaskDialog.tsx
 msgid "Select the blocking task"
