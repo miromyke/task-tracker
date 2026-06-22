@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Archive, ArchiveRestore, CalendarDays, ChevronDown, FolderKanban, FolderPlus, Images, Loader2, MoreVertical, Plus, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, criteriaMet, type Project, type Status, type Task, type User } from "@/lib/api";
+import { api, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { PulseCard } from "@/components/PulseCard";
 import { BlockTaskDialog } from "@/components/BlockTaskDialog";
 import { CalendarView } from "@/components/CalendarView";
 import { FilesView } from "@/components/FilesView";
@@ -226,6 +227,7 @@ export function ProjectsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  const [pulse, setPulse] = useState<Pulse | null>(null);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [tag, setTag] = useState<string>(ALL);
@@ -252,7 +254,7 @@ export function ProjectsPage() {
     setTags(g);
   }
 
-  // The selected project filters the board; null => all projects.
+  // The selected project filters the board and pulse; null => all projects.
   const selectedProject = useMemo(
     () => (selectedId ? projects.find((p) => p.id === selectedId) ?? null : null),
     [projects, selectedId]
@@ -263,6 +265,12 @@ export function ProjectsPage() {
     loadBase().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showArchived]);
+
+  // Pulse is scoped server-side, so refetch whenever the selection or the
+  // archived view changes.
+  useEffect(() => {
+    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
+  }, [selectedId, showArchived]);
 
   function select(id: number | null) {
     setSearchParams(id ? { project: String(id) } : {}, { replace: true });
@@ -298,6 +306,7 @@ export function ProjectsPage() {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: to } : t)));
     try {
       await api.updateTask(task.id, { status: to });
+      api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
     } catch {
       loadBase();
     }
@@ -308,6 +317,7 @@ export function ProjectsPage() {
     if (!blockTask) return;
     const res = await api.updateTask(blockTask.id, { status: "blocked", blockedByTaskId, blockedReason: reason });
     setTasks((prev) => prev.map((t) => (t.id === res.task.id ? res.task : t)));
+    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
   }
 
   // Archive / unarchive the selected project. When archiving while archived items
@@ -596,6 +606,12 @@ export function ProjectsPage() {
                 >
                   <X className="h-4 w-4" />
                 </button>
+              </div>
+            )}
+            {pulse && (
+              // Desktop-only: the mobile tasks view intentionally drops the pulse.
+              <div className="hidden md:block">
+                <PulseCard pulse={pulse} projectId={selectedId ?? undefined} includeArchived={showArchived} />
               </div>
             )}
             <KanbanBoard

@@ -174,6 +174,17 @@ export interface MinorEvent {
   projectName: string;
 }
 
+export interface PulseDay {
+  date: string;
+  count: number;
+  gold: boolean;
+  attachments: number;
+}
+
+export interface Pulse {
+  days: PulseDay[];
+}
+
 export interface Channel {
   id: number;
   name: string;
@@ -283,6 +294,15 @@ export const api = {
   getProject: (id: number) => req<Project>(`/projects/${id}`),
   setProjectArchived: (id: number, archived: boolean) =>
     req<Project>(`/projects/${id}`, jsonBody("PATCH", { archived })),
+  // Activity pulse across all projects, or one when projectId is given.
+  // includeArchived surfaces logs from archived tasks/projects (mirrors ?archived=1).
+  getPulse: (projectId?: number, includeArchived = false) =>
+    req<Pulse>(
+      `/pulse${qs({
+        project: projectId ? String(projectId) : undefined,
+        archived: includeArchived ? "1" : undefined,
+      })}`
+    ),
 
   // tasks
   listTasks: (projectId: number, opts: { status?: string; tag?: string; includeArchived?: boolean } = {}) =>
