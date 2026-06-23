@@ -25,42 +25,6 @@ Current state (starting point):
 Deliverable: render a "postponed ×N" tag on tasks (driven by `postpone_count`) within
 the activity view. Pure frontend over data that already exists.
 
-## 14. Personalized notifications
-
-Notify users about activity that concerns them specifically, rather than leaving
-everything in the same global feeds:
-- **a) Chat mentions** — when someone @-mentions you in a channel message.
-- **b) Tasks you created** — activity on tasks you opened (status changes, logged
-  notes, completion, due-date moves).
-- **c) Tasks assigned to you** — being assigned, plus activity on your assigned tasks.
-
-Current state (starting point):
-- There is no notification infrastructure at all — no `notifications` table, no
-  unread/seen tracking, no delivery surface (bell/badge), no per-user feed.
-  Everything today is either global (chat, pulse, calendar) or task-scoped (the
-  activity log inside `GET /tasks/{id}`).
-- Chat @-mentions exist as data but aren't actionable: messages store raw
-  `@username` tokens in their text, resolved only at render time client-side via
-  `TOKEN_RE` in `MessageText.tsx` (`frontend`). Nothing server-side parses mentions
-  on `POST /channels/{id}/messages` (`handlePostMessage`), so there's no hook to
-  record "user X was mentioned." Mentions would need to be detected at send time and
-  turned into per-recipient notification rows.
-- Task ownership signals are already on the row: `tasks.created_by` and
-  `tasks.assignee_id` (`store.go`). Task activity is already captured as structured
-  `log_items` (status changes, notes, due-date moves, completion, assignment
-  changes) — the raw material for "something happened on your task." A notification
-  step would fan a relevant log entry out to the creator and the current assignee.
-- Assignment itself is recorded (an assignment `log_items` entry on `UpdateTask`,
-  `store.go`) but isn't surfaced to the new assignee anywhere.
-
-Deliverable: introduce per-user notifications — a `notifications` table (recipient,
-type, source ref, created/seen timestamps), a write path that records them on the
-three triggers above, and a read path (`GET /notifications` + mark-as-read) with an
-unread badge/bell in the UI. Decide: in-app only vs. also push/email; how much to
-coalesce (one row per task-activity burst vs. per log entry); and whether the actor
-is always excluded from their own notifications (so you aren't pinged for your own
-actions on a task you created/own).
-
 ## 15. Chat: delete messages (admins still see deleted)
 
 Let members remove a chat message they posted, but keep deleted messages visible to
@@ -161,6 +125,13 @@ like manage-members / edit-tasks / view-reporting).
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#14** Personalized notifications — per-user `notifications` table fanned out on three
+  triggers: chat @-mentions (parsed server-side in `handlePostMessage`), activity on tasks
+  you created or are assigned (coalesced per (recipient, task) while unread — "N updates"),
+  and being assigned a task (discrete). In-app only, polled; the actor is never notified of
+  their own action. Surfaced via a `NotificationBell` in the nav rail (unread badge,
+  dropdown list, per-row mark-read + deep-link to the task/channel, mark-all-read) backed by
+  `GET /notifications`, `/notifications/unread-count`, and the read/read-all routes.
 - **#18** Project membership — `project_members` table with author/admin-managed membership
   (invite existing users only), backfilled from existing project authors and task
   creators/assignees. Membership-scoped reads (`ListProjects`, all-tasks, pulse/calendar,
