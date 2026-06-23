@@ -168,6 +168,28 @@ invites existing users only or can trigger account creation; whether non-members
 fully blind to a project or can request access; whether admins bypass membership; and
 what happens to a member's task assignments when they're removed.
 
+## 19. Users: separate surname, initials-aware avatars
+
+Give users a structured surname (first + last name) instead of one free-form name, and
+derive avatar initials from it explicitly.
+
+Current state (starting point):
+- A user has a single display field: `users.name` (`store.go`), alongside `username`.
+  There is no separate first/last name. Names are set in user management (admin create
+  + the profile "Display name" field).
+- Avatar initials are derived heuristically from that one string by `initials()` in
+  `lib/format.ts`: split on whitespace, take the first letter of the first and last
+  word (or the first two chars for a single word). It already yields two letters for a
+  two-word name, but it's a guess over a free-form string, not a real first/last split
+  (`UserAvatar.tsx` calls `initials(name)`).
+
+Deliverable: add a surname field to users (schema column + create/edit-user and profile
+forms + API), and compute avatar initials from first name + surname directly rather than
+the whitespace heuristic. Decide: best-effort split of existing `name` values into
+first/last on migration vs. keeping `name` as the display value and adding `surname`
+alongside; whether surname is required; and how the full name renders everywhere it's
+shown (mentions, assignee, activity log, member lists).
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
