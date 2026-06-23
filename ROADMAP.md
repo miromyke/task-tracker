@@ -121,6 +121,27 @@ manager; how it composes with admin bypass; and the exact permission set (reuse
 manage_projects / view_reporting / view_history per-project, or a project-specific list
 like manage-members / edit-tasks / view-reporting).
 
+## 21. Admin can promote others to admin
+
+Let an admin grant the admin role to another user (and revoke it) from user management.
+
+Current state (starting point):
+- The backend already supports the role change: `handleUpdateUser` accepts a `role` field
+  and calls `SetRole` (`store.go`), promoting to `roleAdmin` or demoting to `roleMember`,
+  guarded against self-demotion ("cannot change your own role"). `api.updateUser` already
+  takes `role?` (`lib/api.ts`).
+- The gap is purely UI: the user-management page (`UserManagement.tsx`) shows an "admin"
+  badge on admins but exposes no control to change the role — `UserRow` only offers reset
+  password, enable/disable, and the per-user capability toggles (#17). Capability toggles
+  are deliberately hidden for admins, since admins bypass capabilities.
+
+Deliverable: add a "Make admin" / "Revoke admin" action to `UserRow` (admin-only, hidden
+on your own row to respect the self-demotion guard), wired through the existing
+`api.updateUser({ role })`. Decide: a confirm step for promotion (it's a powerful grant);
+whether to keep at least one admin (block demoting the last admin, server-side); and how the
+admin action sits alongside the capability toggles now that an admin implicitly holds all
+capabilities.
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
