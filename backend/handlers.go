@@ -70,6 +70,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/channels/{id}/messages", s.requireAuth(s.handleListMessages))
 	mux.HandleFunc("POST /api/channels/{id}/messages", s.requireAuth(s.handlePostMessage))
 
+	mux.HandleFunc("GET /api/notifications", s.requireAuth(s.handleListNotifications))
+	mux.HandleFunc("GET /api/notifications/unread-count", s.requireAuth(s.handleNotificationsUnreadCount))
+	mux.HandleFunc("POST /api/notifications/{id}/read", s.requireAuth(s.handleMarkNotificationRead))
+	mux.HandleFunc("POST /api/notifications/read-all", s.requireAuth(s.handleMarkAllNotificationsRead))
+
 	mux.HandleFunc("GET /api/pulse", s.requireCapability(capViewReporting, s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
 	mux.HandleFunc("GET /api/calendar", s.requireCapability(capViewReporting, s.handleCalendar))
@@ -734,6 +739,8 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Notify the initial assignee (if any, and not the creator themselves).
+	s.notifyAssignment(t.AssigneeID, nil, t.ID, currentUser(r).ID)
 	writeJSON(w, http.StatusCreated, t)
 }
 
@@ -918,6 +925,15 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "task not found")
 		return
 	}
+	actor := currentUser(r).ID
+	// A discrete "assigned to you" ping when the assignee changed, plus the coalesced
+	// activity ping to the task's creator + current assignee for any logged change.
+	if ch.SetAssignee {
+		s.notifyAssignment(ch.AssigneeID, existing.AssigneeID, t.ID, actor)
+	}
+	if len(logs) > 0 {
+		s.notifyTaskActivity(t, actor)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"task": t, "newLogs": logs})
 }
 
@@ -958,6 +974,9 @@ func (s *Server) handleSetCriterion(w http.ResponseWriter, r *http.Request) {
 	if t == nil {
 		writeErr(w, http.StatusNotFound, "criterion not found")
 		return
+	}
+	if len(logs) > 0 {
+		s.notifyTaskActivity(t, currentUser(r).ID)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"task": t, "newLogs": logs})
 }
@@ -1017,6 +1036,7 @@ func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.notifyTaskActivity(t, currentUser(r).ID)
 	writeJSON(w, http.StatusCreated, logItem)
 }
 
@@ -1438,6 +1458,7 @@ func (s *Server) handlePostMessage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.notifyMentions(text, id, m.ID, currentUser(r).ID)
 	writeJSON(w, http.StatusCreated, m)
 }
 

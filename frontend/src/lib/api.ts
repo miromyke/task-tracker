@@ -222,6 +222,25 @@ export interface Message {
   createdAt: string;
 }
 
+export type NotificationType = "mention" | "task_assigned" | "task_activity";
+
+// A per-user notification (#14). Refs are resolved server-side to titles/names so
+// the bell can render a line directly. count > 1 means coalesced task activity.
+export interface Notification {
+  id: number;
+  type: NotificationType;
+  count: number;
+  read: boolean;
+  createdAt: string;
+  updatedAt: string;
+  actor: { id: number; name: string; avatarPath: string | null } | null;
+  taskId: number | null;
+  taskTitle: string | null;
+  channelId: number | null;
+  channelName: string | null;
+  messageId: number | null;
+}
+
 export interface TaskUpdate {
   title?: string;
   description?: string;
@@ -447,4 +466,12 @@ export const api = {
         archived: includeArchived ? "1" : undefined,
       })}`
     ),
+
+  // notifications
+  listNotifications: () => req<Notification[]>("/notifications"),
+  notificationsUnreadCount: () => req<{ count: number }>("/notifications/unread-count"),
+  markNotificationRead: (id: number) =>
+    req<{ ok: boolean }>(`/notifications/${id}/read`, { method: "POST" }),
+  markAllNotificationsRead: () =>
+    req<{ ok: boolean }>("/notifications/read-all", { method: "POST" }),
 };

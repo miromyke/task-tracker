@@ -106,6 +106,23 @@ msgstr "{overdueDays, plural, one {Overdue by # day} other {Overdue by # days}}"
 #~ msgid "{z, plural, one {# month} other {# months}}"
 #~ msgstr "{z, plural, one {# month} other {# months}}"
 
+#. placeholder {0}: n.count
+#: src/components/NotificationBell.tsx
+msgid "<0>{0} updates</0> on <1>{task}</1>"
+msgstr "<0>{0} updates</0> on <1>{task}</1>"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> assigned you <1>{task}</1>"
+msgstr "<0>{actor}</0> assigned you <1>{task}</1>"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> mentioned you in #{channel}"
+msgstr "<0>{actor}</0> mentioned you in #{channel}"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> updated <1>{task}</1>"
+msgstr "<0>{actor}</0> updated <1>{task}</1>"
+
 #: src/components/PulseCard.tsx
 msgid "1 month"
 msgstr "1 month"
@@ -746,6 +763,10 @@ msgstr "Manage projects"
 #~ msgid "Manage users"
 #~ msgstr "Manage users"
 
+#: src/components/NotificationBell.tsx
+msgid "Mark all read"
+msgstr "Mark all read"
+
 #: src/pages/Projects.tsx
 msgid "Members"
 msgstr "Members"
@@ -860,6 +881,10 @@ msgstr "Nothing logged on this day."
 #: src/components/FilesView.tsx
 msgid "Nothing submitted for deletion."
 msgstr "Nothing submitted for deletion."
+
+#: src/components/NotificationBell.tsx
+msgid "Notifications"
+msgstr "Notifications"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
@@ -1256,3 +1281,7 @@ msgstr "you"
 #: src/pages/Projects.tsx
 msgid "You need at least one project before you can add a task."
 msgstr "You need at least one project before you can add a task."
+
+#: src/components/NotificationBell.tsx
+msgid "You're all caught up."
+msgstr "You're all caught up."

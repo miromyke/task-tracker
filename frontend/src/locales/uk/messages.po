@@ -106,6 +106,23 @@ msgstr "{overdueDays, plural, one {Прострочено на # день} few {
 #~ msgid "{z, plural, one {# month} other {# months}}"
 #~ msgstr "{z, plural, one {# місяць} few {# місяці} many {# місяців} other {# місяця}}"
 
+#. placeholder {0}: n.count
+#: src/components/NotificationBell.tsx
+msgid "<0>{0} updates</0> on <1>{task}</1>"
+msgstr "<0>{0} оновлень</0> у <1>{task}</1>"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> assigned you <1>{task}</1>"
+msgstr "<0>{actor}</0> призначив(ла) вам <1>{task}</1>"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> mentioned you in #{channel}"
+msgstr "<0>{actor}</0> згадав(ла) вас у #{channel}"
+
+#: src/components/NotificationBell.tsx
+msgid "<0>{actor}</0> updated <1>{task}</1>"
+msgstr "<0>{actor}</0> оновив(ла) <1>{task}</1>"
+
 #: src/components/PulseCard.tsx
 msgid "1 month"
 msgstr "1 місяць"
@@ -742,6 +759,10 @@ msgstr "Керування проєктами"
 #~ msgid "Manage users"
 #~ msgstr "Керування користувачами"
 
+#: src/components/NotificationBell.tsx
+msgid "Mark all read"
+msgstr "Позначити всі прочитаними"
+
 #: src/pages/Projects.tsx
 msgid "Members"
 msgstr "Учасники"
@@ -856,6 +877,10 @@ msgstr "Цього дня нічого не записано."
 #: src/components/FilesView.tsx
 msgid "Nothing submitted for deletion."
 msgstr "Немає файлів на видалення."
+
+#: src/components/NotificationBell.tsx
+msgid "Notifications"
+msgstr "Сповіщення"
 
 #: src/pages/ProjectOverview.tsx
 #~ msgid "Open board"
@@ -1252,3 +1277,7 @@ msgstr "ви"
 #: src/pages/Projects.tsx
 msgid "You need at least one project before you can add a task."
 msgstr "Перш ніж додати завдання, потрібен щонайменше один проєкт."
+
+#: src/components/NotificationBell.tsx
+msgid "You're all caught up."
+msgstr "Усе переглянуто."

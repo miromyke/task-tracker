@@ -391,6 +391,19 @@ CREATE TABLE IF NOT EXISTS project_members (
   added_at   TEXT NOT NULL,
   PRIMARY KEY (project_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS notifications (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  recipient_id INTEGER NOT NULL REFERENCES users(id),
+  type         TEXT NOT NULL,                       -- mention | task_assigned | task_activity
+  task_id      INTEGER REFERENCES tasks(id),
+  channel_id   INTEGER REFERENCES channels(id),
+  message_id   INTEGER REFERENCES messages(id),
+  actor_id     INTEGER REFERENCES users(id),
+  count        INTEGER NOT NULL DEFAULT 1,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  read_at      TEXT
+);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_logs_task ON log_items(task_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
@@ -400,6 +413,8 @@ CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_criteria_task ON task_criteria(task_id);
 CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id, id);
 CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(recipient_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_feed ON notifications(recipient_id, updated_at);
 `
 
 func (s *Store) Migrate() error {

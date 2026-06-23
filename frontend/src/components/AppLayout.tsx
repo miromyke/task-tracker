@@ -8,6 +8,7 @@ import { activateLocale, LOCALES, type Locale } from "@/i18n";
 import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ChangePasswordDialog } from "@/components/UserManagement";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -192,7 +193,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
             )}
           </div>
         </TooltipProvider>
-        <AccountDialog />
+        <div className="flex items-center gap-1 sm:flex-col sm:gap-2">
+          <NotificationBell />
+          <AccountDialog />
+        </div>
       </nav>
 
       <main className="mx-auto h-full w-full max-w-[120rem] flex-1 overflow-y-auto p-4 lg:px-10 lg:py-8">{children}</main>
