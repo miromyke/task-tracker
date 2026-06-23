@@ -5,36 +5,25 @@ implementation so the work has a starting point. Numbers are stable ids (commits
 reference them as `ROADMAP #N`); shipped items are kept as a one-line changelog below
 rather than renumbered.
 
-## 12. Per-user visibility: reporting & task activity log (+ "postponed" tag)
+## 12. Task activity: "postponed ×N" tag
 
-Let only some users see the "heavier" surfaces, instead of showing them to every
-authenticated member:
-- **a) Reporting** — the calendar, pulse, and day-report stories.
-- **b) Task activity log** — a task's history feed, including a visible **"postponed"
-  tag** that surfaces how often the due date has slipped.
+Surface how often a task's due date has slipped, as a visible **"postponed ×N"** badge
+in its activity view.
+
+> Scope note: this item originally also covered gating reporting and the task activity
+> log behind a per-user capability. That access-control half has moved to **#17**
+> (attribute-based access control), which now owns the capability model and server-side
+> enforcement for the history/pulse reads. What's left here is the render-only tag.
 
 Current state (starting point):
-- Roles are a coarse binary: `users.role` is `"admin" | "member"` (`User.IsAdmin()`),
-  enforced by the `requireAdmin` middleware. There is no per-user/per-capability flag
-  for finer-grained visibility — this work likely needs one (e.g. a `can_view_reporting`
-  / `can_view_history` capability, or a third role) since admin/member is too blunt.
-- The reporting endpoints are open to any authenticated user: `GET /pulse`,
-  `GET /projects/{id}/pulse`, `GET /calendar`, `GET /calendar/day/{date}` are all behind
-  plain `requireAuth` (`handlers.go`). Gating means a new middleware/check plus hiding the
-  entry points in the frontend for users without the capability.
-- The task activity log ships inside `GET /tasks/{id}` (`{task, logs}`) and renders in
-  `pages/Task.tsx`; it's also `requireAuth`-only. Gating may mean omitting `logs` from the
-  payload (not just hiding it client-side) for users without access.
 - `tasks.postpone_count` already exists and is incremented on a later-due-date move
-  (`UpdateTask`, `store.go`), and `due_date_change` log entries are recorded — but the count
-  isn't surfaced anywhere as a tag/badge. The "postponed" tag is a small render over data
-  that's already there.
+  (`UpdateTask`, `store.go`), and `due_date_change` log entries are recorded — but the
+  count isn't surfaced anywhere as a tag/badge.
+- The task activity log ships inside `GET /tasks/{id}` (`{task, logs}`) and renders in
+  `pages/Task.tsx`, where the badge would live.
 
-Deliverable: introduce a visibility capability beyond admin/member; gate the reporting
-endpoints and the task-log payload by it (server-side, not just hidden in the UI); hide the
-corresponding entry points for users who lack it; and render a "postponed ×N" tag on tasks
-(driven by `postpone_count`) within the activity view. Decide the capability model (per-user
-flags vs. a new role) and whether reporting and history are one permission or two.
+Deliverable: render a "postponed ×N" tag on tasks (driven by `postpone_count`) within
+the activity view. Pure frontend over data that already exists.
 
 ## 14. Personalized notifications
 
@@ -136,9 +125,13 @@ Current state (starting point):
   - Reporting/history reads are also `requireAuth`: `GET /pulse`,
     `GET /projects/{id}/pulse`, `GET /calendar`, `GET /calendar/day/{date}`, and the
     `logs` array inside `GET /tasks/{id}`.
-- This overlaps with #12 (per-user visibility for reporting & the task activity log),
-  which already proposes a visibility capability for the read half. Treat #12 as a
-  consumer of this model — or fold it in — rather than standing up a second mechanism.
+- This item owns the read-gating that #12 originally described. #12 has been narrowed
+  to its render-only "postponed ×N" tag; the capability model and server-side
+  enforcement for the history/pulse reads live here, so there's a single mechanism
+  rather than two.
+- Relationship to #18: this gates by global capability; #18 (project membership) scopes
+  by project. They compose — decide whether capability holders / admins see everything
+  while membership governs the rest.
 
 Deliverable: choose an access model (per-user capability flags vs. a small role set
 vs. true attribute rules) and a single server-side enforcement point — middleware/
@@ -163,10 +156,9 @@ Current state (starting point):
   creator — the natural owner for managing invites.
 - "member" in the codebase is the global `users.role`, not project membership — a
   different axis from what's needed here.
-- Related: #12 (per-user visibility) and #17 (attribute-based access control) gate by
-  global capability; project membership instead scopes by project. Decide how the two
-  compose (e.g. admins / capability holders still see everything, membership governs
-  the rest).
+- Related: #17 (attribute-based access control) gates by global capability; project
+  membership instead scopes by project. Decide how the two compose (e.g. admins /
+  capability holders still see everything, membership governs the rest).
 
 Deliverable: introduce per-project membership — a `project_members` table (project,
 user, added_by/at), an invite/remove flow the author (and admins) can use, and
