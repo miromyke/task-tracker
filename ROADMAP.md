@@ -125,6 +125,38 @@ first/last on migration vs. keeping `name` as the display value and adding `surn
 alongside; whether surname is required; and how the full name renders everywhere it's
 shown (mentions, assignee, activity log, member lists).
 
+## 20. Per-project user permissions
+
+Let a project manager grant permissions to a project's members per-project, so what a
+user may do is scoped to the individual project rather than set globally. Builds on #17
+(global capabilities) and #18 (membership): today membership only records *whether* a
+user belongs to a project, not *what they may do* inside it.
+
+Current state (starting point):
+- Membership is binary. `project_members` (project_id, user_id, added_by, added_at)
+  records belonging only — there is no per-member role or permission set (`store.go`).
+- Capabilities are global, not per-project: `users.cap_manage_projects`,
+  `cap_view_reporting`, `cap_view_history` apply across every project a user can see
+  (shipped #17). A member holds a capability everywhere or nowhere.
+- Who may manage a project is hardcoded to author-or-admin: `loadManageableProject`
+  checks `IsAdmin() || project.created_by == user.ID` (`handlers.go`); member
+  add/remove flows through that. There is no separate "project manager" who isn't the
+  author.
+- Access checks have no per-project permission dimension yet: `canAccessProject`,
+  `requireProjectAccess`, and the capability middleware (`auth.go`) consult global
+  capability + membership only.
+
+Deliverable: attach a role or permission set to each `project_members` row (e.g.
+manager / member, or per-project flags mirroring #17's capabilities), a management UI in
+the existing "Manage members" dialog for a project manager to set them, and enforcement
+that consults the per-project grant alongside the global capability. Decide: whether
+per-project permissions replace or layer on the global #17 capabilities (e.g. global as a
+baseline, per-project can extend within that project); what a "project manager" may do
+(manage members + permissions, archive, …) and whether the author is simply the first
+manager; how it composes with admin bypass; and the exact permission set (reuse
+manage_projects / view_reporting / view_history per-project, or a project-specific list
+like manage-members / edit-tasks / view-reporting).
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
