@@ -11,8 +11,8 @@ Surface how often a task's due date has slipped, as a visible **"postponed ×N"*
 in its activity view.
 
 > Scope note: this item originally also covered gating reporting and the task activity
-> log behind a per-user capability. That access-control half has moved to **#17**
-> (attribute-based access control), which now owns the capability model and server-side
+> log behind a per-user capability. That access-control half shipped in **#17**
+> (attribute-based access control), which owns the capability model and server-side
 > enforcement for the history/pulse reads. What's left here is the render-only tag.
 
 Current state (starting point):
@@ -103,71 +103,6 @@ changing the stored token format and the `TOKEN_RE` + `usersByUsername` resoluti
 `MessageText.tsx`; or keep the `@username` token internally and only change what's
 displayed.
 
-## 17. Attribute-based access control
-
-Replace the coarse admin/member binary with finer-grained, per-user
-attributes/capabilities that gate specific actions and reads. The first capabilities
-to enforce:
-- **Project creation & archival** — who may create a project, and who may
-  archive/unarchive one.
-- **History / activity / pulse reads** — who may see task activity logs and the
-  reporting surfaces (pulse, calendar/day-report).
-
-Current state (starting point):
-- Access is a coarse binary: `users.role` is `"admin" | "member"` (`User.IsAdmin()`),
-  enforced by the `requireAdmin` middleware. There is no per-capability flag, so any
-  finer rule needs a new model.
-- Both target areas are currently open to every authenticated member:
-  - Project create/archive run under plain `requireAuth` — `POST /api/projects`
-    (`handleCreateProject`) and `PATCH /api/projects/{id}` (`handleUpdateProject`,
-    which toggles `archived`). The frontend shows "New project" and "Archive" to
-    everyone (the project-selector menu in `Projects.tsx`).
-  - Reporting/history reads are also `requireAuth`: `GET /pulse`,
-    `GET /projects/{id}/pulse`, `GET /calendar`, `GET /calendar/day/{date}`, and the
-    `logs` array inside `GET /tasks/{id}`.
-- This item owns the read-gating that #12 originally described. #12 has been narrowed
-  to its render-only "postponed ×N" tag; the capability model and server-side
-  enforcement for the history/pulse reads live here, so there's a single mechanism
-  rather than two.
-- Relationship to #18: this gates by global capability; #18 (project membership) scopes
-  by project. They compose — decide whether capability holders / admins see everything
-  while membership governs the rest.
-
-Deliverable: choose an access model (per-user capability flags vs. a small role set
-vs. true attribute rules) and a single server-side enforcement point — middleware/
-helpers that check a capability — applied to project create/archive and to the
-history/reporting reads (gating the payload, not just hiding UI), with the matching
-entry points hidden in the frontend for users who lack each capability. Decide the
-granularity (separate "manage projects" / "view reporting" / "view history"
-capabilities vs. bundles) and how capabilities are assigned and managed (an admin
-control in user management).
-
-## 18. Project membership: author can invite members
-
-Make project access membership-based: a project has an explicit member list, and its
-author can invite other users to it. Today every authenticated user implicitly sees
-every project; this scopes a project to the people who belong to it.
-
-Current state (starting point):
-- Projects are global — there is no membership concept. `ListProjects` returns all
-  projects to any authenticated user (`GET /api/projects`, plain `requireAuth`), and
-  there's no `project_members` table or per-project access check anywhere.
-- The author is already recorded: `projects.created_by` (`store.go`) identifies the
-  creator — the natural owner for managing invites.
-- "member" in the codebase is the global `users.role`, not project membership — a
-  different axis from what's needed here.
-- Related: #17 (attribute-based access control) gates by global capability; project
-  membership instead scopes by project. Decide how the two compose (e.g. admins /
-  capability holders still see everything, membership governs the rest).
-
-Deliverable: introduce per-project membership — a `project_members` table (project,
-user, added_by/at), an invite/remove flow the author (and admins) can use, and
-membership-scoped reads so `ListProjects` and project-scoped endpoints (tasks, pulse,
-files, calendar) only return projects the user belongs to. Decide: whether the author
-invites existing users only or can trigger account creation; whether non-members are
-fully blind to a project or can request access; whether admins bypass membership; and
-what happens to a member's task assignments when they're removed.
-
 ## 19. Users: separate surname, initials-aware avatars
 
 Give users a structured surname (first + last name) instead of one free-form name, and
@@ -194,6 +129,20 @@ shown (mentions, assignee, activity log, member lists).
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#18** Project membership — `project_members` table with author/admin-managed membership
+  (invite existing users only), backfilled from existing project authors and task
+  creators/assignees. Membership-scoped reads (`ListProjects`, all-tasks, pulse/calendar,
+  files) plus per-project access checks make non-members fully blind to a project (hidden
+  from lists; endpoints 404). Tasks can only be assigned to current members; removing a
+  member keeps their existing assignments and records a `member_removed` log entry on the
+  affected tasks. Admins bypass membership.
+- **#17** Attribute-based access control — replaced the admin/member binary with three
+  per-user capabilities (`manage_projects`, `view_reporting`, `view_history`); admins bypass
+  all. A single server-side enforcement point (`requireCapability` + `requireProjectAccess`
+  helpers) gates project create/archive, pulse/calendar, and the task activity-log payload
+  (comments stay visible — only the non-note history is withheld), with matching entry points
+  hidden in the UI. Capabilities are assigned from user management, which moved out of the
+  account modal into its own admin-only `/users` page (responsive card grid, add-member modal).
 - **#13** Mobile: overhaul the project tasks view — view tabs (Tasks / Calendar / Files) moved
   to a top strip with text labels; the board renders desktop-style status columns on mobile
   (horizontally scrollable with snap + `scroll-px` gutters) and tap-to-move is retained (drag
