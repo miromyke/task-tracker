@@ -142,6 +142,30 @@ whether to keep at least one admin (block demoting the last admin, server-side);
 admin action sits alongside the capability toggles now that an admin implicitly holds all
 capabilities.
 
+## 22. Files must belong to a project
+
+Require every uploaded file to be attached to a project — reversing the "project optional"
+direction of shipped #9, so there's no project-less bucket.
+
+Current state (starting point):
+- Files can currently be uploaded with no project (shipped #9): `assets.project_id` was made
+  nullable, `POST /api/assets` (`handleUploadOrphanAssets`) stores files via
+  `AddAssets(nil, …)`, and `FilesView.tsx` offers a "No project" choice in the upload picker
+  plus a "No project" bucket in the grid.
+- The main tension is chat (shipped #7): the chat composer uploads via that same project-less
+  path with `source="chat"`, because chat is global and not scoped to a project. Requiring a
+  project for every file forces a decision about chat uploads.
+- Existing project-less rows already in the DB would need a destination if the column becomes
+  NOT NULL again.
+
+Deliverable: make a project mandatory on upload — require it in the Files upload UI (drop the
+"No project" option), and enforce server-side. Decide: what happens to **chat** uploads —
+keep them as an explicit exception (the one sanctioned project-less source), or require the
+sender to pick a project / route them to a default project; whether to re-tighten the
+`assets.project_id` column to NOT NULL (and how to migrate existing orphan rows — backfill to
+a project, leave as a legacy "No project" bucket, or block the migration until reassigned);
+and whether the "No project" bucket/filter stays in `FilesView` for historical files.
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
