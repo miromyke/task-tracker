@@ -148,7 +148,7 @@ function DraggableCard({
       {...attributes}
       onClick={onClick}
       className={cn(
-        "cursor-grab touch-none rounded-lg border bg-card p-3 shadow-sm active:cursor-grabbing",
+        "cursor-grab touch-none rounded-lg border bg-card p-4 shadow-sm active:cursor-grabbing",
         task.archived && "border-dashed border-muted-foreground/40 bg-muted/40 opacity-70",
         isDragging && "opacity-40"
       )}
@@ -175,7 +175,7 @@ function Column({
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
     <div className="flex min-w-0 flex-col">
-      <div className="mb-2 flex items-center gap-2 px-1">
+      <div className="mb-3 flex items-center gap-2 px-1">
         <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[status])} />
         <span className="text-sm font-semibold">{i18n._(STATUS_LABEL[status])}</span>
         <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-muted-foreground">{tasks.length}</span>
@@ -183,7 +183,7 @@ function Column({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 rounded-xl border border-dashed p-2 transition-colors",
+          "flex min-h-32 flex-1 flex-col gap-3 rounded-xl border border-dashed p-3 transition-colors",
           isOver ? "border-foreground bg-accent" : "border-border bg-muted/40"
         )}
       >
@@ -223,7 +223,7 @@ function DesktopBoard({ tasks, usersById, taskTitleById, onCardClick, onMove }: 
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveTask(null)}>
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-5 gap-4 xl:gap-5">
         {STATUS_ORDER.map((s) => (
           <Column
             key={s}

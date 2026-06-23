@@ -40,6 +40,27 @@ type DayEvent struct {
 	Task        DayEventTask `json:"task"`
 }
 
+// reportScope resolves membership scoping for a reporting read. When projectID is
+// a specific project it enforces per-project access (writing 404 and returning
+// ok=false for non-members) and returns a nil scope (the project filter already
+// constrains it). For the cross-project aggregate it returns the user's visible
+// project scope (nil for admins). On any error it writes the response and returns
+// ok=false.
+func (s *Server) reportScope(w http.ResponseWriter, r *http.Request, projectID int64) (scope []int64, ok bool) {
+	if projectID > 0 {
+		if !s.requireProjectAccess(w, r, projectID) {
+			return nil, false
+		}
+		return nil, true
+	}
+	scope, err := s.visibleProjectScope(currentUser(r))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return nil, false
+	}
+	return scope, true
+}
+
 func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from, to := q.Get("from"), q.Get("to")
@@ -63,8 +84,12 @@ func (s *Server) handleCalendar(w http.ResponseWriter, r *http.Request) {
 	startUTC := fromT.UTC().Format(time.RFC3339)
 	endUTC := toT.AddDate(0, 0, 1).UTC().Format(time.RFC3339) // exclusive end
 
+	scope, ok := s.reportScope(w, r, projectID)
+	if !ok {
+		return
+	}
 	includeArchived := q.Get("archived") == "1"
-	rows, err := s.store.LogsInRange(startUTC, endUTC, tag, projectID, includeArchived)
+	rows, err := s.store.LogsInRange(startUTC, endUTC, tag, projectID, includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -117,13 +142,17 @@ func (s *Server) handleCalendarDay(w http.ResponseWriter, r *http.Request) {
 	endUTC := dayT.AddDate(0, 0, 1).UTC().Format(time.RFC3339)
 
 	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
+	scope, ok := s.reportScope(w, r, projectID)
+	if !ok {
+		return
+	}
 	includeArchived := r.URL.Query().Get("archived") == "1"
-	events, err := s.store.DayEvents(startUTC, endUTC, tag, projectID, includeArchived)
+	events, err := s.store.DayEvents(startUTC, endUTC, tag, projectID, includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	minor, err := s.store.DayMinorEvents(startUTC, endUTC, tag, projectID, includeArchived)
+	minor, err := s.store.DayMinorEvents(startUTC, endUTC, tag, projectID, includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -146,25 +175,34 @@ func (s *Server) handleProjectPulse(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	s.writePulse(w, id, r.URL.Query().Get("archived") == "1")
+	scope, ok := s.reportScope(w, r, id)
+	if !ok {
+		return
+	}
+	s.writePulse(w, id, r.URL.Query().Get("archived") == "1", scope)
 }
 
 // handlePulse serves the pulse across all projects, or one via ?project=<id>.
 func (s *Server) handlePulse(w http.ResponseWriter, r *http.Request) {
 	projectID, _ := strconv.ParseInt(r.URL.Query().Get("project"), 10, 64) // 0 = all projects
-	s.writePulse(w, projectID, r.URL.Query().Get("archived") == "1")
+	scope, ok := s.reportScope(w, r, projectID)
+	if !ok {
+		return
+	}
+	s.writePulse(w, projectID, r.URL.Query().Get("archived") == "1", scope)
 }
 
 // writePulse builds and writes the activity pulse; projectID == 0 spans all projects.
-// Logs from archived tasks/projects are excluded unless includeArchived is set.
-func (s *Server) writePulse(w http.ResponseWriter, projectID int64, includeArchived bool) {
+// Logs from archived tasks/projects are excluded unless includeArchived is set. A
+// non-nil scope restricts the aggregate to those project ids (membership scoping).
+func (s *Server) writePulse(w http.ResponseWriter, projectID int64, includeArchived bool, scope []int64) {
 	loc := s.cfg.Location
 	now := time.Now().In(loc)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	const window = 180 // days returned; the frontend slices to the selected span
 	start := today.AddDate(0, 0, -(window - 1))
 
-	rows, err := s.store.ProjectLogsSince(projectID, start.UTC().Format(time.RFC3339), includeArchived)
+	rows, err := s.store.ProjectLogsSince(projectID, start.UTC().Format(time.RFC3339), includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -246,10 +284,10 @@ func scanLogRange(rows *sql.Rows) (LogRangeRow, error) {
 
 // LogsInRange returns log rows in [startUTC, endUTC); projectID == 0 spans all projects.
 // Logs from archived tasks/projects are excluded unless includeArchived is set.
-func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]LogRangeRow, error) {
+func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64, includeArchived bool, scope []int64) ([]LogRangeRow, error) {
 	q := "SELECT " + logRangeCols + " FROM log_items li"
 	args := []any{}
-	if projectID != 0 || !includeArchived {
+	if projectID != 0 || !includeArchived || scope != nil {
 		q += " JOIN tasks t ON t.id = li.task_id"
 	}
 	q += " WHERE " + reportEventTypes + " AND li.created_at >= ? AND li.created_at < ?"
@@ -264,6 +302,8 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64, inclu
 	if projectID != 0 {
 		q += " AND t.project_id = ?"
 		args = append(args, projectID)
+	} else {
+		q += projectScopeClause("t.project_id", scope, false, &args)
 	}
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
@@ -283,7 +323,7 @@ func (s *Store) LogsInRange(startUTC, endUTC, tag string, projectID int64, inclu
 
 // ProjectLogsSince returns log rows since startUTC; projectID == 0 spans all projects.
 // Logs from archived tasks/projects are excluded unless includeArchived is set.
-func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchived bool) ([]LogRangeRow, error) {
+func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchived bool, scope []int64) ([]LogRangeRow, error) {
 	q := "SELECT " + logRangeCols + ` FROM log_items li
 		 JOIN tasks t ON t.id = li.task_id
 		 WHERE ` + reportEventTypes + ` AND li.created_at >= ?`
@@ -294,6 +334,8 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchiv
 	if projectID != 0 {
 		q += " AND t.project_id = ?"
 		args = append(args, projectID)
+	} else {
+		q += projectScopeClause("t.project_id", scope, false, &args)
 	}
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
@@ -313,7 +355,7 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchiv
 
 // DayEvents returns notes and status changes for a day, enriched with user and
 // task/project context, ordered chronologically for the carousel report.
-func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]DayEvent, error) {
+func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool, scope []int64) ([]DayEvent, error) {
 	q := `
 		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.created_at,
 		       u.id, u.username, u.name, u.avatar_path,
@@ -335,6 +377,8 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, include
 	if projectID > 0 {
 		q += " AND t.project_id = ?"
 		args = append(args, projectID)
+	} else {
+		q += projectScopeClause("t.project_id", scope, false, &args)
 	}
 	q += " ORDER BY li.created_at, li.id"
 
@@ -402,7 +446,7 @@ type MinorEvent struct {
 // DayMinorEvents returns the day's log entries that DayEvents excludes (everything
 // outside reportEventTypes), with the same tag/project/archived scoping, ordered
 // chronologically. The frontend aggregates them by type for the footer summary.
-func (s *Store) DayMinorEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool) ([]MinorEvent, error) {
+func (s *Store) DayMinorEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool, scope []int64) ([]MinorEvent, error) {
 	q := `
 		SELECT li.type, li.created_at, u.name, t.title, p.name
 		FROM log_items li
@@ -422,6 +466,8 @@ func (s *Store) DayMinorEvents(startUTC, endUTC, tag string, projectID int64, in
 	if projectID > 0 {
 		q += " AND t.project_id = ?"
 		args = append(args, projectID)
+	} else {
+		q += projectScopeClause("t.project_id", scope, false, &args)
 	}
 	q += " ORDER BY li.created_at, li.id"
 

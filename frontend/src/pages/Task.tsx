@@ -304,6 +304,8 @@ export function TaskPage() {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [logTab, setLogTab] = useState<"comments" | "activity">("comments");
+  // Whether the server included the activity history (view_history capability).
+  const [canViewHistory, setCanViewHistory] = useState(false);
 
   const [noteText, setNoteText] = useState("");
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
@@ -320,6 +322,7 @@ export function TaskPage() {
     ]);
     setTask(detail.task);
     setLogs(detail.logs);
+    setCanViewHistory(detail.canViewHistory);
     setUsers(u);
     setTags(g);
     setAllTasks(ts);
@@ -671,13 +674,16 @@ export function TaskPage() {
                   <Trans>Comments</Trans>
                   {comments.length > 0 && <span className="ml-1.5 text-xs text-muted-foreground">{comments.length}</span>}
                 </TabsTrigger>
-                <TabsTrigger value="activity">
-                  <Trans>Activity</Trans>
-                  {activity.length > 0 && <span className="ml-1.5 text-xs text-muted-foreground">{activity.length}</span>}
-                </TabsTrigger>
+                {/* Activity is the task history, gated behind the view_history capability. */}
+                {canViewHistory && (
+                  <TabsTrigger value="activity">
+                    <Trans>Activity</Trans>
+                    {activity.length > 0 && <span className="ml-1.5 text-xs text-muted-foreground">{activity.length}</span>}
+                  </TabsTrigger>
+                )}
               </TabsList>
             </Tabs>
-            {(logTab === "comments" ? comments : activity).map((log) => (
+            {(logTab === "comments" || !canViewHistory ? comments : activity).map((log) => (
               <LogEntry
                 key={log.id}
                 log={log}

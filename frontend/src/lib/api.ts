@@ -4,6 +4,15 @@ export type Status = "todo" | "in_progress" | "blocked" | "done" | "abandoned";
 
 export type Role = "admin" | "member";
 
+// Per-user capabilities (#17). Admins bypass these entirely — see can().
+export interface Capabilities {
+  manageProjects: boolean; // create / archive projects
+  viewReporting: boolean; // pulse + calendar
+  viewHistory: boolean; // task activity logs
+}
+
+export type Capability = keyof Capabilities;
+
 export interface User {
   id: number;
   username: string;
@@ -11,6 +20,13 @@ export interface User {
   avatarPath: string | null;
   role: Role;
   disabled: boolean;
+  capabilities: Capabilities;
+}
+
+// can reports whether a user may exercise a capability. Admins always can.
+export function can(user: User | null | undefined, cap: Capability): boolean {
+  if (!user) return false;
+  return user.role === "admin" || !!user.capabilities?.[cap];
 }
 
 export interface Project {
@@ -278,8 +294,10 @@ export const api = {
   listUsers: () => req<User[]>("/users"),
   createUser: (body: { username: string; name: string; password: string; role: Role }) =>
     req<User>("/users", jsonBody("POST", body)),
-  updateUser: (id: number, body: { password?: string; role?: Role; disabled?: boolean }) =>
-    req<User>(`/users/${id}`, jsonBody("PATCH", body)),
+  updateUser: (
+    id: number,
+    body: { password?: string; role?: Role; disabled?: boolean; capabilities?: Capabilities }
+  ) => req<User>(`/users/${id}`, jsonBody("PATCH", body)),
   uploadAvatar: (file: File) => {
     const fd = new FormData();
     fd.append("image", file);
@@ -294,6 +312,12 @@ export const api = {
   getProject: (id: number) => req<Project>(`/projects/${id}`),
   setProjectArchived: (id: number, archived: boolean) =>
     req<Project>(`/projects/${id}`, jsonBody("PATCH", { archived })),
+  // project membership (#18)
+  listProjectMembers: (projectId: number) => req<User[]>(`/projects/${projectId}/members`),
+  addProjectMember: (projectId: number, userId: number) =>
+    req<User[]>(`/projects/${projectId}/members`, jsonBody("POST", { userId })),
+  removeProjectMember: (projectId: number, userId: number) =>
+    req<User[]>(`/projects/${projectId}/members/${userId}`, { method: "DELETE" }),
   // Activity pulse across all projects, or one when projectId is given.
   // includeArchived surfaces logs from archived tasks/projects (mirrors ?archived=1).
   getPulse: (projectId?: number, includeArchived = false) =>
@@ -336,7 +360,8 @@ export const api = {
       blockedReason?: string;
     }
   ) => req<Task>(`/projects/${projectId}/tasks`, jsonBody("POST", body)),
-  getTask: (id: number) => req<{ task: Task; logs: LogItem[] }>(`/tasks/${id}`),
+  getTask: (id: number) =>
+    req<{ task: Task; logs: LogItem[]; canViewHistory: boolean }>(`/tasks/${id}`),
   updateTask: (id: number, patch: TaskUpdate) =>
     req<{ task: Task; newLogs: LogItem[] }>(`/tasks/${id}`, jsonBody("PATCH", patch)),
   setCriterion: (taskId: number, criterionId: number, patch: { done?: boolean; abandoned?: boolean }) =>

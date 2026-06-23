@@ -40,12 +40,15 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("PATCH /api/users/{id}", s.requireAdmin(s.handleUpdateUser))
 
 	mux.HandleFunc("GET /api/projects", s.requireAuth(s.handleListProjects))
-	mux.HandleFunc("POST /api/projects", s.requireAuth(s.handleCreateProject))
+	mux.HandleFunc("POST /api/projects", s.requireCapability(capManageProjects, s.handleCreateProject))
 	mux.HandleFunc("GET /api/projects/{id}", s.requireAuth(s.handleGetProject))
-	mux.HandleFunc("PATCH /api/projects/{id}", s.requireAuth(s.handleUpdateProject))
-	mux.HandleFunc("GET /api/projects/{id}/pulse", s.requireAuth(s.handleProjectPulse))
+	mux.HandleFunc("PATCH /api/projects/{id}", s.requireCapability(capManageProjects, s.handleUpdateProject))
+	mux.HandleFunc("GET /api/projects/{id}/pulse", s.requireCapability(capViewReporting, s.handleProjectPulse))
 	mux.HandleFunc("GET /api/projects/{id}/tasks", s.requireAuth(s.handleListTasks))
 	mux.HandleFunc("POST /api/projects/{id}/tasks", s.requireAuth(s.handleCreateTask))
+	mux.HandleFunc("GET /api/projects/{id}/members", s.requireAuth(s.handleListProjectMembers))
+	mux.HandleFunc("POST /api/projects/{id}/members", s.requireAuth(s.handleAddProjectMember))
+	mux.HandleFunc("DELETE /api/projects/{id}/members/{uid}", s.requireAuth(s.handleRemoveProjectMember))
 
 	mux.HandleFunc("GET /api/tasks", s.requireAuth(s.handleListAllTasks))
 	mux.HandleFunc("GET /api/tasks/{id}", s.requireAuth(s.handleGetTask))
@@ -67,10 +70,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/channels/{id}/messages", s.requireAuth(s.handleListMessages))
 	mux.HandleFunc("POST /api/channels/{id}/messages", s.requireAuth(s.handlePostMessage))
 
-	mux.HandleFunc("GET /api/pulse", s.requireAuth(s.handlePulse))
+	mux.HandleFunc("GET /api/pulse", s.requireCapability(capViewReporting, s.handlePulse))
 	mux.HandleFunc("GET /api/tags", s.requireAuth(s.handleListTags))
-	mux.HandleFunc("GET /api/calendar", s.requireAuth(s.handleCalendar))
-	mux.HandleFunc("GET /api/calendar/day/{date}", s.requireAuth(s.handleCalendarDay))
+	mux.HandleFunc("GET /api/calendar", s.requireCapability(capViewReporting, s.handleCalendar))
+	mux.HandleFunc("GET /api/calendar/day/{date}", s.requireCapability(capViewReporting, s.handleCalendarDay))
 
 	mux.HandleFunc("GET /api/uploads/{file}", s.handleUpload)
 
@@ -318,9 +321,10 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Password *string `json:"password"`
-		Role     *string `json:"role"`
-		Disabled *bool   `json:"disabled"`
+		Password     *string       `json:"password"`
+		Role         *string       `json:"role"`
+		Disabled     *bool         `json:"disabled"`
+		Capabilities *Capabilities `json:"capabilities"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
@@ -363,6 +367,12 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.store.SetDisabled(id, *req.Disabled); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if req.Capabilities != nil {
+		if err := s.store.SetCapabilities(id, *req.Capabilities); err != nil {
 			writeErr(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -422,7 +432,12 @@ func (s *Server) handleAvatar(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListProjects(w http.ResponseWriter, r *http.Request) {
 	includeArchived := r.URL.Query().Get("archived") == "1"
-	projects, err := s.store.ListProjects(includeArchived)
+	scope, err := s.visibleProjectScope(currentUser(r))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	projects, err := s.store.ListProjects(includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -435,6 +450,9 @@ func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if !s.requireProjectAccess(w, r, id) {
 		return
 	}
 	proj, err := s.store.GetProject(id)
@@ -494,6 +512,9 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+	if !s.requireProjectAccess(w, r, id) {
+		return
+	}
 	p, err := s.store.GetProject(id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
@@ -506,6 +527,114 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, p)
 }
 
+// ---- project membership handlers ----
+
+// loadManageableProject loads the project and verifies the current user may manage
+// its membership (admins, or the project's author). Writes the response and returns
+// nil on any failure (404 for missing/inaccessible, 403 when not author/admin).
+func (s *Server) loadManageableProject(w http.ResponseWriter, r *http.Request) *Project {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return nil
+	}
+	p, err := s.store.GetProject(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return nil
+	}
+	if p == nil {
+		writeErr(w, http.StatusNotFound, "project not found")
+		return nil
+	}
+	u := currentUser(r)
+	if !u.IsAdmin() && p.CreatedBy != u.ID {
+		writeErr(w, http.StatusForbidden, "only the project author or an admin can manage members")
+		return nil
+	}
+	return p
+}
+
+// handleListProjectMembers returns the project's members. Visible to any member of
+// the project (so the team can see who belongs), not just author/admin.
+func (s *Server) handleListProjectMembers(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathInt(r, "id")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if !s.requireProjectAccess(w, r, id) {
+		return
+	}
+	members, err := s.store.ListProjectMembers(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, members)
+}
+
+func (s *Server) handleAddProjectMember(w http.ResponseWriter, r *http.Request) {
+	p := s.loadManageableProject(w, r)
+	if p == nil {
+		return
+	}
+	var req struct {
+		UserID int64 `json:"userId"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	target, err := s.store.GetUser(req.UserID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if target == nil {
+		writeErr(w, http.StatusBadRequest, "user not found")
+		return
+	}
+	if err := s.store.AddProjectMember(p.ID, req.UserID, currentUser(r).ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	members, err := s.store.ListProjectMembers(p.ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, members)
+}
+
+func (s *Server) handleRemoveProjectMember(w http.ResponseWriter, r *http.Request) {
+	p := s.loadManageableProject(w, r)
+	if p == nil {
+		return
+	}
+	uid, ok := pathInt(r, "uid")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+	// The author is the implicit owner and can't be removed (they'd lose their own
+	// project); transfer/delete is out of scope here.
+	if uid == p.CreatedBy {
+		writeErr(w, http.StatusBadRequest, "cannot remove the project author")
+		return
+	}
+	if err := s.store.RemoveProjectMember(p.ID, uid, currentUser(r).ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	members, err := s.store.ListProjectMembers(p.ID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, members)
+}
+
 // ---- task handlers ----
 
 func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
@@ -514,8 +643,11 @@ func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid id")
 		return
 	}
+	if !s.requireProjectAccess(w, r, id) {
+		return
+	}
 	includeArchived := r.URL.Query().Get("archived") == "1"
-	tasks, err := s.store.ListTasks(id, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived)
+	tasks, err := s.store.ListTasks(id, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived, nil)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -526,7 +658,12 @@ func (s *Server) handleListTasks(w http.ResponseWriter, r *http.Request) {
 // handleListAllTasks lists tasks across every project (for the projects overview).
 func (s *Server) handleListAllTasks(w http.ResponseWriter, r *http.Request) {
 	includeArchived := r.URL.Query().Get("archived") == "1"
-	tasks, err := s.store.ListTasks(0, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived)
+	scope, err := s.visibleProjectScope(currentUser(r))
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	tasks, err := s.store.ListTasks(0, r.URL.Query().Get("status"), r.URL.Query().Get("tag"), includeArchived, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -538,6 +675,9 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 	projectID, ok := pathInt(r, "id")
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if !s.requireProjectAccess(w, r, projectID) {
 		return
 	}
 	proj, err := s.store.GetProject(projectID)
@@ -577,6 +717,13 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "invalid status")
 		return
 	}
+	if ok, err := s.assigneeAllowed(projectID, req.AssigneeID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	} else if !ok {
+		writeErr(w, http.StatusBadRequest, "assignee must be a member of the project")
+		return
+	}
 	t, err := s.store.CreateTask(projectID, req.Title, strings.TrimSpace(req.Description), tags, req.Criteria,
 		req.AssigneeID, req.DueDate, req.Status, req.BlockedByTaskID, strings.TrimSpace(req.BlockedReason), currentUser(r).ID)
 	if errors.Is(err, errBlockedRef) {
@@ -588,6 +735,17 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, t)
+}
+
+// assigneeAllowed reports whether a task may be assigned to assigneeID within the
+// project: unassigning (nil) is always allowed; otherwise the assignee must be a
+// current member of the project. This is the forward guard that keeps tasks from
+// being assigned to non-members (removed members keep their existing assignments).
+func (s *Server) assigneeAllowed(projectID int64, assigneeID *int64) (bool, error) {
+	if assigneeID == nil {
+		return true, nil
+	}
+	return s.store.IsProjectMember(projectID, *assigneeID)
 }
 
 func (s *Server) handleGetTask(w http.ResponseWriter, r *http.Request) {
@@ -605,18 +763,48 @@ func (s *Server) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "task not found")
 		return
 	}
+	if !s.requireProjectAccess(w, r, t.ProjectID) {
+		return
+	}
+	// The activity log (status changes, due-date moves, etc.) is gated behind the
+	// view_history capability (admins always pass). Comments (note entries) are a
+	// collaboration surface, not history, so they stay visible to every member —
+	// only the non-note activity entries are withheld. This gates the payload, not
+	// just the UI. canViewHistory lets the client tell "no history" from "hidden".
+	canViewHistory := currentUser(r).Has(capViewHistory)
 	logs, err := s.store.ListLogs(id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"task": t, "logs": logs})
+	if !canViewHistory {
+		notes := make([]LogItem, 0, len(logs))
+		for _, l := range logs {
+			if l.Type == "note" {
+				notes = append(notes, l)
+			}
+		}
+		logs = notes
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"task": t, "logs": logs, "canViewHistory": canViewHistory})
 }
 
 func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	existing, err := s.store.GetTask(id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if existing == nil {
+		writeErr(w, http.StatusNotFound, "task not found")
+		return
+	}
+	if !s.requireProjectAccess(w, r, existing.ProjectID) {
 		return
 	}
 	var raw map[string]json.RawMessage
@@ -707,6 +895,16 @@ func (s *Server) handleUpdateTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if ch.SetAssignee {
+		if ok, err := s.assigneeAllowed(existing.ProjectID, ch.AssigneeID); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		} else if !ok {
+			writeErr(w, http.StatusBadRequest, "assignee must be a member of the project")
+			return
+		}
+	}
+
 	t, logs, err := s.store.UpdateTask(id, currentUser(r).ID, ch)
 	if errors.Is(err, errCriteriaUnmet) || errors.Is(err, errBlockedRef) {
 		writeErr(w, http.StatusBadRequest, err.Error())
@@ -730,6 +928,18 @@ func (s *Server) handleSetCriterion(w http.ResponseWriter, r *http.Request) {
 	cid, ok2 := pathInt(r, "cid")
 	if !ok || !ok2 {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	existing, err := s.store.GetTask(taskID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if existing == nil {
+		writeErr(w, http.StatusNotFound, "task not found")
+		return
+	}
+	if !s.requireProjectAccess(w, r, existing.ProjectID) {
 		return
 	}
 	var req struct {
@@ -765,6 +975,9 @@ func (s *Server) handleAddLog(w http.ResponseWriter, r *http.Request) {
 	}
 	if t == nil {
 		writeErr(w, http.StatusNotFound, "task not found")
+		return
+	}
+	if !s.requireProjectAccess(w, r, t.ProjectID) {
 		return
 	}
 
@@ -830,9 +1043,25 @@ func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 	if page < 0 {
 		page = 0
 	}
+	// A specific project is access-checked directly; the cross-project grid is
+	// membership-scoped (orphan files stay visible). The pending queue is admin-only
+	// (checked above) and spans everything.
+	var scope []int64
+	var err error
+	if projectID > 0 {
+		if !s.requireProjectAccess(w, r, projectID) {
+			return
+		}
+	} else if !pending {
+		scope, err = s.visibleProjectScope(currentUser(r))
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
 	const pageSize = 60
 	// Fetch one extra row to detect whether another page exists.
-	assets, err := s.store.ListAssets(projectID, kind, tag, pending, pageSize+1, page*pageSize)
+	assets, err := s.store.ListAssets(projectID, kind, tag, pending, pageSize+1, page*pageSize, scope)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -870,6 +1099,9 @@ func (s *Server) handleUploadAssets(w http.ResponseWriter, r *http.Request) {
 	projectID, ok := pathInt(r, "id")
 	if !ok {
 		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if !s.requireProjectAccess(w, r, projectID) {
 		return
 	}
 	proj, err := s.store.GetProject(projectID)

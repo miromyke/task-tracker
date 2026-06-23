@@ -68,6 +68,25 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
   const formProjectId = (showProjectPicker ? Number(project) : projectId) || undefined;
   const blockCandidates = useBlockCandidates(formProjectId, task?.id, open && status === "blocked");
 
+  // A task may only be assigned to a member of its project (#18), so scope the
+  // assignee list to the project's members. Until a project is chosen (create mode
+  // before a pick) fall back to all users; the server is the final guard.
+  const [members, setMembers] = useState<User[] | null>(null);
+  useEffect(() => {
+    if (!open || !formProjectId) {
+      setMembers(null);
+      return;
+    }
+    let active = true;
+    api.listProjectMembers(formProjectId).then((m) => {
+      if (active) setMembers(m);
+    });
+    return () => {
+      active = false;
+    };
+  }, [open, formProjectId]);
+  const assignableUsers = members ?? users;
+
   useEffect(() => {
     if (!open) return;
     setTitle(task?.title ?? "");
@@ -440,7 +459,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                   <SelectItem value={NONE}>
                     <Trans>Unassigned</Trans>
                   </SelectItem>
-                  {users.map((u) => (
+                  {assignableUsers.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.name}
                     </SelectItem>

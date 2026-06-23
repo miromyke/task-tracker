@@ -121,6 +121,64 @@ func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+// requireCapability wraps requireAuth and rejects users who lack the named
+// capability. Admins always pass (User.Has short-circuits on IsAdmin).
+func (s *Server) requireCapability(cap string, next http.HandlerFunc) http.HandlerFunc {
+	return s.requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if u := currentUser(r); u == nil || !u.Has(cap) {
+			writeErr(w, http.StatusForbidden, "not permitted")
+			return
+		}
+		next(w, r)
+	})
+}
+
+// canAccessProject reports whether the user may see/act within a project: admins
+// always can; everyone else must be a member. The boolean is used to return 404
+// (blind) rather than 403, so non-members can't even confirm a project exists.
+func (s *Server) canAccessProject(u *User, projectID int64) (bool, error) {
+	if u == nil {
+		return false, nil
+	}
+	if u.IsAdmin() {
+		return true, nil
+	}
+	return s.store.IsProjectMember(projectID, u.ID)
+}
+
+// requireProjectAccess checks per-project access for the current user and, when
+// denied, writes a 404 (blind to non-members) and returns false. Handlers guard
+// with: if !s.requireProjectAccess(w, r, id) { return }.
+func (s *Server) requireProjectAccess(w http.ResponseWriter, r *http.Request, projectID int64) bool {
+	ok, err := s.canAccessProject(currentUser(r), projectID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return false
+	}
+	if !ok {
+		writeErr(w, http.StatusNotFound, "project not found")
+		return false
+	}
+	return true
+}
+
+// visibleProjectScope returns the project ids a user may see across "all
+// projects" reads. A nil slice means unrestricted (admins). For members it is the
+// list of projects they belong to (possibly empty — a member of nothing).
+func (s *Server) visibleProjectScope(u *User) ([]int64, error) {
+	if u == nil || u.IsAdmin() {
+		return nil, nil
+	}
+	ids, err := s.store.MemberProjectIDs(u.ID)
+	if err != nil {
+		return nil, err
+	}
+	if ids == nil {
+		ids = []int64{}
+	}
+	return ids, nil
+}
+
 func currentUser(r *http.Request) *User {
 	u, _ := r.Context().Value(userCtxKey).(*User)
 	return u

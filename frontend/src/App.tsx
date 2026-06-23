@@ -7,6 +7,7 @@ import { LoginPage } from "@/pages/Login";
 import { ProjectsPage } from "@/pages/Projects";
 import { TaskPage } from "@/pages/Task";
 import { ChatPage } from "@/pages/Chat";
+import { UsersPage } from "@/pages/Users";
 
 // Old per-project routes now map onto the overview's project filter.
 function ProjectRedirect() {
@@ -31,6 +32,13 @@ function RequireAuth() {
   );
 }
 
+// RequireAdmin gates admin-only routes; non-admins are bounced to the overview.
+function RequireAdmin() {
+  const { user } = useAuth();
+  if (user && user.role !== "admin") return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -43,6 +51,9 @@ export default function App() {
           <Route path="/projects/:id/board" element={<ProjectRedirect />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/tasks/:id" element={<TaskPage />} />
+          <Route element={<RequireAdmin />}>
+            <Route path="/users" element={<UsersPage />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

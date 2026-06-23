@@ -165,6 +165,14 @@ msgstr "Activity"
 #~ msgid "Activity log"
 #~ msgstr "Activity log"
 
+#: src/pages/Projects.tsx
+msgid "Add"
+msgstr "Add"
+
+#: src/pages/Projects.tsx
+msgid "Add a member"
+msgstr "Add a member"
+
 #: src/components/TaskFormDialog.tsx
 msgid "Add at least one success criterion"
 msgstr "Add at least one success criterion"
@@ -299,6 +307,10 @@ msgstr "attached a file"
 #~ msgid "attached an image"
 #~ msgstr "attached an image"
 
+#: src/pages/Projects.tsx
+msgid "author"
+msgstr "author"
+
 #: src/pages/Task.tsx
 msgid "Back"
 msgstr "Back"
@@ -404,6 +416,10 @@ msgstr "Check off all success criteria before marking this done."
 msgid "checked off a criterion"
 msgstr "checked off a criterion"
 
+#: src/pages/Projects.tsx
+msgid "Choose a user"
+msgstr "Choose a user"
+
 #: src/components/FilesView.tsx
 msgid "Choose at least one file"
 msgstr "Choose at least one file"
@@ -442,6 +458,7 @@ msgid "Continue"
 msgstr "Continue"
 
 #: src/components/UserManagement.tsx
+#: src/pages/Projects.tsx
 msgid "Could not add member"
 msgstr "Could not add member"
 
@@ -452,6 +469,10 @@ msgstr "Could not change password"
 #: src/pages/Login.tsx
 msgid "Could not log in"
 msgstr "Could not log in"
+
+#: src/pages/Projects.tsx
+msgid "Could not remove member"
+msgstr "Could not remove member"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
@@ -713,13 +734,26 @@ msgstr "Log out"
 msgid "logged a note"
 msgstr "logged a note"
 
-#: src/components/UserManagement.tsx
-msgid "Manage users"
-msgstr "Manage users"
+#: src/pages/Projects.tsx
+msgid "Manage members"
+msgstr "Manage members"
 
-#: src/pages/ProjectOverview.tsx
-#~ msgid "Members"
-#~ msgstr "Members"
+#: src/components/UserManagement.tsx
+msgid "Manage projects"
+msgstr "Manage projects"
+
+#: src/components/UserManagement.tsx
+#~ msgid "Manage users"
+#~ msgstr "Manage users"
+
+#: src/pages/Projects.tsx
+msgid "Members"
+msgstr "Members"
+
+#. placeholder {0}: project.name
+#: src/pages/Projects.tsx
+msgid "Members of {0}"
+msgstr "Members of {0}"
 
 #: src/pages/Chat.tsx
 msgid "Message… use @ to mention, # to link a task"
@@ -914,6 +948,10 @@ msgstr "Reason"
 msgid "Reference a file"
 msgstr "Reference a file"
 
+#: src/pages/Projects.tsx
+msgid "Remove"
+msgstr "Remove"
+
 #: src/components/TaskFormDialog.tsx
 msgid "Remove criterion"
 msgstr "Remove criterion"
@@ -931,8 +969,12 @@ msgid "renamed this task"
 msgstr "renamed this task"
 
 #: src/components/UserManagement.tsx
-msgid "Reset"
-msgstr "Reset"
+#~ msgid "Reset"
+#~ msgstr "Reset"
+
+#: src/components/UserManagement.tsx
+msgid "Reset password"
+msgstr "Reset password"
 
 #: src/components/FilesView.tsx
 msgid "Restore"
@@ -1190,9 +1232,26 @@ msgstr "Uploading…"
 msgid "Username"
 msgstr "Username"
 
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "Users"
+msgstr "Users"
+
 #: src/components/FilesView.tsx
 msgid "Videos"
 msgstr "Videos"
+
+#: src/components/UserManagement.tsx
+msgid "View history"
+msgstr "View history"
+
+#: src/components/UserManagement.tsx
+msgid "View reporting"
+msgstr "View reporting"
+
+#: src/components/UserManagement.tsx
+msgid "you"
+msgstr "you"
 
 #: src/pages/Projects.tsx
 msgid "You need at least one project before you can add a task."

@@ -21,7 +21,7 @@ func TestMigrateAssetsProjectNullable(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = db.Exec(`
-CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_by INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
 CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL);
 CREATE TABLE assets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Archive, ArchiveRestore, CalendarDays, ChevronDown, FolderKanban, FolderPlus, Images, Loader2, MoreVertical, Plus, X } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, ChevronDown, FolderKanban, FolderPlus, Images, Loader2, MoreVertical, Plus, Users, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
+import { api, ApiError, can, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
+import { useAuth } from "@/context/auth";
+import { UserAvatar } from "@/components/UserAvatar";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { PulseCard } from "@/components/PulseCard";
 import { BlockTaskDialog } from "@/components/BlockTaskDialog";
@@ -27,6 +29,12 @@ import {
 } from "@/components/ui/dialog";
 
 const ALL = "__all__";
+
+// Membership is managed by the project's author or any admin (#18).
+function canManageMembers(user: User | null | undefined, project: Project): boolean {
+  if (!user) return false;
+  return user.role === "admin" || project.createdBy === user.id;
+}
 
 function CreateProjectDialog({
   open,
@@ -90,6 +98,146 @@ function CreateProjectDialog({
   );
 }
 
+// ManageMembersDialog lets a project's author (or an admin) see who belongs to the
+// project, add existing users, and remove members (#18). The author can't be
+// removed. Removed members keep their existing task assignments but lose access.
+function ManageMembersDialog({
+  open,
+  onOpenChange,
+  project,
+  allUsers,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  project: Project;
+  allUsers: User[];
+}) {
+  const { t } = useLingui();
+  const [members, setMembers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [addId, setAddId] = useState<string>("");
+
+  // Load members whenever the dialog opens. Driven by `open` (not Dialog's
+  // onOpenChange) because the dialog is opened programmatically from the menu,
+  // which never fires onOpenChange — relying on it left the spinner stuck.
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    setAddId("");
+    setLoading(true);
+    let active = true;
+    api
+      .listProjectMembers(project.id)
+      .then((m) => active && setMembers(m))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [open, project.id]);
+
+  const memberIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
+  // Only non-members (and not disabled) can be invited.
+  const candidates = useMemo(
+    () => allUsers.filter((u) => !u.disabled && !memberIds.has(u.id)),
+    [allUsers, memberIds]
+  );
+
+  async function add() {
+    if (!addId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setMembers(await api.addProjectMember(project.id, Number(addId)));
+      setAddId("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not add member`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(userId: number) {
+    setBusy(true);
+    setError(null);
+    try {
+      setMembers(await api.removeProjectMember(project.id, userId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not remove member`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-sm overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            <Trans>Members of {project.name}</Trans>
+          </DialogTitle>
+        </DialogHeader>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <Label>
+              <Trans>Add a member</Trans>
+            </Label>
+            <Select value={addId} onValueChange={setAddId}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder={t`Choose a user`} />
+              </SelectTrigger>
+              <SelectContent>
+                {candidates.map((u) => (
+                  <SelectItem key={u.id} value={String(u.id)}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" disabled={busy || !addId} onClick={add}>
+            <Trans>Add</Trans>
+          </Button>
+        </div>
+
+        <div className="space-y-1.5">
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            members.map((m) => {
+              const isAuthor = m.id === project.createdBy;
+              return (
+                <div key={m.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <UserAvatar name={m.name} avatarPath={m.avatarPath} className="h-7 w-7" />
+                    <span className="truncate text-sm">{m.name}</span>
+                    {isAuthor && (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        <Trans>author</Trans>
+                      </span>
+                    )}
+                  </div>
+                  {!isAuthor && (
+                    <Button variant="ghost" size="sm" disabled={busy} onClick={() => remove(m.id)}>
+                      <Trans>Remove</Trans>
+                    </Button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProjectTile({
   label,
   count,
@@ -108,7 +256,7 @@ function ProjectTile({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors lg:w-full",
+        "flex shrink-0 items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-left text-sm transition-colors lg:w-full",
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-card text-foreground hover:border-border hover:bg-muted",
@@ -220,6 +368,9 @@ function FilterDialog({
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { t } = useLingui();
+  const { user: me } = useAuth();
+  const canManageProjects = can(me, "manageProjects");
+  const canViewReporting = can(me, "viewReporting");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("project") ? Number(searchParams.get("project")) : null;
 
@@ -241,6 +392,7 @@ export function ProjectsPage() {
   const [blockTask, setBlockTask] = useState<Task | null>(null);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [noProjectsOpen, setNoProjectsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -268,13 +420,30 @@ export function ProjectsPage() {
   }, [showArchived]);
 
   // Pulse is scoped server-side, so refetch whenever the selection or the
-  // archived view changes.
+  // archived view changes. Reporting is gated by the view_reporting capability —
+  // skip the fetch entirely for users without it (the endpoint would 403).
   useEffect(() => {
+    if (!canViewReporting) {
+      setPulse(null);
+      return;
+    }
     api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
-  }, [selectedId, showArchived]);
+  }, [selectedId, showArchived, canViewReporting]);
+
+  // The calendar tab is reporting-gated; never leave the view stuck on it.
+  useEffect(() => {
+    if (view === "calendar" && !canViewReporting) setView("board");
+  }, [view, canViewReporting]);
 
   function select(id: number | null) {
     setSearchParams(id ? { project: String(id) } : {}, { replace: true });
+  }
+
+  // Refresh the pulse after an action that changes activity — no-op without the
+  // view_reporting capability (the endpoint is gated).
+  function refreshPulse() {
+    if (!canViewReporting) return;
+    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
   }
 
   // A task always needs a project, so there's nothing to add into when none exist
@@ -317,7 +486,7 @@ export function ProjectsPage() {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: to } : t)));
     try {
       await api.updateTask(task.id, { status: to });
-      api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
+      refreshPulse();
     } catch {
       loadBase();
     }
@@ -328,7 +497,7 @@ export function ProjectsPage() {
     if (!blockTask) return;
     const res = await api.updateTask(blockTask.id, { status: "blocked", blockedByTaskId, blockedReason: reason });
     setTasks((prev) => prev.map((t) => (t.id === res.task.id ? res.task : t)));
-    api.getPulse(selectedId ?? undefined, showArchived).then(setPulse);
+    refreshPulse();
   }
 
   // Archive / unarchive the selected project. When archiving while archived items
@@ -356,7 +525,10 @@ export function ProjectsPage() {
         {(
           [
             { key: "board", icon: FolderKanban, label: <Trans>Tasks</Trans> },
-            { key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> },
+            // Calendar is a reporting surface, gated by the view_reporting capability.
+            ...(canViewReporting
+              ? ([{ key: "calendar", icon: CalendarDays, label: <Trans>Calendar</Trans> }] as const)
+              : []),
             { key: "files", icon: Images, label: <Trans>Files</Trans> },
           ] as const
         ).map(({ key, icon: Icon, label }) => (
@@ -419,7 +591,7 @@ export function ProjectsPage() {
   const usesTags = view === "board" || view === "calendar";
 
   return (
-    <div className="flex flex-col gap-10 pt-1">
+    <div className="flex flex-col gap-10 pt-1 lg:gap-12">
       {/* Mobile: the project selector sits above the view tabs (desktop keeps it
           in the left sidebar). The button shows the current selection as its value. */}
       <div className="lg:hidden">
@@ -444,7 +616,7 @@ export function ProjectsPage() {
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-52 p-1">
-              {selectedProject && (
+              {selectedProject && canManageProjects && (
                 <button
                   type="button"
                   className={menuItemClass}
@@ -457,17 +629,32 @@ export function ProjectsPage() {
                   {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
                 </button>
               )}
-              <button
-                type="button"
-                className={menuItemClass}
-                onClick={() => {
-                  setProjMenuOpen(false);
-                  setCreateOpen(true);
-                }}
-              >
-                <FolderPlus className="h-4 w-4" />
-                <Trans>New project</Trans>
-              </button>
+              {selectedProject && canManageMembers(me, selectedProject) && (
+                <button
+                  type="button"
+                  className={menuItemClass}
+                  onClick={() => {
+                    setProjMenuOpen(false);
+                    setMembersOpen(true);
+                  }}
+                >
+                  <Users className="h-4 w-4" />
+                  <Trans>Manage members</Trans>
+                </button>
+              )}
+              {canManageProjects && (
+                <button
+                  type="button"
+                  className={menuItemClass}
+                  onClick={() => {
+                    setProjMenuOpen(false);
+                    setCreateOpen(true);
+                  }}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  <Trans>New project</Trans>
+                </button>
+              )}
             </PopoverContent>
           </Popover>
         </div>
@@ -482,22 +669,24 @@ export function ProjectsPage() {
       </div>
 
       {/* Tabs in a top strip; on desktop they align over the content column. */}
-      <div className="flex flex-row lg:gap-12">
-        <div className="hidden lg:block lg:w-56 lg:shrink-0" aria-hidden />
+      <div className="flex flex-row lg:gap-16">
+        <div className="hidden lg:block lg:w-64 lg:shrink-0 xl:w-72" aria-hidden />
         <div className="min-w-0 flex-1">{viewTabs}</div>
       </div>
 
-      <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
+      <div className="flex flex-col gap-8 lg:flex-row lg:gap-16">
         {/* Projects stack — desktop only; mobile uses the compact selector above. */}
-        <aside className="hidden lg:block lg:w-56 lg:shrink-0">
+        <aside className="hidden lg:block lg:w-64 lg:shrink-0 xl:w-72">
         <div className="mb-5 flex items-center justify-between gap-2">
           <h1 className="text-lg font-bold tracking-tight">
             <Trans>Projects</Trans>
           </h1>
-          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            <Trans>New</Trans>
-          </Button>
+          {canManageProjects && (
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <Trans>New</Trans>
+            </Button>
+          )}
         </div>
         <div className="flex flex-col gap-3">
           <ProjectTile
@@ -552,7 +741,7 @@ export function ProjectsPage() {
       </aside>
 
       {/* Main content: board or calendar, scoped to the selection */}
-      <div className="min-w-0 flex-1 space-y-5">
+      <div className="min-w-0 flex-1 space-y-6 lg:space-y-8">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="truncate text-xl font-bold tracking-tight lg:text-2xl">{heading}</h2>
@@ -565,7 +754,13 @@ export function ProjectsPage() {
                 Archive is desktop-only here — phone/tablet reach it from the
                 project selector's menu. */}
             <div className="flex items-center gap-2">
-              {selectedProject && (
+              {selectedProject && canManageMembers(me, selectedProject) && (
+                <Button variant="outline" className="hidden lg:inline-flex" onClick={() => setMembersOpen(true)}>
+                  <Users className="h-4 w-4" />
+                  <Trans>Members</Trans>
+                </Button>
+              )}
+              {selectedProject && canManageProjects && (
                 <Button variant="outline" className="hidden lg:inline-flex" onClick={onArchiveProjectClick}>
                   {selectedProject.archived ? (
                     <>
@@ -699,6 +894,15 @@ export function ProjectsPage() {
         confirmLabel={<Trans>New project</Trans>}
         onConfirm={() => setCreateOpen(true)}
       />
+
+      {selectedProject && (
+        <ManageMembersDialog
+          open={membersOpen}
+          onOpenChange={setMembersOpen}
+          project={selectedProject}
+          allUsers={users}
+        />
+      )}
     </div>
   );
 }

@@ -23,22 +23,54 @@ var errBlockedRef = errors.New("a blocked task must reference another existing t
 // ---- Models ----
 
 type User struct {
-	ID         int64   `json:"id"`
-	Username   string  `json:"username"`
-	Name       string  `json:"name"`
-	AvatarPath *string `json:"avatarPath"`
-	Role       string  `json:"role"`     // "admin" | "member"
-	Disabled   bool    `json:"disabled"` // soft-disabled: cannot log in
+	ID         int64        `json:"id"`
+	Username   string       `json:"username"`
+	Name       string       `json:"name"`
+	AvatarPath *string      `json:"avatarPath"`
+	Role       string       `json:"role"`     // "admin" | "member"
+	Disabled   bool         `json:"disabled"` // soft-disabled: cannot log in
+	Caps       Capabilities `json:"capabilities"`
 	// PasswordHash is never serialized to clients. Nil means "not set up yet"
 	// (the account exists but cannot log in until an admin sets a password).
 	PasswordHash *string `json:"-"`
 }
 
+// Capabilities are per-user grants that gate classes of action/read for
+// non-admins. Admins bypass these entirely (IsAdmin short-circuits every check).
+type Capabilities struct {
+	ManageProjects bool `json:"manageProjects"` // create/archive projects
+	ViewReporting  bool `json:"viewReporting"`  // pulse + calendar reads
+	ViewHistory    bool `json:"viewHistory"`    // task activity logs
+}
+
 func (u *User) IsAdmin() bool { return u.Role == roleAdmin }
+
+// Has reports whether the user holds a capability — admins always do.
+func (u *User) Has(cap string) bool {
+	if u.IsAdmin() {
+		return true
+	}
+	switch cap {
+	case capManageProjects:
+		return u.Caps.ManageProjects
+	case capViewReporting:
+		return u.Caps.ViewReporting
+	case capViewHistory:
+		return u.Caps.ViewHistory
+	}
+	return false
+}
 
 const (
 	roleAdmin  = "admin"
 	roleMember = "member"
+)
+
+// Capability names, used by User.Has and the requireCapability middleware.
+const (
+	capManageProjects = "manage_projects"
+	capViewReporting  = "view_reporting"
+	capViewHistory    = "view_history"
 )
 
 type Project struct {
@@ -352,6 +384,13 @@ CREATE TABLE IF NOT EXISTS messages (
   text       TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS project_members (
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  user_id    INTEGER NOT NULL REFERENCES users(id),
+  added_by   INTEGER REFERENCES users(id),
+  added_at   TEXT NOT NULL,
+  PRIMARY KEY (project_id, user_id)
+);
 CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_logs_task ON log_items(task_id);
 CREATE INDEX IF NOT EXISTS idx_logs_created ON log_items(created_at);
@@ -360,6 +399,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_log ON assets(log_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag ON task_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_criteria_task ON task_criteria(task_id);
 CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel_id, id);
+CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
 `
 
 func (s *Store) Migrate() error {
@@ -383,6 +423,11 @@ func (s *Store) Migrate() error {
 	}
 	if err := s.addColumnIfMissing("users", "password_hash", "TEXT"); err != nil {
 		return err
+	}
+	for _, col := range []string{"cap_manage_projects", "cap_view_reporting", "cap_view_history"} {
+		if err := s.addColumnIfMissing("users", col, "INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return err
+		}
 	}
 	if err := s.addColumnIfMissing("projects", "archived_at", "TEXT"); err != nil {
 		return err
@@ -408,10 +453,53 @@ func (s *Store) Migrate() error {
 	if err := s.migrateAssetsProjectNullable(); err != nil {
 		return err
 	}
+	if err := s.addColumnIfMissing("assets", "source", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	// source is added after the project-nullable rebuild (which copies a fixed
 	// column set) so the rebuild can't drop it. Marks where an upload came from
 	// (e.g. "chat") when it isn't derivable from the task/project ids.
-	return s.addColumnIfMissing("assets", "source", "TEXT NOT NULL DEFAULT ''")
+	return s.backfillProjectMembers()
+}
+
+// backfillProjectMembers seeds project_members from existing participation the
+// first time the membership feature is migrated in (the table is empty but
+// projects exist). For every project it makes the creator a member, plus every
+// distinct task creator and assignee within that project — so nobody currently
+// participating is locked out and existing task assignments stay valid. Once any
+// membership row exists this is a no-op.
+func (s *Store) backfillProjectMembers() error {
+	var existing int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM project_members").Scan(&existing); err != nil {
+		return err
+	}
+	if existing > 0 {
+		return nil
+	}
+	var projects int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM projects").Scan(&projects); err != nil {
+		return err
+	}
+	if projects == 0 {
+		return nil // fresh DB; nothing to backfill
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// Union of project creators and the creators/assignees of their tasks.
+	if _, err := tx.Exec(`
+		INSERT OR IGNORE INTO project_members (project_id, user_id, added_by, added_at)
+		SELECT id, created_by, created_by, ? FROM projects
+		UNION
+		SELECT project_id, created_by, created_by, ? FROM tasks
+		UNION
+		SELECT project_id, assignee_id, assignee_id, ? FROM tasks WHERE assignee_id IS NOT NULL`,
+		nowUTC(), nowUTC(), nowUTC()); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // migrateAssetsProjectNullable drops the NOT NULL constraint on assets.project_id
@@ -593,14 +681,16 @@ func dueDisplay(p *string) string {
 
 // ---- Users ----
 
-const userCols = "id, username, name, avatar_path, role, disabled, password_hash"
+const userCols = "id, username, name, avatar_path, role, disabled, " +
+	"cap_manage_projects, cap_view_reporting, cap_view_history, password_hash"
 
 type scanner interface{ Scan(dest ...any) error }
 
 func scanUser(sc scanner) (*User, error) {
 	var u User
 	var avatar, hash sql.NullString
-	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &avatar, &u.Role, &u.Disabled, &hash); err != nil {
+	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &avatar, &u.Role, &u.Disabled,
+		&u.Caps.ManageProjects, &u.Caps.ViewReporting, &u.Caps.ViewHistory, &hash); err != nil {
 		return nil, err
 	}
 	if avatar.Valid {
@@ -658,6 +748,14 @@ func (s *Store) SetRole(id int64, role string) error {
 	return err
 }
 
+// SetCapabilities overwrites a user's three capability flags.
+func (s *Store) SetCapabilities(id int64, caps Capabilities) error {
+	_, err := s.db.Exec(
+		"UPDATE users SET cap_manage_projects=?, cap_view_reporting=?, cap_view_history=? WHERE id=?",
+		caps.ManageProjects, caps.ViewReporting, caps.ViewHistory, id)
+	return err
+}
+
 func (s *Store) SetDisabled(id int64, disabled bool) error {
 	_, err := s.db.Exec("UPDATE users SET disabled=? WHERE id=?", disabled, id)
 	return err
@@ -705,18 +803,48 @@ func (s *Store) SetAvatar(id int64, path string) error {
 
 // ---- Projects ----
 
+// projectScopeClause restricts `col` to a set of visible project ids, for
+// membership scoping of "all projects" reads. A nil scope means no restriction
+// (admins see everything); a non-nil but empty scope matches nothing (a member of
+// no projects). When allowNull is true, rows with a NULL project are always
+// included — for assets, project-less/orphan files stay visible to everyone.
+func projectScopeClause(col string, scope []int64, allowNull bool, args *[]any) string {
+	if scope == nil {
+		return ""
+	}
+	if len(scope) == 0 {
+		if allowNull {
+			return " AND " + col + " IS NULL"
+		}
+		return " AND 1=0"
+	}
+	ph := make([]string, len(scope))
+	for i, id := range scope {
+		ph[i] = "?"
+		*args = append(*args, id)
+	}
+	clause := col + " IN (" + strings.Join(ph, ",") + ")"
+	if allowNull {
+		clause = "(" + clause + " OR " + col + " IS NULL)"
+	}
+	return " AND " + clause
+}
+
 // ListProjects returns projects newest-first. The task count excludes archived
 // tasks. When includeArchived is false, archived projects are omitted entirely.
-func (s *Store) ListProjects(includeArchived bool) ([]Project, error) {
+// A non-nil scope restricts the result to those project ids (membership scoping).
+func (s *Store) ListProjects(includeArchived bool, scope []int64) ([]Project, error) {
 	q := `
 		SELECT p.id, p.name, p.description, p.created_by, p.created_at, p.archived_at,
 		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.archived_at IS NULL) AS cnt
-		FROM projects p`
+		FROM projects p WHERE 1=1`
+	args := []any{}
 	if !includeArchived {
-		q += " WHERE p.archived_at IS NULL"
+		q += " AND p.archived_at IS NULL"
 	}
+	q += projectScopeClause("p.id", scope, false, &args)
 	q += " ORDER BY p.created_at DESC"
-	rows, err := s.db.Query(q)
+	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -764,7 +892,114 @@ func (s *Store) CreateProject(name, desc string, by int64) (*Project, error) {
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
+	// The creator is implicitly the first member, so they retain access to the
+	// project they just made.
+	if _, err := s.db.Exec(
+		"INSERT OR IGNORE INTO project_members (project_id, user_id, added_by, added_at) VALUES (?,?,?,?)",
+		id, by, by, now); err != nil {
+		return nil, err
+	}
 	return s.GetProject(id)
+}
+
+// ---- Project membership ----
+
+// IsProjectMember reports whether the user belongs to the project.
+func (s *Store) IsProjectMember(projectID, userID int64) (bool, error) {
+	var n int
+	err := s.db.QueryRow(
+		"SELECT COUNT(*) FROM project_members WHERE project_id=? AND user_id=?", projectID, userID).Scan(&n)
+	return n > 0, err
+}
+
+// MemberProjectIDs returns the ids of every project the user belongs to.
+func (s *Store) MemberProjectIDs(userID int64) ([]int64, error) {
+	rows, err := s.db.Query("SELECT project_id FROM project_members WHERE user_id=?", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// ListProjectMembers returns the project's members, ordered by name.
+func (s *Store) ListProjectMembers(projectID int64) ([]User, error) {
+	rows, err := s.db.Query(
+		"SELECT "+userCols+" FROM users u JOIN project_members m ON m.user_id=u.id "+
+			"WHERE m.project_id=? ORDER BY u.name", projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []User{}
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *u)
+	}
+	return out, rows.Err()
+}
+
+// AddProjectMember adds a user to a project (idempotent).
+func (s *Store) AddProjectMember(projectID, userID, addedBy int64) error {
+	_, err := s.db.Exec(
+		"INSERT OR IGNORE INTO project_members (project_id, user_id, added_by, added_at) VALUES (?,?,?,?)",
+		projectID, userID, addedBy, nowUTC())
+	return err
+}
+
+// RemoveProjectMember removes a user from a project. Existing task assignments are
+// deliberately left intact (history); the user simply loses access. For every task
+// in the project the user is still assigned to, a "member_removed" log entry is
+// appended (attributed to the acting admin/author) so the removal is auditable
+// exactly where it matters — those tasks now have an assignee without access.
+func (s *Store) RemoveProjectMember(projectID, userID, actor int64) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	rows, err := tx.Query(
+		"SELECT id FROM tasks WHERE project_id=? AND assignee_id=?", projectID, userID)
+	if err != nil {
+		return err
+	}
+	var taskIDs []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		taskIDs = append(taskIDs, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	now := nowUTC()
+	for _, tid := range taskIDs {
+		if _, err := tx.Exec(
+			`INSERT INTO log_items (task_id, user_id, type, text, created_at) VALUES (?,?,?,?,?)`,
+			tid, actor, "member_removed", "Removed assignee from the project", now); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec(
+		"DELETE FROM project_members WHERE project_id=? AND user_id=?", projectID, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ---- Tasks ----
@@ -801,7 +1036,7 @@ func scanTask(sc scanner) (*Task, error) {
 	return &t, nil
 }
 
-func (s *Store) ListTasks(projectID int64, status, tag string, includeArchived bool) ([]Task, error) {
+func (s *Store) ListTasks(projectID int64, status, tag string, includeArchived bool, scope []int64) ([]Task, error) {
 	// projectID == 0 means "all projects".
 	q := "SELECT " + taskCols + " FROM tasks WHERE 1=1"
 	args := []any{}
@@ -812,6 +1047,10 @@ func (s *Store) ListTasks(projectID int64, status, tag string, includeArchived b
 	if projectID != 0 {
 		q += " AND project_id=?"
 		args = append(args, projectID)
+	} else {
+		// Only the cross-project listing needs membership scoping; a specific
+		// project id is already access-checked by the handler.
+		q += projectScopeClause("project_id", scope, false, &args)
 	}
 	if status != "" {
 		q += " AND status=?"
@@ -1731,7 +1970,7 @@ const assetColsQ = "a.id, a.project_id, a.task_id, a.log_id, a.source, a.uploade
 // selects only project-less files; empty kind/tag skip that filter. pending
 // selects the soft-deletion queue (assets awaiting purge) instead of the live
 // grid. limit/offset paginate.
-func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limit, offset int) ([]Asset, error) {
+func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limit, offset int, scope []int64) ([]Asset, error) {
 	q := "SELECT " + assetColsQ + " FROM assets a WHERE 1=1"
 	args := []any{}
 	if pending {
@@ -1744,6 +1983,10 @@ func (s *Store) ListAssets(projectID int64, kind, tag string, pending bool, limi
 	} else if projectID != 0 {
 		q += " AND a.project_id = ?"
 		args = append(args, projectID)
+	} else {
+		// Cross-project listing: restrict to member projects, but keep orphan
+		// (project-less) files visible to everyone.
+		q += projectScopeClause("a.project_id", scope, true, &args)
 	}
 	if kind != "" {
 		q += " AND a.kind = ?"
