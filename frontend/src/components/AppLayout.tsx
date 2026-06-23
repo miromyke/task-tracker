@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FolderKanban, LogOut, MessageCircle, Upload, Users } from "lucide-react";
+import { FolderKanban, LogOut, MessageCircle, Pencil, Upload, Users } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { ChangePasswordDialog } from "@/components/UserManagement";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -29,10 +30,13 @@ import {
 
 function AccountDialog() {
   const { user, setUser, logout } = useAuth();
-  const { i18n } = useLingui();
+  const { i18n, t } = useLingui();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
+  const [editingName, setEditingName] = useState(false);
+  const [firstName, setFirstName] = useState(user?.firstName ?? "");
+  const [surname, setSurname] = useState(user?.surname ?? "");
   if (!user) return null;
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -45,6 +49,17 @@ function AccountDialog() {
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function saveName() {
+    setBusy(true);
+    try {
+      const updated = await api.updateProfile({ firstName: firstName.trim(), surname: surname.trim() });
+      setUser(updated);
+      setEditingName(false);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -62,11 +77,55 @@ function AccountDialog() {
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-3 py-2">
-          <UserAvatar name={user.name} avatarPath={user.avatarPath} className="h-20 w-20 text-xl" />
-          <div className="text-center">
-            <div className="font-medium">{user.name}</div>
-            <div className="text-sm text-muted-foreground">@{user.username}</div>
-          </div>
+          <UserAvatar
+            name={user.name}
+            firstName={user.firstName}
+            surname={user.surname}
+            avatarPath={user.avatarPath}
+            className="h-20 w-20 text-xl"
+          />
+          {editingName ? (
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex gap-2">
+                <Input
+                  autoFocus
+                  placeholder={t`First name`}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+                <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
+              </div>
+              <div className="flex justify-center gap-2">
+                <Button size="sm" disabled={busy || (!firstName.trim() && !surname.trim())} onClick={saveName}>
+                  <Trans>Save</Trans>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    setFirstName(user.firstName);
+                    setSurname(user.surname);
+                    setEditingName(false);
+                  }}
+                >
+                  <Trans>Cancel</Trans>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                className="inline-flex items-center gap-1 font-medium hover:text-primary"
+              >
+                {user.name}
+                <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              <div className="text-sm text-muted-foreground">@{user.username}</div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">

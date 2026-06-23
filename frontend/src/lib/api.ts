@@ -16,7 +16,11 @@ export type Capability = keyof Capabilities;
 export interface User {
   id: number;
   username: string;
+  // name is the composed display name (first + surname), kept for every consumer
+  // that renders a single name. firstName/surname are the structured source (#19).
   name: string;
+  firstName: string;
+  surname: string;
   avatarPath: string | null;
   role: Role;
   disabled: boolean;
@@ -212,14 +216,18 @@ export interface Channel {
   lastMessageAt: string | null;
 }
 
-// A chat message. `text` holds raw reference tokens (@username, #<taskId>,
-// #file<assetId>) resolved at render time by MessageText.
+// A chat message. `text` holds raw reference tokens (@[userId], #<taskId>,
+// #file<assetId>) resolved at render time by MessageText. Soft-deletable (#15):
+// when deletedAt is set, non-admins receive an empty `text` tombstone while
+// admins keep the original for the audit view.
 export interface Message {
   id: number;
   channelId: number;
   userId: number;
   text: string;
   createdAt: string;
+  deletedAt: string | null;
+  deletedBy: number | null;
 }
 
 export type NotificationType = "mention" | "task_assigned" | "task_activity";
@@ -306,16 +314,25 @@ export const api = {
     req<User>("/login", jsonBody("POST", { username, password })),
   logout: () => req<{ ok: boolean }>("/logout", { method: "POST" }),
   me: () => req<User>("/me"),
+  updateProfile: (body: { firstName: string; surname: string }) =>
+    req<User>("/me", jsonBody("PATCH", body)),
   changePassword: (currentPassword: string, newPassword: string) =>
     req<{ ok: boolean }>("/me/password", jsonBody("POST", { currentPassword, newPassword })),
 
   // users
   listUsers: () => req<User[]>("/users"),
-  createUser: (body: { username: string; name: string; password: string; role: Role }) =>
+  createUser: (body: { username: string; firstName: string; surname: string; password: string; role: Role }) =>
     req<User>("/users", jsonBody("POST", body)),
   updateUser: (
     id: number,
-    body: { password?: string; role?: Role; disabled?: boolean; capabilities?: Capabilities }
+    body: {
+      password?: string;
+      firstName?: string;
+      surname?: string;
+      role?: Role;
+      disabled?: boolean;
+      capabilities?: Capabilities;
+    }
   ) => req<User>(`/users/${id}`, jsonBody("PATCH", body)),
   uploadAvatar: (file: File) => {
     const fd = new FormData();
@@ -445,6 +462,9 @@ export const api = {
     ),
   postMessage: (channelId: number, text: string) =>
     req<Message>(`/channels/${channelId}/messages`, jsonBody("POST", { text })),
+  // Soft-delete a message (author or admin). Returns the updated row.
+  deleteMessage: (channelId: number, messageId: number) =>
+    req<Message>(`/channels/${channelId}/messages/${messageId}`, { method: "DELETE" }),
 
   // tags + calendar
   listTags: () => req<string[]>("/tags"),

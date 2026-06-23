@@ -23,9 +23,15 @@ var errBlockedRef = errors.New("a blocked task must reference another existing t
 // ---- Models ----
 
 type User struct {
-	ID         int64        `json:"id"`
-	Username   string       `json:"username"`
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	// Name is the composed display name (first + surname), kept denormalized so
+	// every existing consumer (mentions, assignee, member lists, ORDER BY) keeps
+	// working. FirstName/Surname are the structured source of truth (#19); avatar
+	// initials derive from them.
 	Name       string       `json:"name"`
+	FirstName  string       `json:"firstName"`
+	Surname    string       `json:"surname"`
 	AvatarPath *string      `json:"avatarPath"`
 	Role       string       `json:"role"`     // "admin" | "member"
 	Disabled   bool         `json:"disabled"` // soft-disabled: cannot log in
@@ -132,15 +138,15 @@ type CriterionInput struct {
 }
 
 type LogItem struct {
-	ID         int64  `json:"id"`
-	TaskID     int64  `json:"taskId"`
-	UserID     int64  `json:"userId"`
+	ID     int64 `json:"id"`
+	TaskID int64 `json:"taskId"`
+	UserID int64 `json:"userId"`
 	// Type values: created | note | status_change | due_date_change |
 	// assignee_change | title_change | description_change | tags_change |
 	// criteria_change | criterion_check | archive (legacy rows may carry the
 	// retired "edit").
-	Type string `json:"type"`
-	Text       string `json:"text"`
+	Type       string  `json:"type"`
+	Text       string  `json:"text"`
 	FromStatus *string `json:"fromStatus"`
 	ToStatus   *string `json:"toStatus"`
 	// Details is a structured, language-neutral payload describing exactly what
@@ -202,10 +208,10 @@ type criteriaDiff struct {
 // tied to a project (e.g. chat uploads). thumb_path/width/height/duration are
 // reserved (e.g. for future video posters) and may be null.
 type Asset struct {
-	ID         int64    `json:"id"`
-	ProjectID  *int64   `json:"projectId"`
-	TaskID     *int64   `json:"taskId"`
-	LogID      *int64   `json:"logId"`
+	ID        int64  `json:"id"`
+	ProjectID *int64 `json:"projectId"`
+	TaskID    *int64 `json:"taskId"`
+	LogID     *int64 `json:"logId"`
 	// Source records where a project-less upload originated when it isn't otherwise
 	// derivable — currently "chat" for files uploaded from the chat composer, ""
 	// for a direct Files-page upload. Task/project context is read from the ids above.
@@ -242,16 +248,19 @@ type Channel struct {
 	LastMessageAt *string `json:"lastMessageAt"`
 }
 
-// Message is one chat message. Text stores raw reference tokens (@username,
+// Message is one chat message. Text stores raw reference tokens (@[userID],
 // #<taskID>, #file<assetID>) that the frontend resolves at render time, so the
-// stored text stays language-neutral and survives renames. Append-only: messages
-// are never edited or deleted.
+// stored text stays language-neutral and survives renames. Reversibly
+// soft-deleted (#15): DeletedAt/DeletedBy are set on deletion; non-admin viewers
+// receive a redacted (empty-text) tombstone, admins keep the original text.
 type Message struct {
-	ID        int64  `json:"id"`
-	ChannelID int64  `json:"channelId"`
-	UserID    int64  `json:"userId"`
-	Text      string `json:"text"`
-	CreatedAt string `json:"createdAt"`
+	ID        int64   `json:"id"`
+	ChannelID int64   `json:"channelId"`
+	UserID    int64   `json:"userId"`
+	Text      string  `json:"text"`
+	CreatedAt string  `json:"createdAt"`
+	DeletedAt *string `json:"deletedAt"`
+	DeletedBy *int64  `json:"deletedBy"`
 }
 
 // TaskChanges describes a partial update; only fields that are set are applied.
@@ -433,6 +442,12 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("users", "role", "TEXT NOT NULL DEFAULT 'member'"); err != nil {
 		return err
 	}
+	if err := s.addColumnIfMissing("users", "first_name", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("users", "surname", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	if err := s.addColumnIfMissing("users", "disabled", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
@@ -474,7 +489,60 @@ func (s *Store) Migrate() error {
 	// source is added after the project-nullable rebuild (which copies a fixed
 	// column set) so the rebuild can't drop it. Marks where an upload came from
 	// (e.g. "chat") when it isn't derivable from the task/project ids.
+	if err := s.addColumnIfMissing("messages", "deleted_at", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.addColumnIfMissing("messages", "deleted_by", "INTEGER"); err != nil {
+		return err
+	}
+	if err := s.backfillUserNames(); err != nil {
+		return err
+	}
 	return s.backfillProjectMembers()
+}
+
+// backfillUserNames seeds first_name/surname from the legacy free-form name the
+// first time #19 migrates in (rows where both structured parts are still empty).
+// Best-effort split: the first whitespace-delimited word is the first name, the
+// remainder is the surname (a single-word name becomes the first name only).
+func (s *Store) backfillUserNames() error {
+	rows, err := s.db.Query("SELECT id, name FROM users WHERE first_name = '' AND surname = ''")
+	if err != nil {
+		return err
+	}
+	type pending struct {
+		id             int64
+		first, surname string
+	}
+	var todo []pending
+	for rows.Next() {
+		var id int64
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			rows.Close()
+			return err
+		}
+		parts := strings.Fields(name)
+		p := pending{id: id}
+		if len(parts) > 0 {
+			p.first = parts[0]
+			p.surname = strings.Join(parts[1:], " ")
+		}
+		todo = append(todo, p)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	for _, p := range todo {
+		if _, err := s.db.Exec(
+			"UPDATE users SET first_name = ?, surname = ?, name = ? WHERE id = ?",
+			p.first, p.surname, composeName(p.first, p.surname), p.id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // backfillProjectMembers seeds project_members from existing participation the
@@ -696,15 +764,21 @@ func dueDisplay(p *string) string {
 
 // ---- Users ----
 
-const userCols = "id, username, name, avatar_path, role, disabled, " +
+const userCols = "id, username, name, first_name, surname, avatar_path, role, disabled, " +
 	"cap_manage_projects, cap_view_reporting, cap_view_history, password_hash"
 
 type scanner interface{ Scan(dest ...any) error }
 
+// composeName builds the denormalized display name from the structured parts.
+// Falls back to a lone first name or surname when only one is set.
+func composeName(firstName, surname string) string {
+	return strings.TrimSpace(strings.TrimSpace(firstName) + " " + strings.TrimSpace(surname))
+}
+
 func scanUser(sc scanner) (*User, error) {
 	var u User
 	var avatar, hash sql.NullString
-	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &avatar, &u.Role, &u.Disabled,
+	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &u.FirstName, &u.Surname, &avatar, &u.Role, &u.Disabled,
 		&u.Caps.ManageProjects, &u.Caps.ViewReporting, &u.Caps.ViewHistory, &hash); err != nil {
 		return nil, err
 	}
@@ -729,28 +803,45 @@ func (s *Store) EnsureAdmin(username, name, passwordHash string) error {
 		hash = passwordHash
 	}
 	_, err := s.db.Exec(
-		`INSERT INTO users (username, name, role, disabled, password_hash, created_at)
-		 VALUES (?,?,?,0,?,?)
+		`INSERT INTO users (username, name, first_name, role, disabled, password_hash, created_at)
+		 VALUES (?,?,?,?,0,?,?)
 		 ON CONFLICT(username) DO UPDATE SET
 		   role='admin',
 		   disabled=0,
 		   password_hash=COALESCE(excluded.password_hash, users.password_hash)`,
-		username, name, roleAdmin, hash, now)
+		username, name, name, roleAdmin, hash, now)
 	return err
 }
 
-// CreateUser inserts a new member with the given password hash.
-func (s *Store) CreateUser(username, name, role, passwordHash string) (*User, error) {
+// CreateUser inserts a new member with the given password hash. The display name
+// is composed from firstName + surname (#19).
+func (s *Store) CreateUser(username, firstName, surname, role, passwordHash string) (*User, error) {
 	now := nowUTC()
 	res, err := s.db.Exec(
-		`INSERT INTO users (username, name, role, disabled, password_hash, created_at)
-		 VALUES (?,?,?,0,?,?)`,
-		username, name, role, passwordHash, now)
+		`INSERT INTO users (username, name, first_name, surname, role, disabled, password_hash, created_at)
+		 VALUES (?,?,?,?,?,0,?,?)`,
+		username, composeName(firstName, surname), firstName, surname, role, passwordHash, now)
 	if err != nil {
 		return nil, err
 	}
 	id, _ := res.LastInsertId()
 	return s.GetUser(id)
+}
+
+// SetName updates a user's structured name and the denormalized display name.
+func (s *Store) SetName(id int64, firstName, surname string) error {
+	_, err := s.db.Exec(
+		"UPDATE users SET first_name=?, surname=?, name=? WHERE id=?",
+		firstName, surname, composeName(firstName, surname), id)
+	return err
+}
+
+// CountAdmins returns how many enabled-or-not admin accounts exist, used to block
+// demoting the last admin (#21).
+func (s *Store) CountAdmins() (int, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM users WHERE role = ?", roleAdmin).Scan(&n)
+	return n, err
 }
 
 func (s *Store) SetPassword(id int64, passwordHash string) error {
@@ -2189,6 +2280,45 @@ func (s *Store) CreateMessage(channelID, userID int64, text string) (*Message, e
 	return &Message{ID: id, ChannelID: channelID, UserID: userID, Text: text, CreatedAt: now}, nil
 }
 
+const messageCols = "id, channel_id, user_id, text, created_at, deleted_at, deleted_by"
+
+func scanMessage(sc scanner) (*Message, error) {
+	var m Message
+	var deletedAt sql.NullString
+	var deletedBy sql.NullInt64
+	if err := sc.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.Text, &m.CreatedAt, &deletedAt, &deletedBy); err != nil {
+		return nil, err
+	}
+	if deletedAt.Valid {
+		v := deletedAt.String
+		m.DeletedAt = &v
+	}
+	if deletedBy.Valid {
+		v := deletedBy.Int64
+		m.DeletedBy = &v
+	}
+	return &m, nil
+}
+
+// GetMessage returns a single message by id, or nil if it doesn't exist.
+func (s *Store) GetMessage(id int64) (*Message, error) {
+	row := s.db.QueryRow("SELECT "+messageCols+" FROM messages WHERE id=?", id)
+	m, err := scanMessage(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return m, err
+}
+
+// SoftDeleteMessage marks a message deleted (reversibly): the row and its text
+// are preserved for the admin audit view. A no-op if already deleted.
+func (s *Store) SoftDeleteMessage(id, by int64) error {
+	_, err := s.db.Exec(
+		"UPDATE messages SET deleted_at=?, deleted_by=? WHERE id=? AND deleted_at IS NULL",
+		nowUTC(), by, id)
+	return err
+}
+
 // ListMessages returns a channel's messages oldest-first. afterID > 0 returns only
 // messages newer than that id (the polling delta); afterID == 0 returns the most
 // recent `limit` messages (initial load), still ordered oldest→newest for display.
@@ -2197,12 +2327,12 @@ func (s *Store) ListMessages(channelID, afterID int64, limit int) ([]Message, er
 	var err error
 	if afterID > 0 {
 		rows, err = s.db.Query(
-			"SELECT id, channel_id, user_id, text, created_at FROM messages WHERE channel_id=? AND id>? ORDER BY id ASC LIMIT ?",
+			"SELECT "+messageCols+" FROM messages WHERE channel_id=? AND id>? ORDER BY id ASC LIMIT ?",
 			channelID, afterID, limit)
 	} else {
 		// Take the newest `limit` rows, then flip to chronological order below.
 		rows, err = s.db.Query(
-			"SELECT id, channel_id, user_id, text, created_at FROM messages WHERE channel_id=? ORDER BY id DESC LIMIT ?",
+			"SELECT "+messageCols+" FROM messages WHERE channel_id=? ORDER BY id DESC LIMIT ?",
 			channelID, limit)
 	}
 	if err != nil {
@@ -2211,11 +2341,11 @@ func (s *Store) ListMessages(channelID, afterID int64, limit int) ([]Message, er
 	defer rows.Close()
 	out := []Message{}
 	for rows.Next() {
-		var m Message
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.Text, &m.CreatedAt); err != nil {
+		m, err := scanMessage(rows)
+		if err != nil {
 			return nil, err
 		}
-		out = append(out, m)
+		out = append(out, *m)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

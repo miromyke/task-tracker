@@ -33,6 +33,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/login", s.handleLogin)
 	mux.HandleFunc("POST /api/logout", s.handleLogout)
 	mux.HandleFunc("GET /api/me", s.requireAuth(s.handleMe))
+	mux.HandleFunc("PATCH /api/me", s.requireAuth(s.handleUpdateProfile))
 	mux.HandleFunc("POST /api/me/password", s.requireAuth(s.handleChangePassword))
 	mux.HandleFunc("GET /api/users", s.requireAuth(s.handleListUsers))
 	mux.HandleFunc("POST /api/users/avatar", s.requireAuth(s.handleAvatar))
@@ -69,6 +70,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("PATCH /api/channels/{id}", s.requireAuth(s.handleUpdateChannel))
 	mux.HandleFunc("GET /api/channels/{id}/messages", s.requireAuth(s.handleListMessages))
 	mux.HandleFunc("POST /api/channels/{id}/messages", s.requireAuth(s.handlePostMessage))
+	mux.HandleFunc("DELETE /api/channels/{id}/messages/{mid}", s.requireAuth(s.handleDeleteMessage))
 
 	mux.HandleFunc("GET /api/notifications", s.requireAuth(s.handleListNotifications))
 	mux.HandleFunc("GET /api/notifications/unread-count", s.requireAuth(s.handleNotificationsUnreadCount))
@@ -271,23 +273,25 @@ func (s *Server) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Username string `json:"username"`
-		Name     string `json:"name"`
-		Password string `json:"password"`
-		Role     string `json:"role"`
+		Username  string `json:"username"`
+		FirstName string `json:"firstName"`
+		Surname   string `json:"surname"`
+		Password  string `json:"password"`
+		Role      string `json:"role"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
 		return
 	}
 	username := strings.TrimSpace(req.Username)
-	name := strings.TrimSpace(req.Name)
+	firstName := strings.TrimSpace(req.FirstName)
+	surname := strings.TrimSpace(req.Surname)
 	if username == "" {
 		writeErr(w, http.StatusBadRequest, "username is required")
 		return
 	}
-	if name == "" {
-		name = username
+	if firstName == "" && surname == "" {
+		firstName = username
 	}
 	if len(req.Password) < minPasswordLen {
 		writeErr(w, http.StatusBadRequest, "password too short")
@@ -306,7 +310,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	user, err := s.store.CreateUser(username, name, role, hash)
+	user, err := s.store.CreateUser(username, firstName, surname, role, hash)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -327,6 +331,8 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		Password     *string       `json:"password"`
+		FirstName    *string       `json:"firstName"`
+		Surname      *string       `json:"surname"`
 		Role         *string       `json:"role"`
 		Disabled     *bool         `json:"disabled"`
 		Capabilities *Capabilities `json:"capabilities"`
@@ -337,6 +343,24 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	// Guard against self-lockout: an admin can't demote or disable themselves.
 	self := currentUser(r).ID == target.ID
+	if req.FirstName != nil || req.Surname != nil {
+		first := target.FirstName
+		if req.FirstName != nil {
+			first = strings.TrimSpace(*req.FirstName)
+		}
+		surname := target.Surname
+		if req.Surname != nil {
+			surname = strings.TrimSpace(*req.Surname)
+		}
+		if first == "" && surname == "" {
+			writeErr(w, http.StatusBadRequest, "name is required")
+			return
+		}
+		if err := s.store.SetName(id, first, surname); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
 	if req.Password != nil {
 		if len(*req.Password) < minPasswordLen {
 			writeErr(w, http.StatusBadRequest, "password too short")
@@ -360,6 +384,18 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		role := roleMember
 		if *req.Role == roleAdmin {
 			role = roleAdmin
+		}
+		// Never strip the last admin — leaves nobody able to manage users (#21).
+		if role == roleMember && target.IsAdmin() {
+			n, err := s.store.CountAdmins()
+			if err != nil {
+				writeErr(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			if n <= 1 {
+				writeErr(w, http.StatusBadRequest, "cannot demote the last admin")
+				return
+			}
 		}
 		if err := s.store.SetRole(id, role); err != nil {
 			writeErr(w, http.StatusInternalServerError, err.Error())
@@ -397,6 +433,35 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, currentUser(r))
+}
+
+// handleUpdateProfile lets the signed-in user edit their own structured name (#19).
+func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		FirstName string `json:"firstName"`
+		Surname   string `json:"surname"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	first := strings.TrimSpace(req.FirstName)
+	surname := strings.TrimSpace(req.Surname)
+	if first == "" && surname == "" {
+		writeErr(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	me := currentUser(r)
+	if err := s.store.SetName(me.ID, first, surname); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	updated, err := s.store.GetUser(me.ID)
+	if err != nil || updated == nil {
+		writeErr(w, http.StatusInternalServerError, "reload failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
@@ -1419,6 +1484,15 @@ func (s *Server) handleListMessages(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Redact deleted messages for non-admins: they get an empty-text tombstone,
+	// admins keep the original text for the audit view (#15).
+	if !currentUser(r).IsAdmin() {
+		for i := range msgs {
+			if msgs[i].DeletedAt != nil {
+				msgs[i].Text = ""
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, msgs)
 }
 
@@ -1460,6 +1534,45 @@ func (s *Server) handlePostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	s.notifyMentions(text, id, m.ID, currentUser(r).ID)
 	writeJSON(w, http.StatusCreated, m)
+}
+
+// handleDeleteMessage soft-deletes a chat message (#15). The author may delete
+// their own message; an admin may delete anyone's. The row is preserved for the
+// admin audit view.
+func (s *Server) handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
+	mid, ok := pathInt(r, "mid")
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	msg, err := s.store.GetMessage(mid)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if msg == nil {
+		writeErr(w, http.StatusNotFound, "message not found")
+		return
+	}
+	me := currentUser(r)
+	if msg.UserID != me.ID && !me.IsAdmin() {
+		writeErr(w, http.StatusForbidden, "not allowed to delete this message")
+		return
+	}
+	if err := s.store.SoftDeleteMessage(mid, me.ID); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	updated, err := s.store.GetMessage(mid)
+	if err != nil || updated == nil {
+		writeErr(w, http.StatusInternalServerError, "reload failed")
+		return
+	}
+	// Mirror the list redaction so a non-admin author doesn't get the text back.
+	if !me.IsAdmin() {
+		updated.Text = ""
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 // ---- uploads & static ----

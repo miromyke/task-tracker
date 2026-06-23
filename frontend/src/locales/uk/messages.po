@@ -226,6 +226,10 @@ msgstr "додано файл"
 msgid "admin"
 msgstr "адмін"
 
+#: src/components/UserManagement.tsx
+msgid "Admins can manage all users, projects, and files, and bypass every permission. This is a powerful grant."
+msgstr "Адміністратори можуть керувати всіма користувачами, проєктами та файлами й обходять усі дозволи. Це потужні права."
+
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "All"
@@ -375,6 +379,7 @@ msgstr "автор: {0}"
 msgid "Calendar"
 msgstr "Календар"
 
+#: src/components/AppLayout.tsx
 #: src/components/BlockTaskDialog.tsx
 #: src/components/ConfirmDialog.tsx
 #: src/components/FilesView.tsx
@@ -479,6 +484,10 @@ msgstr "Не вдалося додати учасника"
 msgid "Could not change password"
 msgstr "Не вдалося змінити пароль"
 
+#: src/components/UserManagement.tsx
+msgid "Could not change role"
+msgstr "Не вдалося змінити роль"
+
 #: src/pages/Login.tsx
 msgid "Could not log in"
 msgstr "Не вдалося увійти"
@@ -486,6 +495,10 @@ msgstr "Не вдалося увійти"
 #: src/pages/Projects.tsx
 msgid "Could not remove member"
 msgstr "Не вдалося видалити учасника"
+
+#: src/components/UserManagement.tsx
+msgid "Could not save"
+msgstr "Не вдалося зберегти"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
@@ -534,8 +547,13 @@ msgid "Dark"
 msgstr "Темна"
 
 #: src/components/FilesView.tsx
+#: src/pages/Chat.tsx
 msgid "Delete"
 msgstr "Видалити"
+
+#: src/pages/Chat.tsx
+msgid "Delete message"
+msgstr "Видалити повідомлення"
 
 #: src/components/FilesView.tsx
 msgid "Delete permanently"
@@ -548,6 +566,14 @@ msgstr "Видалити цей файл назавжди?"
 #: src/components/FilesView.tsx
 msgid "Delete this file?"
 msgstr "Видалити цей файл?"
+
+#: src/pages/Chat.tsx
+msgid "Delete this message?"
+msgstr "Видалити це повідомлення?"
+
+#: src/pages/Chat.tsx
+msgid "deleted"
+msgstr "видалено"
 
 #: src/components/FilesView.tsx
 msgid "Deletion requested"
@@ -580,8 +606,8 @@ msgid "Dismiss"
 msgstr "Закрити"
 
 #: src/components/UserManagement.tsx
-msgid "Display name"
-msgstr "Ім'я для показу"
+#~ msgid "Display name"
+#~ msgstr "Ім'я для показу"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -624,6 +650,10 @@ msgstr "напр. Плитку затерто й загерметизовано"
 #: src/components/BlockTaskDialog.tsx
 msgid "e.g. waiting on the electrician to finish first"
 msgstr "напр., очікуємо, поки електрик закінчить"
+
+#: src/components/UserManagement.tsx
+msgid "Edit name"
+msgstr "Змінити ім'я"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -669,6 +699,11 @@ msgstr "Файли для {0}"
 msgid "Filter"
 msgstr "Фільтр"
 
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "First name"
+msgstr "Ім'я"
+
 #: src/pages/Chat.tsx
 msgid "general"
 msgstr "загальний"
@@ -704,6 +739,10 @@ msgstr "Її буде приховано з дошки за замовчуван
 #: src/components/FilesView.tsx
 #~ msgid "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
 #~ msgstr "Файл буде переміщено до черги на видалення та приховано з розділу «Файли». Адміністратор зможе відновити його або видалити назавжди."
+
+#: src/pages/Chat.tsx
+msgid "It will be removed for everyone. Admins can still see it for moderation."
+msgstr "Його буде приховано для всіх. Адміністратори зможуть бачити його для модерації."
 
 #: src/components/FilesView.tsx
 msgid "It will be removed from Files."
@@ -746,6 +785,14 @@ msgstr "Вийти"
 #: src/pages/Task.tsx
 msgid "logged a note"
 msgstr "залишено нотатку"
+
+#: src/components/UserManagement.tsx
+msgid "Make admin"
+msgstr "Зробити адміністратором"
+
+#: src/components/UserManagement.tsx
+msgid "Make this user an admin?"
+msgstr "Зробити цього користувача адміністратором?"
 
 #: src/pages/Projects.tsx
 msgid "Manage members"
@@ -1011,6 +1058,11 @@ msgid "Restored"
 msgstr "Відновлено"
 
 #: src/components/UserManagement.tsx
+msgid "Revoke admin"
+msgstr "Зняти права адміністратора"
+
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
 msgid "Save"
 msgstr "Зберегти"
 
@@ -1079,6 +1131,11 @@ msgid "Success criteria"
 msgstr "Критерії успіху"
 
 #: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "Surname"
+msgstr "Прізвище"
+
+#: src/components/AppLayout.tsx
 msgid "System"
 msgstr "Системна"
 
@@ -1138,6 +1195,10 @@ msgstr "Тема"
 #: src/components/FilesView.tsx
 msgid "These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the file for good."
 msgstr "Ці файли в черзі на видалення. Відновіть файл, щоб повернути його, або видаліть назавжди, щоб прибрати остаточно."
+
+#: src/pages/Chat.tsx
+msgid "This message was deleted."
+msgstr "Це повідомлення було видалено."
 
 #: src/components/FilesView.tsx
 msgid "This removes the file and its data for good. This cannot be undone."

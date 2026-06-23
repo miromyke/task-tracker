@@ -215,7 +215,13 @@ function ManageMembersDialog({
               return (
                 <div key={m.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <UserAvatar name={m.name} avatarPath={m.avatarPath} className="h-7 w-7" />
+                    <UserAvatar
+                      name={m.name}
+                      firstName={m.firstName}
+                      surname={m.surname}
+                      avatarPath={m.avatarPath}
+                      className="h-7 w-7"
+                    />
                     <span className="truncate text-sm">{m.name}</span>
                     {isAuthor && (
                       <span className="shrink-0 text-xs text-muted-foreground">

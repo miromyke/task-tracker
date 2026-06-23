@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FileText, Hash, Loader2, Paperclip, Play, Plus, Send, Upload, X } from "lucide-react";
+import { FileText, Hash, Loader2, Paperclip, Play, Plus, Send, Trash2, Upload, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import {
   api,
@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/context/auth";
 import { MessageText, referencedFileIds, type RefMaps } from "@/components/MessageText";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -203,9 +204,15 @@ function Composer({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [suggest, setSuggest] = useState<Suggest | null>(null);
+  // Mentions picked in this draft: the visible text shows the display name
+  // (@Name, never a login — #16); on send each label is rewritten to an id-based
+  // @[id] token. Kept as a list so the same person can be mentioned more than once.
+  const [mentions, setMentions] = useState<{ id: number; label: string }[]>([]);
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // A suggestion. `insert` is the literal inserted into the textarea; `userId` is
+  // set for mentions so send() can swap the visible @Name for an @[id] token.
   const matches = useMemo(() => {
     if (!suggest) return [];
     const q = suggest.query.toLowerCase();
@@ -213,12 +220,12 @@ function Composer({
       return users
         .filter((u) => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))
         .slice(0, 6)
-        .map((u) => ({ key: u.id, label: u.name, sub: `@${u.username}`, token: `@${u.username}` }));
+        .map((u) => ({ key: u.id, label: u.name, sub: "", insert: `@${u.name}`, userId: u.id }));
     }
     return tasks
       .filter((tk) => tk.title.toLowerCase().includes(q) || String(tk.id) === q)
       .slice(0, 6)
-      .map((tk) => ({ key: tk.id, label: `#${tk.id} ${tk.title}`, sub: "", token: `#${tk.id}` }));
+      .map((tk) => ({ key: tk.id, label: `#${tk.id} ${tk.title}`, sub: "", insert: `#${tk.id}`, userId: undefined as number | undefined }));
   }, [suggest, users, tasks]);
 
   function onChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -227,18 +234,21 @@ function Composer({
     setSuggest(detectSuggest(v, e.target.selectionStart ?? v.length));
   }
 
-  function insert(token: string) {
+  function insert(match: { insert: string; userId?: number }) {
     if (!suggest) return;
     const before = text.slice(0, suggest.start);
     const after = text.slice(suggest.start + 1 + suggest.query.length);
-    const next = `${before}${token} ${after}`;
+    const next = `${before}${match.insert} ${after}`;
     setText(next);
     setSuggest(null);
+    if (match.userId !== undefined) {
+      setMentions((cur) => [...cur, { id: match.userId!, label: match.insert }]);
+    }
     // Restore focus + caret after the inserted token.
     requestAnimationFrame(() => {
       const el = ref.current;
       if (el) {
-        const pos = before.length + token.length + 1;
+        const pos = before.length + match.insert.length + 1;
         el.focus();
         el.setSelectionRange(pos, pos);
       }
@@ -270,14 +280,27 @@ function Composer({
     }
   }
 
+  // Rewrite each picked mention's visible @Name into an id-based @[id] token so
+  // the stored text never carries a login (#16). Sequential first-occurrence
+  // replacement handles the same person mentioned more than once.
+  function resolveMentions(body: string): string {
+    let out = body;
+    for (const m of mentions) {
+      const i = out.indexOf(m.label);
+      if (i >= 0) out = out.slice(0, i) + `@[${m.id}]` + out.slice(i + m.label.length);
+    }
+    return out;
+  }
+
   async function send() {
     const body = text.trim();
     if (!body || busy) return;
     setBusy(true);
     try {
-      const m = await api.postMessage(channelId, body);
+      const m = await api.postMessage(channelId, resolveMentions(body));
       onSent(m);
       setText("");
+      setMentions([]);
       setSuggest(null);
     } finally {
       setBusy(false);
@@ -287,7 +310,7 @@ function Composer({
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (suggest && matches.length > 0 && (e.key === "Tab" || e.key === "Enter")) {
       e.preventDefault();
-      insert(matches[0].token);
+      insert(matches[0]);
       return;
     }
     if (e.key === "Enter" && !e.shiftKey) {
@@ -304,7 +327,7 @@ function Composer({
             <button
               key={m.key}
               type="button"
-              onClick={() => insert(m.token)}
+              onClick={() => insert(m)}
               className={cn(
                 "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted",
                 i === 0 && "bg-muted/60"
@@ -346,17 +369,63 @@ function Composer({
   );
 }
 
-function MessageRow({ message, author, refs }: { message: Message; author?: User; refs: RefMaps }) {
+function MessageRow({
+  message,
+  author,
+  refs,
+  canDelete,
+  isAdmin,
+  onDelete,
+}: {
+  message: Message;
+  author?: User;
+  refs: RefMaps;
+  canDelete: boolean;
+  isAdmin: boolean;
+  onDelete: (m: Message) => void;
+}) {
+  const { t } = useLingui();
+  const deleted = message.deletedAt != null;
+  // Admins keep the original text (marked deleted) for the audit view; everyone
+  // else sees a contentless tombstone (the server already redacted the text).
+  const showText = !deleted || (isAdmin && message.text !== "");
   return (
-    <div className="flex gap-2.5">
-      <UserAvatar name={author?.name ?? "?"} avatarPath={author?.avatarPath} className="mt-0.5 h-8 w-8 shrink-0 text-xs" />
+    <div className="group flex gap-2.5">
+      <UserAvatar
+        name={author?.name ?? "?"}
+        firstName={author?.firstName}
+        surname={author?.surname}
+        avatarPath={author?.avatarPath}
+        className="mt-0.5 h-8 w-8 shrink-0 text-xs"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-medium">{author?.name ?? <Trans>Unknown</Trans>}</span>
           <span className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</span>
+          {deleted && (
+            <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
+              <Trans>deleted</Trans>
+            </span>
+          )}
+          {canDelete && !deleted && (
+            <button
+              type="button"
+              onClick={() => onDelete(message)}
+              title={t`Delete message`}
+              className="ml-auto shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
         <div className="text-sm text-foreground">
-          <MessageText text={message.text} refs={refs} />
+          {showText ? (
+            <MessageText text={message.text} refs={refs} />
+          ) : (
+            <span className="italic text-muted-foreground">
+              <Trans>This message was deleted.</Trans>
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -428,9 +497,10 @@ export function ChatPage() {
     return m;
   }, [tasks]);
   const refs: RefMaps = useMemo(
-    () => ({ usersByUsername, tasksById, assetsById }),
-    [usersByUsername, tasksById, assetsById]
+    () => ({ usersById, usersByUsername, tasksById, assetsById }),
+    [usersById, usersByUsername, tasksById, assetsById]
   );
+  const [confirmDel, setConfirmDel] = useState<Message | null>(null);
 
   // Lazily fetch any referenced files we haven't loaded yet.
   const resolveFiles = useCallback((msgs: Message[]) => {
@@ -493,6 +563,12 @@ export function ChatPage() {
     setMessages((cur) => (cur.some((x) => x.id === m.id) ? cur : [...cur, m]));
     lastIdRef.current = Math.max(lastIdRef.current, m.id);
     resolveFiles([m]);
+  }
+
+  const isAdmin = user?.role === "admin";
+  async function deleteMessage(m: Message) {
+    const updated = await api.deleteMessage(m.channelId, m.id);
+    setMessages((cur) => cur.map((x) => (x.id === updated.id ? updated : x)));
   }
 
   return (
@@ -570,7 +646,15 @@ export function ChatPage() {
                 </p>
               ) : (
                 messages.map((m) => (
-                  <MessageRow key={m.id} message={m} author={usersById[m.userId]} refs={refs} />
+                  <MessageRow
+                    key={m.id}
+                    message={m}
+                    author={usersById[m.userId]}
+                    refs={refs}
+                    isAdmin={isAdmin}
+                    canDelete={!!user && (user.id === m.userId || isAdmin)}
+                    onDelete={setConfirmDel}
+                  />
                 ))
               )}
             </div>
@@ -582,6 +666,18 @@ export function ChatPage() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={!!confirmDel}
+        onOpenChange={(o) => !o && setConfirmDel(null)}
+        title={<Trans>Delete this message?</Trans>}
+        description={<Trans>It will be removed for everyone. Admins can still see it for moderation.</Trans>}
+        confirmLabel={<Trans>Delete</Trans>}
+        destructive
+        onConfirm={async () => {
+          if (confirmDel) await deleteMessage(confirmDel);
+        }}
+      />
     </div>
   );
 }

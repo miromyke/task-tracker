@@ -119,7 +119,13 @@ function CardBody({
         )}
         {assignee && (
           <div className="ml-auto">
-            <UserAvatar name={assignee.name} avatarPath={assignee.avatarPath} className="h-6 w-6 text-[10px]" />
+            <UserAvatar
+              name={assignee.name}
+              firstName={assignee.firstName}
+              surname={assignee.surname}
+              avatarPath={assignee.avatarPath}
+              className="h-6 w-6 text-[10px]"
+            />
           </div>
         )}
       </div>

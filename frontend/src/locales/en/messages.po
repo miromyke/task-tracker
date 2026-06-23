@@ -226,6 +226,10 @@ msgstr "added a file"
 msgid "admin"
 msgstr "admin"
 
+#: src/components/UserManagement.tsx
+msgid "Admins can manage all users, projects, and files, and bypass every permission. This is a powerful grant."
+msgstr "Admins can manage all users, projects, and files, and bypass every permission. This is a powerful grant."
+
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "All"
@@ -379,6 +383,7 @@ msgstr "by {0}"
 msgid "Calendar"
 msgstr "Calendar"
 
+#: src/components/AppLayout.tsx
 #: src/components/BlockTaskDialog.tsx
 #: src/components/ConfirmDialog.tsx
 #: src/components/FilesView.tsx
@@ -483,6 +488,10 @@ msgstr "Could not add member"
 msgid "Could not change password"
 msgstr "Could not change password"
 
+#: src/components/UserManagement.tsx
+msgid "Could not change role"
+msgstr "Could not change role"
+
 #: src/pages/Login.tsx
 msgid "Could not log in"
 msgstr "Could not log in"
@@ -490,6 +499,10 @@ msgstr "Could not log in"
 #: src/pages/Projects.tsx
 msgid "Could not remove member"
 msgstr "Could not remove member"
+
+#: src/components/UserManagement.tsx
+msgid "Could not save"
+msgstr "Could not save"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Could not save task"
@@ -538,8 +551,13 @@ msgid "Dark"
 msgstr "Dark"
 
 #: src/components/FilesView.tsx
+#: src/pages/Chat.tsx
 msgid "Delete"
 msgstr "Delete"
+
+#: src/pages/Chat.tsx
+msgid "Delete message"
+msgstr "Delete message"
 
 #: src/components/FilesView.tsx
 msgid "Delete permanently"
@@ -552,6 +570,14 @@ msgstr "Delete this file permanently?"
 #: src/components/FilesView.tsx
 msgid "Delete this file?"
 msgstr "Delete this file?"
+
+#: src/pages/Chat.tsx
+msgid "Delete this message?"
+msgstr "Delete this message?"
+
+#: src/pages/Chat.tsx
+msgid "deleted"
+msgstr "deleted"
 
 #: src/components/FilesView.tsx
 msgid "Deletion requested"
@@ -584,8 +610,8 @@ msgid "Dismiss"
 msgstr "Dismiss"
 
 #: src/components/UserManagement.tsx
-msgid "Display name"
-msgstr "Display name"
+#~ msgid "Display name"
+#~ msgstr "Display name"
 
 #: src/components/FilesView.tsx
 msgid "Docs"
@@ -628,6 +654,10 @@ msgstr "e.g. Tiles grouted and sealed"
 #: src/components/BlockTaskDialog.tsx
 msgid "e.g. waiting on the electrician to finish first"
 msgstr "e.g. waiting on the electrician to finish first"
+
+#: src/components/UserManagement.tsx
+msgid "Edit name"
+msgstr "Edit name"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
@@ -673,6 +703,11 @@ msgstr "Files for {0}"
 msgid "Filter"
 msgstr "Filter"
 
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "First name"
+msgstr "First name"
+
 #: src/pages/Chat.tsx
 msgid "general"
 msgstr "general"
@@ -708,6 +743,10 @@ msgstr "It will be hidden from the board by default. You can unarchive it later 
 #: src/components/FilesView.tsx
 #~ msgid "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
 #~ msgstr "It will be moved to the deletion queue and hidden from Files. An admin can restore it or delete it for good."
+
+#: src/pages/Chat.tsx
+msgid "It will be removed for everyone. Admins can still see it for moderation."
+msgstr "It will be removed for everyone. Admins can still see it for moderation."
 
 #: src/components/FilesView.tsx
 msgid "It will be removed from Files."
@@ -750,6 +789,14 @@ msgstr "Log out"
 #: src/pages/Task.tsx
 msgid "logged a note"
 msgstr "logged a note"
+
+#: src/components/UserManagement.tsx
+msgid "Make admin"
+msgstr "Make admin"
+
+#: src/components/UserManagement.tsx
+msgid "Make this user an admin?"
+msgstr "Make this user an admin?"
 
 #: src/pages/Projects.tsx
 msgid "Manage members"
@@ -1015,6 +1062,11 @@ msgid "Restored"
 msgstr "Restored"
 
 #: src/components/UserManagement.tsx
+msgid "Revoke admin"
+msgstr "Revoke admin"
+
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
 msgid "Save"
 msgstr "Save"
 
@@ -1083,6 +1135,11 @@ msgid "Success criteria"
 msgstr "Success criteria"
 
 #: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "Surname"
+msgstr "Surname"
+
+#: src/components/AppLayout.tsx
 msgid "System"
 msgstr "System"
 
@@ -1142,6 +1199,10 @@ msgstr "Theme"
 #: src/components/FilesView.tsx
 msgid "These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the file for good."
 msgstr "These files are queued for deletion. Restore one to put it back, or delete it permanently to remove the file for good."
+
+#: src/pages/Chat.tsx
+msgid "This message was deleted."
+msgstr "This message was deleted."
 
 #: src/components/FilesView.tsx
 msgid "This removes the file and its data for good. This cannot be undone."

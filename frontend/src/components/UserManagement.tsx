@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { KeyRound, UserPlus } from "lucide-react";
+import { KeyRound, Pencil, ShieldCheck, UserPlus } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, ApiError, type Capability, type User } from "@/lib/api";
+import { api, ApiError, type Capability, type Role, type User } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,8 +127,14 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
   const { user: me } = useAuth();
   const [resetting, setResetting] = useState(false);
   const [pw, setPw] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [firstName, setFirstName] = useState(user.firstName);
+  const [surname, setSurname] = useState(user.surname);
+  const [promoting, setPromoting] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isSelf = me?.id === user.id;
+  const isAdmin = user.role === "admin";
 
   async function resetPassword() {
     setBusy(true);
@@ -135,6 +142,35 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
       await api.updateUser(user.id, { password: pw });
       setResetting(false);
       setPw("");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveName() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateUser(user.id, { firstName: firstName.trim(), surname: surname.trim() });
+      setEditingName(false);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not save`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Promote/demote (#21). The server blocks demoting the last admin and surfaces
+  // the reason, which we show inline.
+  async function setRole(role: Role) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateUser(user.id, { role });
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not change role`);
     } finally {
       setBusy(false);
     }
@@ -178,7 +214,13 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
   return (
     <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
       <div className="flex items-start gap-3">
-        <UserAvatar name={user.name} avatarPath={user.avatarPath} className="h-10 w-10 shrink-0" />
+        <UserAvatar
+          name={user.name}
+          firstName={user.firstName}
+          surname={user.surname}
+          avatarPath={user.avatarPath}
+          className="h-10 w-10 shrink-0"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="truncate font-medium">{user.name}</span>
@@ -227,6 +269,28 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         </div>
       )}
 
+      {editingName && (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input
+              autoFocus
+              placeholder={t`First name`}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+            <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
+          </div>
+          <Button
+            size="sm"
+            className="self-start"
+            disabled={busy || (!firstName.trim() && !surname.trim())}
+            onClick={saveName}
+          >
+            <Trans>Save</Trans>
+          </Button>
+        </div>
+      )}
+
       {resetting && (
         <div className="flex gap-2">
           <Input
@@ -242,17 +306,43 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         </div>
       )}
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       {!isSelf && (
-        <div className="mt-auto flex gap-1 border-t pt-3">
+        <div className="mt-auto flex flex-wrap gap-1 border-t pt-3">
+          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setEditingName((v) => !v)}>
+            <Pencil className="h-4 w-4" />
+            <Trans>Edit name</Trans>
+          </Button>
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => setResetting((v) => !v)}>
             <KeyRound className="h-4 w-4" />
             <Trans>Reset password</Trans>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => (isAdmin ? setRole("member") : setPromoting(true))}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            {isAdmin ? <Trans>Revoke admin</Trans> : <Trans>Make admin</Trans>}
           </Button>
           <Button variant="ghost" size="sm" className="ml-auto" disabled={busy} onClick={toggleDisabled}>
             {user.disabled ? <Trans>Enable</Trans> : <Trans>Disable</Trans>}
           </Button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={promoting}
+        onOpenChange={setPromoting}
+        title={<Trans>Make this user an admin?</Trans>}
+        description={
+          <Trans>Admins can manage all users, projects, and files, and bypass every permission. This is a powerful grant.</Trans>
+        }
+        confirmLabel={<Trans>Make admin</Trans>}
+        onConfirm={() => setRole("admin")}
+      />
     </div>
   );
 }
@@ -262,14 +352,16 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
   const { t } = useLingui();
   const [open, setOpen] = useState(false);
   const [username, setUsername] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setUsername("");
-    setName("");
+    setFirstName("");
+    setSurname("");
     setPassword("");
     setError(null);
   }
@@ -279,7 +371,13 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await api.createUser({ username: username.trim(), name: name.trim(), password, role: "member" });
+      await api.createUser({
+        username: username.trim(),
+        firstName: firstName.trim(),
+        surname: surname.trim(),
+        password,
+        role: "member",
+      });
       onAdded();
       reset();
       setOpen(false);
@@ -324,11 +422,19 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>
-              <Trans>Display name</Trans>
-            </Label>
-            <Input placeholder={t`Display name`} value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label>
+                <Trans>First name</Trans>
+              </Label>
+              <Input placeholder={t`First name`} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>
+                <Trans>Surname</Trans>
+              </Label>
+              <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>

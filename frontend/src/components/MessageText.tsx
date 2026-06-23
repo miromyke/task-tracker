@@ -7,14 +7,16 @@ import type { Asset, Task, User } from "@/lib/api";
 // resolve them at render time so stored text stays language-neutral and survives
 // renames / never goes stale.
 export interface RefMaps {
-  usersByUsername: Record<string, User>;
+  usersById: Record<number, User>;
+  usersByUsername: Record<string, User>; // legacy @username tokens
   tasksById: Record<number, Task>;
   assetsById: Record<number, Asset>;
 }
 
-// Matches the three reference tokens. #file<id> is listed before #<id> so a file
-// token never gets mis-parsed as a task token.
-const TOKEN_RE = /(@[A-Za-z0-9_.-]+)|(#file\d+)|(#\d+)/g;
+// Matches the reference tokens. Mentions are id-based (@[id], #16); the legacy
+// @username form is still matched so messages stored before the switch resolve.
+// #file<id> is listed before #<id> so a file token never parses as a task token.
+const TOKEN_RE = /(@\[\d+\])|(@[A-Za-z0-9_.-]+)|(#file\d+)|(#\d+)/g;
 
 function Mention({ name }: { name: string }) {
   return (
@@ -74,11 +76,16 @@ export function MessageText({ text, refs }: { text: string; refs: RefMaps }) {
     last = start + token.length;
 
     if (m[1]) {
-      // @username
+      // @[id] — id-based mention
+      const id = Number(token.slice(2, -1));
+      const user = refs.usersById[id];
+      out.push(user ? <Mention key={key++} name={user.name} /> : <Fragment key={key++}>{token}</Fragment>);
+    } else if (m[2]) {
+      // @username — legacy mention
       const username = token.slice(1);
       const user = refs.usersByUsername[username];
       out.push(user ? <Mention key={key++} name={user.name} /> : <Fragment key={key++}>{token}</Fragment>);
-    } else if (m[2]) {
+    } else if (m[3]) {
       // #file<id>
       const id = Number(token.slice(5));
       const asset = refs.assetsById[id];

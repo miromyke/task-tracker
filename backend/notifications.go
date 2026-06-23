@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 )
 
 // Personalized notifications (ROADMAP #14). Per-user rows fanned out on three
@@ -15,7 +16,10 @@ import (
 
 // mentionRE matches @-mention tokens in message text. Mirrors TOKEN_RE in
 // MessageText.tsx so server-side detection agrees with client-side rendering.
-var mentionRE = regexp.MustCompile(`@([A-Za-z0-9_.-]+)`)
+// Mentions are id-based (@[userID], #16) so a login is never embedded in the
+// stored text; the legacy @username form is matched too for messages stored
+// before the switch.
+var mentionRE = regexp.MustCompile(`@\[(\d+)\]|@([A-Za-z0-9_.-]+)`)
 
 // NotifActor is the user who caused a notification (latest actor for coalesced rows).
 type NotifActor struct {
@@ -199,7 +203,17 @@ func (s *Server) notifyAssignment(newAssignee, oldAssignee *int64, taskID, actor
 func (s *Server) notifyMentions(text string, channelID, messageID, actorID int64) {
 	seen := map[int64]bool{}
 	for _, m := range mentionRE.FindAllStringSubmatch(text, -1) {
-		u, err := s.store.GetUserByUsername(m[1])
+		var u *User
+		var err error
+		if m[1] != "" { // @[id]
+			var id int64
+			id, err = strconv.ParseInt(m[1], 10, 64)
+			if err == nil {
+				u, err = s.store.GetUser(id)
+			}
+		} else { // legacy @username
+			u, err = s.store.GetUserByUsername(m[2])
+		}
 		if err != nil || u == nil || u.ID == actorID || seen[u.ID] {
 			continue
 		}

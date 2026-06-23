@@ -12,6 +12,19 @@ export function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// avatarInitials derives the two-letter avatar label from the structured name
+// when available (#19): first-name initial + surname initial. Falls back to the
+// whitespace heuristic over the composed display name when the parts are absent
+// (partial user payloads, e.g. a notification actor).
+export function avatarInitials(firstName?: string, surname?: string, name = ""): string {
+  const f = (firstName ?? "").trim();
+  const s = (surname ?? "").trim();
+  if (f && s) return (f[0] + s[0]).toUpperCase();
+  if (f) return f.slice(0, 2).toUpperCase();
+  if (s) return s.slice(0, 2).toUpperCase();
+  return initials(name);
+}
+
 // Deterministic background color for an initials avatar.
 const AVATAR_COLORS = [
   "bg-rose-200 text-rose-800",
