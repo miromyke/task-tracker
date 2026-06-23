@@ -57,12 +57,15 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Only offer the picker when creating without a fixed project.
-  const showProjectPicker = !editing && !projectId && !!projects?.length;
+  // Always offer the picker when creating (and we have choices). It starts empty
+  // and must be chosen explicitly, so a task can't be filed under the wrong
+  // project just because the form was opened from one.
+  const showProjectPicker = !editing && !!projects?.length;
 
   // Candidate "blocked by" tasks come from the form's target project; loaded only
-  // while the status is "blocked".
-  const formProjectId = projectId || Number(project) || undefined;
+  // while the status is "blocked". When the picker is shown it follows the user's
+  // choice (none until picked); otherwise it's the fixed/editing project.
+  const formProjectId = (showProjectPicker ? Number(project) : projectId) || undefined;
   const blockCandidates = useBlockCandidates(formProjectId, task?.id, open && status === "blocked");
 
   useEffect(() => {
@@ -75,7 +78,9 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     setAssignee(task?.assigneeId ? String(task.assigneeId) : NONE);
     setDueDate(task?.dueDate ?? "");
     setStatus(task?.status ?? "todo");
-    setProject(projectId ? String(projectId) : "");
+    // Editing keeps the task's project (drives block-candidate scoping); creating
+    // starts blank to force an explicit pick.
+    setProject(editing && projectId ? String(projectId) : "");
     setBlockedBy(task?.blockedByTaskId ? String(task.blockedByTaskId) : "");
     setBlockedReason(task?.blockedReason ?? "");
     setError(null);
@@ -143,7 +148,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
     const finalTags = tagInput.trim() && !selectedTags.includes(tagInput.trim())
       ? [...selectedTags, tagInput.trim()]
       : selectedTags;
-    const targetProject = projectId || Number(project);
+    const targetProject = showProjectPicker ? Number(project) : projectId;
     if (!editing && !targetProject) return setError(t`Pick a project`);
     // Keep existing items (always have text); drop only blank new ones.
     const finalCriteria = criteria

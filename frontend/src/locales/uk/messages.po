@@ -463,6 +463,10 @@ msgstr "Не вдалося завантажити файли"
 msgid "Create"
 msgstr "Створити"
 
+#: src/pages/Projects.tsx
+msgid "Create a project first"
+msgstr "Спочатку створіть проєкт"
+
 #: src/components/TaskFormDialog.tsx
 msgid "Create task"
 msgstr "Створити задачу"
@@ -1185,3 +1189,7 @@ msgstr "Імʼя користувача"
 #: src/components/FilesView.tsx
 msgid "Videos"
 msgstr "Відео"
+
+#: src/pages/Projects.tsx
+msgid "You need at least one project before you can add a task."
+msgstr "Перш ніж додати завдання, потрібен щонайменше один проєкт."

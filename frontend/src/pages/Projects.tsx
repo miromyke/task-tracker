@@ -240,6 +240,7 @@ export function ProjectsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [blockTask, setBlockTask] = useState<Task | null>(null);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [noProjectsOpen, setNoProjectsOpen] = useState(false);
 
   async function loadBase() {
     const [p, t, u, g] = await Promise.all([
@@ -274,6 +275,16 @@ export function ProjectsPage() {
 
   function select(id: number | null) {
     setSearchParams(id ? { project: String(id) } : {}, { replace: true });
+  }
+
+  // A task always needs a project, so there's nothing to add into when none exist
+  // yet — alert and point the user at creating one instead of opening a dead-end form.
+  function openTaskForm() {
+    if (projects.length === 0) {
+      setNoProjectsOpen(true);
+      return;
+    }
+    setFormOpen(true);
   }
 
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
@@ -392,7 +403,7 @@ export function ProjectsPage() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-52 p-1">
         {view === "board" && (
-          <button type="button" className={menuItemClass} onClick={() => runMenu(() => setFormOpen(true))}>
+          <button type="button" className={menuItemClass} onClick={() => runMenu(openTaskForm)}>
             <Plus className="h-4 w-4" />
             <Trans>Add task</Trans>
           </button>
@@ -570,7 +581,7 @@ export function ProjectsPage() {
                 </Button>
               )}
               {view === "board" && (
-                <Button className="hidden sm:inline-flex" onClick={() => setFormOpen(true)}>
+                <Button className="hidden sm:inline-flex" onClick={openTaskForm}>
                   <Plus className="h-4 w-4" />
                   <Trans>Add task</Trans>
                 </Button>
@@ -678,6 +689,15 @@ export function ProjectsPage() {
         }
         confirmLabel={<Trans>Archive project</Trans>}
         onConfirm={() => setProjectArchived(true)}
+      />
+
+      <ConfirmDialog
+        open={noProjectsOpen}
+        onOpenChange={setNoProjectsOpen}
+        title={<Trans>Create a project first</Trans>}
+        description={<Trans>You need at least one project before you can add a task.</Trans>}
+        confirmLabel={<Trans>New project</Trans>}
+        onConfirm={() => setCreateOpen(true)}
       />
     </div>
   );
