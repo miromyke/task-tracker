@@ -199,6 +199,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
           })
         ).task;
       } else {
+        if (!targetProject) return setError(t`Pick a project`);
         saved = await api.createTask(targetProject, { ...base, criteria: finalCriteria.map((c) => c.text) });
       }
       onSaved(saved);
