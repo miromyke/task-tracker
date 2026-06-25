@@ -42,7 +42,7 @@ function CardBody({
   const blockerTitle = task.blockedByTaskId ? taskTitleById.get(task.blockedByTaskId) : undefined;
   const done = task.status === "done";
   const closed = done || task.status === "abandoned";
-  const overdueDays = task.dueDate ? daysOverdue(task.dueDate) : 0;
+  const overdueDays = task.dueDate ? daysOverdue(task.dueDate, task.createdAt) : 0;
   // Open + overdue is urgent (red); closed (done/abandoned) + overdue is just
   // historical (neutral); done + met the due date is a win (green).
   const openOverdue = overdueDays > 0 && !closed;

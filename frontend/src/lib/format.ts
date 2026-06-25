@@ -75,7 +75,14 @@ export function formatShortDate(date: string): string {
   return new Date(y, m - 1, d).toLocaleDateString(loc(), { month: "short", day: "numeric" });
 }
 
-export function isPast(date: string): boolean {
+// A task created after its due date isn't overdue — it's an old task being
+// logged after the fact. `createdAt` may be an ISO timestamp or a date string.
+function createdAfterDue(date: string, createdAt?: string): boolean {
+  return !!createdAt && createdAt.slice(0, 10) > date;
+}
+
+export function isPast(date: string, createdAt?: string): boolean {
+  if (createdAfterDue(date, createdAt)) return false;
   const [y, m, d] = date.split("-").map(Number);
   const due = new Date(y, m - 1, d);
   const today = new Date();
@@ -83,8 +90,10 @@ export function isPast(date: string): boolean {
   return due < today;
 }
 
-// Whole days a due date is past (0 if it is today or in the future).
-export function daysOverdue(date: string): number {
+// Whole days a due date is past (0 if it is today, in the future, or the task
+// was created after the due date).
+export function daysOverdue(date: string, createdAt?: string): number {
+  if (createdAfterDue(date, createdAt)) return 0;
   const [y, m, d] = date.split("-").map(Number);
   const due = new Date(y, m - 1, d);
   const today = new Date();

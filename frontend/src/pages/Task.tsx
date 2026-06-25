@@ -434,7 +434,7 @@ export function TaskPage() {
 
   const assignee = task.assigneeId ? usersById.get(task.assigneeId) : undefined;
   const creator = usersById.get(task.createdBy);
-  const overdue = task.dueDate && isPast(task.dueDate) && task.status !== "done" && task.status !== "abandoned";
+  const overdue = task.dueDate && isPast(task.dueDate, task.createdAt) && task.status !== "done" && task.status !== "abandoned";
 
   return (
     <div className="flex h-full flex-col gap-5">
