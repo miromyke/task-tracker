@@ -142,6 +142,33 @@ whether to keep at least one admin (block demoting the last admin, server-side);
 admin action sits alongside the capability toggles now that an admin implicitly holds all
 capabilities.
 
+## 23. Chat: invite users to a channel
+
+Let a channel be scoped to invited members instead of being visible to everyone, with
+an invite flow to add users to it. Mirrors project membership (#18), but for channels.
+
+Current state (starting point):
+- Channels are global. The `channels` table has no membership — only
+  `created_by`/`archived_at` (`store.go`) — and there is no `channel_members` table.
+- Every authenticated user sees and can post to every channel: the routes
+  (`GET`/`POST /api/channels`, `…/{id}/messages`) are guarded by `requireAuth` only,
+  with no per-channel access check (`handlers.go`). `ListChannels` is unscoped, and
+  `handleListMessages`/`handlePostMessage` load the channel by id without verifying the
+  caller belongs to it.
+- The pattern already exists for projects (#18): `project_members` plus membership-scoped
+  reads and per-project access checks that 404 non-members. This can mirror that — a
+  `channel_members` table, an invite-existing-users flow, scoped `ListChannels`, and a
+  `requireChannelAccess`-style check on the message routes.
+
+Deliverable: add channel membership (a `channel_members` table + invite UI in the chat
+view, inviting existing users only), scope channel listing and message read/post to
+members, and 404 non-members on a channel's messages. Decide: whether existing channels
+are "open to all" (backfill every user as a member, or special-case a public flag) vs.
+membership required everywhere; who may invite (channel creator/admin vs. any member);
+whether removing a member keeps their past messages (it should, mirroring how #18 keeps a
+removed member's task assignments); and how this composes with admin bypass and the
+@-mention fan-out (don't notify a mention for a user who isn't in the channel).
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
