@@ -411,16 +411,25 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
         <form onSubmit={addMember} className="space-y-3">
           <div className="space-y-1.5">
             <Label>
-              <Trans>Username</Trans>
+              <Trans>Login</Trans>
             </Label>
             <Input
               autoFocus
-              placeholder={t`Username`}
+              placeholder={t`Login`}
               autoCapitalize="none"
               autoCorrect="off"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              <Trans>Temp password</Trans>
+            </Label>
+            <Input placeholder={t`Temp password`} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              <Trans>The member signs in with this password and can change it later in their account settings.</Trans>
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
@@ -435,12 +444,6 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
               </Label>
               <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              <Trans>Temp password</Trans>
-            </Label>
-            <Input placeholder={t`Temp password`} value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy || !username.trim() || password.length < 6}>

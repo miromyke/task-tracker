@@ -787,6 +787,10 @@ msgid "logged a note"
 msgstr "залишено нотатку"
 
 #: src/components/UserManagement.tsx
+msgid "Login"
+msgstr "Логін"
+
+#: src/components/UserManagement.tsx
 msgid "Make admin"
 msgstr "Зробити адміністратором"
 
@@ -1184,6 +1188,10 @@ msgstr "Чат для всієї команди"
 msgid "Temp password"
 msgstr "Тимчасовий пароль"
 
+#: src/components/UserManagement.tsx
+msgid "The member signs in with this password and can change it later in their account settings."
+msgstr "Учасник входить за цим паролем і може змінити його пізніше в налаштуваннях облікового запису."
+
 #: src/pages/Projects.tsx
 msgid "The project and its tasks will be hidden from the default view. You can unarchive it later with “Show archived”."
 msgstr "Проєкт і його задачі буде приховано зі стандартного перегляду. Пізніше можна розархівувати через «Показати архівовані»."
@@ -1309,7 +1317,6 @@ msgstr "Завантажено: {uploaderName}"
 msgid "Uploading…"
 msgstr "Завантаження…"
 
-#: src/components/UserManagement.tsx
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Імʼя користувача"

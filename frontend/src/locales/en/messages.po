@@ -791,6 +791,10 @@ msgid "logged a note"
 msgstr "logged a note"
 
 #: src/components/UserManagement.tsx
+msgid "Login"
+msgstr "Login"
+
+#: src/components/UserManagement.tsx
 msgid "Make admin"
 msgstr "Make admin"
 
@@ -1188,6 +1192,10 @@ msgstr "Team-wide chat"
 msgid "Temp password"
 msgstr "Temp password"
 
+#: src/components/UserManagement.tsx
+msgid "The member signs in with this password and can change it later in their account settings."
+msgstr "The member signs in with this password and can change it later in their account settings."
+
 #: src/pages/Projects.tsx
 msgid "The project and its tasks will be hidden from the default view. You can unarchive it later with “Show archived”."
 msgstr "The project and its tasks will be hidden from the default view. You can unarchive it later with “Show archived”."
@@ -1313,7 +1321,6 @@ msgstr "Uploaded by {uploaderName}"
 msgid "Uploading…"
 msgstr "Uploading…"
 
-#: src/components/UserManagement.tsx
 #: src/pages/Login.tsx
 msgid "Username"
 msgstr "Username"
