@@ -3,27 +3,8 @@
 These are planned, not finalized — details may change. Notes reference the current
 implementation so the work has a starting point. Numbers are stable ids (commits
 reference them as `ROADMAP #N`); shipped items are kept as a one-line changelog below
-rather than renumbered. Open items are listed in priority order — the current focus is
-**#28**.
-
-## 28. Task comments: show most recent on top
-
-Reverse the task comment order so the newest comment is at the top of the list instead
-of the bottom, surfacing the latest discussion without scrolling to the end.
-
-Current state (starting point):
-- A task's log entries are fetched oldest-first: `GET /tasks/{id}` returns `logs` ordered
-  `created_at, id` ascending (`store.go`, the `log_items WHERE task_id=? ORDER BY
-  created_at, id` query).
-- `pages/Task.tsx` splits them into `comments = logs.filter(type === "note")` and
-  `activity` (the rest), then renders the active list in that same ascending order
-  (the `.map` at the bottom of the activity panel). So comments read oldest → newest.
-
-Deliverable: render comments newest-first. Decide whether this is comments-only or also
-the activity tab; whether to reverse on the frontend (e.g. a reversed copy of `comments`
-in `Task.tsx`, keeping the API ascending) vs. ordering at the query; and where the
-"add comment" composer sits relative to the now top-most newest comment (it currently
-sits under the list).
+rather than renumbered. The priority queue (#29 → #16 → #15 → #28) is cleared; the
+remaining items below are unprioritized (#12, #20, #23, #24).
 
 ## 12. Task activity: "postponed ×N" tag
 
@@ -138,6 +119,10 @@ Left to do / open questions (why it's parked):
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#28** Task comments: show most recent on top — comments now render newest-first in
+  `pages/Task.tsx` (a reversed copy of the `note` logs; the API stays ascending). Scope:
+  comments only — the activity history stays chronological — and the composer stays pinned
+  below the scrolling list.
 - **#16** Chat: don't expose usernames in mentions — the privacy half was already in
   place (the `@`-autocomplete carries no `@username` sub-label, the composer inserts the
   display name `@Name`, and `resolveMentions` rewrites it to an id-based `@[id]` token on
