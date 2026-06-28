@@ -4,28 +4,7 @@ These are planned, not finalized — details may change. Notes reference the cur
 implementation so the work has a starting point. Numbers are stable ids (commits
 reference them as `ROADMAP #N`); shipped items are kept as a one-line changelog below
 rather than renumbered. Open items are listed in priority order — the current focus is
-**#16 → #28**.
-
-## 16. Chat: don't expose usernames in mentions
-
-When mentioning someone, show only their display name — never their login.
-
-Current state (starting point):
-- Rendered messages already show the display name: `MessageText.tsx` resolves an
-  `@username` token to `<Mention name={user.name}>`, so the login isn't shown in
-  posted messages.
-- The login still leaks in the composer: the `@`-autocomplete in `Chat.tsx` lists
-  each candidate as name **plus** a `@${u.username}` sub-label, and inserting a pick
-  drops a raw `@username` token into the textarea, so the user sees the literal
-  `@login` text until the message is sent.
-
-Deliverable: stop surfacing usernames in the mention UI — at minimum drop the
-`@username` sub-label from the suggestion list (avatar + display name only). Decide
-whether to also hide the login in the composed text (render the mention as the
-display name / a chip and store an id-based token instead of `@username`), which means
-changing the stored token format and the `TOKEN_RE` + `usersByUsername` resolution in
-`MessageText.tsx`; or keep the `@username` token internally and only change what's
-displayed.
+**#28**.
 
 ## 28. Task comments: show most recent on top
 
@@ -159,6 +138,12 @@ Left to do / open questions (why it's parked):
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#16** Chat: don't expose usernames in mentions — the privacy half was already in
+  place (the `@`-autocomplete carries no `@username` sub-label, the composer inserts the
+  display name `@Name`, and `resolveMentions` rewrites it to an id-based `@[id]` token on
+  send, so no login is shown or stored). Completed the deliverable by adding the user's
+  avatar beside the display name in the suggestion list (avatar + name only). Usernames
+  are still searchable in the `@` filter but never rendered.
 - **#29** Chat: open files in the Files lightbox — extracted the Files viewer out of
   `FilesView.tsx` into a shared `components/Lightbox.tsx`, with list navigation (`onMove`)
   and the admin soft-delete/restore/purge actions made optional props. Chat's `FileRef`

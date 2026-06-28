@@ -221,12 +221,12 @@ function Composer({
       return users
         .filter((u) => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))
         .slice(0, 6)
-        .map((u) => ({ key: u.id, label: displayName(u), sub: "", insert: `@${u.name}`, userId: u.id }));
+        .map((u) => ({ key: u.id, label: displayName(u), sub: "", insert: `@${u.name}`, userId: u.id, user: u as User | undefined }));
     }
     return tasks
       .filter((tk) => tk.title.toLowerCase().includes(q) || String(tk.id) === q)
       .slice(0, 6)
-      .map((tk) => ({ key: tk.id, label: `#${tk.id} ${tk.title}`, sub: "", insert: `#${tk.id}`, userId: undefined as number | undefined }));
+      .map((tk) => ({ key: tk.id, label: `#${tk.id} ${tk.title}`, sub: "", insert: `#${tk.id}`, userId: undefined as number | undefined, user: undefined as User | undefined }));
   }, [suggest, users, tasks]);
 
   function onChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -334,7 +334,18 @@ function Composer({
                 i === 0 && "bg-muted/60"
               )}
             >
-              <span className="truncate">{m.label}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                {m.user && (
+                  <UserAvatar
+                    name={m.user.name}
+                    firstName={m.user.firstName}
+                    surname={m.user.surname}
+                    avatarPath={m.user.avatarPath}
+                    className="h-5 w-5 shrink-0 text-[10px]"
+                  />
+                )}
+                <span className="truncate">{m.label}</span>
+              </span>
               {m.sub && <span className="shrink-0 text-xs text-muted-foreground">{m.sub}</span>}
             </button>
           ))}
