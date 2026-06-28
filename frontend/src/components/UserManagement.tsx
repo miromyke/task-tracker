@@ -122,38 +122,196 @@ export function ChangePasswordDialog() {
   );
 }
 
+// Fallback for a payload that predates per-user capabilities (#17) — treat every
+// capability as off rather than crashing on a missing field.
+const NO_CAPS = { manageProjects: false, viewReporting: false, viewHistory: false };
+
+// CapToggle is a labelled on/off switch for one capability — the whole control
+// (track + label) is the clickable target, so the text reads as interactive.
+function CapToggle({
+  label,
+  on,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  on: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onToggle}
+      className="flex items-center gap-2 text-sm disabled:opacity-50"
+    >
+      <span
+        className={
+          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors " +
+          (on ? "bg-primary" : "bg-muted-foreground/30")
+        }
+      >
+        <span
+          className={
+            "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform " +
+            (on ? "translate-x-4" : "translate-x-0.5")
+          }
+        />
+      </span>
+      <span className={on ? "" : "text-muted-foreground"}>{label}</span>
+    </button>
+  );
+}
+
+// UserRow renders one user as a table row: identity, role, a stacked set of
+// capability switches, and an Edit button that opens the per-user modal.
 function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
   const { t } = useLingui();
   const { user: me } = useAuth();
-  const [resetting, setResetting] = useState(false);
-  const [pw, setPw] = useState("");
-  const [editingName, setEditingName] = useState(false);
-  const [firstName, setFirstName] = useState(user.firstName);
-  const [surname, setSurname] = useState(user.surname);
-  const [promoting, setPromoting] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const isSelf = me?.id === user.id;
-  const isAdmin = user.role === "admin";
 
-  async function resetPassword() {
+  // Tolerate a payload without capabilities (e.g. an older API response) by
+  // treating every capability as off.
+  const userCaps = user.capabilities ?? NO_CAPS;
+
+  async function toggleCapability(cap: Capability) {
     setBusy(true);
     try {
-      await api.updateUser(user.id, { password: pw });
-      setResetting(false);
-      setPw("");
+      await api.updateUser(user.id, {
+        capabilities: { ...userCaps, [cap]: !userCaps[cap] },
+      });
+      onChanged();
     } finally {
       setBusy(false);
     }
   }
+
+  // Admins implicitly hold every capability, so the toggles are only meaningful
+  // for members. Self is excluded alongside the other account actions.
+  const showCaps = !isSelf && user.role !== "admin";
+  const capLabels: { key: Capability; label: string }[] = [
+    { key: "manageProjects", label: t`Manage projects` },
+    { key: "viewReporting", label: t`View reporting` },
+    { key: "viewHistory", label: t`View history` },
+  ];
+
+  return (
+    <tr className="border-t">
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            name={user.name}
+            firstName={user.firstName}
+            surname={user.surname}
+            avatarPath={user.avatarPath}
+            className="h-9 w-9 shrink-0"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate font-medium">{user.name}</span>
+              {user.disabled && (
+                <Badge className="border-transparent bg-muted text-muted-foreground">
+                  <Trans>disabled</Trans>
+                </Badge>
+              )}
+              {isSelf && (
+                <Badge className="border-transparent bg-muted text-muted-foreground">
+                  <Trans>you</Trans>
+                </Badge>
+              )}
+            </div>
+            <div className="truncate text-sm text-muted-foreground">@{user.username}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-2.5">
+        {user.role === "admin" ? (
+          <Badge className="border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400">
+            <Trans>admin</Trans>
+          </Badge>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            <Trans>member</Trans>
+          </span>
+        )}
+      </td>
+      <td className="px-3 py-2.5">
+        {showCaps ? (
+          <div className="flex flex-col gap-1.5">
+            {capLabels.map(({ key, label }) => (
+              <CapToggle
+                key={key}
+                label={label}
+                on={userCaps[key]}
+                disabled={busy}
+                onToggle={() => toggleCapability(key)}
+              />
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2.5 text-right">
+        {!isSelf && (
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="h-4 w-4" />
+            <Trans>Edit</Trans>
+          </Button>
+        )}
+        {editing && <EditUserDialog user={user} onClose={() => setEditing(false)} onChanged={onChanged} />}
+      </td>
+    </tr>
+  );
+}
+
+// EditUserDialog consolidates per-user editing — rename, reset password, admin
+// role, enable/disable — into one modal opened from the row's Edit button. It is
+// mounted only while open so it always starts from the current user values.
+function EditUserDialog({
+  user,
+  onClose,
+  onChanged,
+}: {
+  user: User;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useLingui();
+  // Fall back to "" — a pre-#19 account may have no structured name, and a bare
+  // undefined would crash the controlled inputs and the trim() guards below.
+  const [firstName, setFirstName] = useState(user.firstName ?? "");
+  const [surname, setSurname] = useState(user.surname ?? "");
+  const [pw, setPw] = useState("");
+  const [promoting, setPromoting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isAdmin = user.role === "admin";
 
   async function saveName() {
     setBusy(true);
     setError(null);
     try {
       await api.updateUser(user.id, { firstName: firstName.trim(), surname: surname.trim() });
-      setEditingName(false);
       onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not save`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPassword() {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.updateUser(user.id, { password: pw });
+      setPw("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t`Could not save`);
     } finally {
@@ -178,160 +336,80 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
 
   async function toggleDisabled() {
     setBusy(true);
+    setError(null);
     try {
       await api.updateUser(user.id, { disabled: !user.disabled });
       onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t`Could not save`);
     } finally {
       setBusy(false);
     }
   }
-
-  // Tolerate a payload without capabilities (e.g. an older API response) by
-  // treating every capability as off.
-  const userCaps = user.capabilities ?? { manageProjects: false, viewReporting: false, viewHistory: false };
-
-  async function toggleCapability(cap: Capability) {
-    setBusy(true);
-    try {
-      await api.updateUser(user.id, {
-        capabilities: { ...userCaps, [cap]: !userCaps[cap] },
-      });
-      onChanged();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Admins implicitly hold every capability, so the toggles are only meaningful
-  // for members. Self is excluded alongside the other account actions.
-  const showCaps = !isSelf && user.role !== "admin";
-  const caps: { key: Capability; label: string }[] = [
-    { key: "manageProjects", label: t`Manage projects` },
-    { key: "viewReporting", label: t`View reporting` },
-    { key: "viewHistory", label: t`View history` },
-  ];
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <UserAvatar
-          name={user.name}
-          firstName={user.firstName}
-          surname={user.surname}
-          avatarPath={user.avatarPath}
-          className="h-10 w-10 shrink-0"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate font-medium">{user.name}</span>
-            {user.role === "admin" && (
-              <Badge className="border-transparent bg-amber-500/15 text-amber-700 dark:text-amber-400">
-                <Trans>admin</Trans>
-              </Badge>
-            )}
-            {user.disabled && (
-              <Badge className="border-transparent bg-muted text-muted-foreground">
-                <Trans>disabled</Trans>
-              </Badge>
-            )}
-            {isSelf && (
-              <Badge className="border-transparent bg-muted text-muted-foreground">
-                <Trans>you</Trans>
-              </Badge>
-            )}
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            <Trans>Edit user</Trans>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>
+              <Trans>Name</Trans>
+            </Label>
+            <div className="flex gap-2">
+              <Input placeholder={t`First name`} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
+            </div>
+            <Button
+              size="sm"
+              className="self-start"
+              disabled={busy || (!firstName.trim() && !surname.trim())}
+              onClick={saveName}
+            >
+              <Trans>Save name</Trans>
+            </Button>
           </div>
-          <div className="truncate text-sm text-muted-foreground">@{user.username}</div>
-        </div>
-      </div>
 
-      {showCaps && (
-        <div className="flex flex-wrap gap-1.5">
-          {caps.map(({ key, label }) => {
-            const on = userCaps[key];
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={busy}
-                onClick={() => toggleCapability(key)}
-                aria-pressed={on}
-                className={
-                  "rounded-full border px-2.5 py-1 text-xs transition-colors disabled:opacity-50 " +
-                  (on
-                    ? "border-transparent bg-primary/15 text-primary"
-                    : "border-border text-muted-foreground hover:bg-muted")
-                }
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {editingName && (
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Input
-              autoFocus
-              placeholder={t`First name`}
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
-            <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
+          <div className="space-y-1.5 border-t pt-4">
+            <Label>
+              <Trans>Reset password</Trans>
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder={t`New temp password`}
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+              />
+              <Button size="sm" disabled={busy || pw.length < 6} onClick={resetPassword}>
+                <KeyRound className="h-4 w-4" />
+                <Trans>Reset</Trans>
+              </Button>
+            </div>
           </div>
-          <Button
-            size="sm"
-            className="self-start"
-            disabled={busy || (!firstName.trim() && !surname.trim())}
-            onClick={saveName}
-          >
-            <Trans>Save</Trans>
-          </Button>
-        </div>
-      )}
 
-      {resetting && (
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            autoFocus
-            placeholder={t`New temp password`}
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-          />
-          <Button size="sm" disabled={busy || pw.length < 6} onClick={resetPassword}>
-            <Trans>Save</Trans>
-          </Button>
-        </div>
-      )}
+          <div className="flex flex-wrap gap-2 border-t pt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={() => (isAdmin ? setRole("member") : setPromoting(true))}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              {isAdmin ? <Trans>Revoke admin</Trans> : <Trans>Make admin</Trans>}
+            </Button>
+            <Button variant="outline" size="sm" className="ml-auto" disabled={busy} onClick={toggleDisabled}>
+              {user.disabled ? <Trans>Enable</Trans> : <Trans>Disable</Trans>}
+            </Button>
+          </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {!isSelf && (
-        <div className="mt-auto flex flex-wrap gap-1 border-t pt-3">
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setEditingName((v) => !v)}>
-            <Pencil className="h-4 w-4" />
-            <Trans>Edit name</Trans>
-          </Button>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setResetting((v) => !v)}>
-            <KeyRound className="h-4 w-4" />
-            <Trans>Reset password</Trans>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={() => (isAdmin ? setRole("member") : setPromoting(true))}
-          >
-            <ShieldCheck className="h-4 w-4" />
-            {isAdmin ? <Trans>Revoke admin</Trans> : <Trans>Make admin</Trans>}
-          </Button>
-          <Button variant="ghost" size="sm" className="ml-auto" disabled={busy} onClick={toggleDisabled}>
-            {user.disabled ? <Trans>Enable</Trans> : <Trans>Disable</Trans>}
-          </Button>
+          {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
-      )}
+      </DialogContent>
 
       <ConfirmDialog
         open={promoting}
@@ -343,7 +421,7 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
         confirmLabel={<Trans>Make admin</Trans>}
         onConfirm={() => setRole("admin")}
       />
-    </div>
+    </Dialog>
   );
 }
 
@@ -456,8 +534,9 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
 }
 
 // UserManagementPanel is the admin-only member management surface (its own page):
-// add members (via a modal), reset passwords, enable/disable accounts, and toggle
-// per-user capabilities. Users are laid out as a responsive card grid.
+// add members (via a modal), toggle per-user capabilities inline, and edit a user
+// (rename, reset password, role, enable/disable) via a modal. Users are laid out
+// as a table; the capability checkboxes line up into scannable columns.
 export function UserManagementPanel() {
   const [users, setUsers] = useState<User[]>([]);
 
@@ -478,10 +557,28 @@ export function UserManagementPanel() {
         <AddMemberDialog onAdded={load} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-        {users.map((u) => (
-          <UserRow key={u.id} user={u} onChanged={load} />
-        ))}
+      <div className="overflow-x-auto rounded-xl border bg-card">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <th className="px-3 py-2.5 font-medium">
+                <Trans>User</Trans>
+              </th>
+              <th className="px-3 py-2.5 font-medium">
+                <Trans>Role</Trans>
+              </th>
+              <th className="px-3 py-2.5 font-medium">
+                <Trans>Permissions</Trans>
+              </th>
+              <th className="px-3 py-2.5" />
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <UserRow key={u.id} user={u} onChanged={load} />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

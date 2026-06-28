@@ -660,13 +660,21 @@ msgid "e.g. waiting on the electrician to finish first"
 msgstr "e.g. waiting on the electrician to finish first"
 
 #: src/components/UserManagement.tsx
-msgid "Edit name"
-msgstr "Edit name"
+msgid "Edit"
+msgstr "Edit"
+
+#: src/components/UserManagement.tsx
+#~ msgid "Edit name"
+#~ msgstr "Edit name"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Edit task"
 msgstr "Edit task"
+
+#: src/components/UserManagement.tsx
+msgid "Edit user"
+msgstr "Edit user"
 
 #: src/components/DayCarousel.tsx
 msgid "edited the checklist"
@@ -812,8 +820,8 @@ msgid "Make this user an admin?"
 msgstr "Make this user an admin?"
 
 #: src/pages/Projects.tsx
-msgid "Manage members"
-msgstr "Manage members"
+#~ msgid "Manage members"
+#~ msgstr "Manage members"
 
 #: src/components/UserManagement.tsx
 msgid "Manage projects"
@@ -826,6 +834,10 @@ msgstr "Manage projects"
 #: src/components/NotificationBell.tsx
 msgid "Mark all read"
 msgstr "Mark all read"
+
+#: src/components/UserManagement.tsx
+msgid "member"
+msgstr "member"
 
 #: src/pages/Projects.tsx
 msgid "Members"
@@ -856,6 +868,7 @@ msgstr "moved this back to To do"
 msgid "moved to To do"
 msgstr "moved to To do"
 
+#: src/components/UserManagement.tsx
 #: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "Name"
@@ -969,6 +982,10 @@ msgstr "Passwords do not match"
 #~ msgid "past 14 days"
 #~ msgstr "past 14 days"
 
+#: src/components/UserManagement.tsx
+msgid "Permissions"
+msgstr "Permissions"
+
 #: src/pages/Task.tsx
 #~ msgid "Photo"
 #~ msgstr "Photo"
@@ -1056,8 +1073,8 @@ msgid "renamed this task"
 msgstr "renamed this task"
 
 #: src/components/UserManagement.tsx
-#~ msgid "Reset"
-#~ msgstr "Reset"
+msgid "Reset"
+msgstr "Reset"
 
 #: src/components/UserManagement.tsx
 msgid "Reset password"
@@ -1080,14 +1097,21 @@ msgstr "Restored"
 msgid "Revoke admin"
 msgstr "Revoke admin"
 
-#: src/components/AppLayout.tsx
 #: src/components/UserManagement.tsx
+msgid "Role"
+msgstr "Role"
+
+#: src/components/AppLayout.tsx
 msgid "Save"
 msgstr "Save"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Save changes"
+
+#: src/components/UserManagement.tsx
+msgid "Save name"
+msgstr "Save name"
 
 #: src/pages/Chat.tsx
 msgid "Select a channel to start chatting."
@@ -1252,6 +1276,10 @@ msgstr "Title is required"
 msgid "To do"
 msgstr "To do"
 
+#: src/components/UserManagement.tsx
+#~ msgid "Toggle capability"
+#~ msgstr "Toggle capability"
+
 #: src/pages/Task.tsx
 msgid "Unarchive"
 msgstr "Unarchive"
@@ -1332,6 +1360,10 @@ msgstr "Uploaded by {uploaderName}"
 #: src/components/AppLayout.tsx
 msgid "Uploading…"
 msgstr "Uploading…"
+
+#: src/components/UserManagement.tsx
+msgid "User"
+msgstr "User"
 
 #: src/pages/Login.tsx
 msgid "Username"

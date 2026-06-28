@@ -583,6 +583,65 @@ export function ProjectsPage() {
   const menuItemClass =
     "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent";
 
+  // Shared contents of the project three-dot menu, used verbatim by both the
+  // desktop tools menu and the mobile project menu so the two never drift. Order
+  // and labels follow the desktop blueprint: Members → Archive → New project →
+  // Show archived. `close` dismisses the host popover before running the action.
+  const projectMenuItems = (close: () => void) => (
+    <>
+      {selectedProject && canManageMembers(me, selectedProject) && (
+        <button
+          type="button"
+          className={menuItemClass}
+          onClick={() => {
+            close();
+            setMembersOpen(true);
+          }}
+        >
+          <Users className="h-4 w-4" />
+          <Trans>Members</Trans>
+        </button>
+      )}
+      {selectedProject && canManageProjects && (
+        <button
+          type="button"
+          className={menuItemClass}
+          onClick={() => {
+            close();
+            onArchiveProjectClick();
+          }}
+        >
+          {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+          {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
+        </button>
+      )}
+      {canManageProjects && (
+        <button
+          type="button"
+          className={menuItemClass}
+          onClick={() => {
+            close();
+            setCreateOpen(true);
+          }}
+        >
+          <FolderPlus className="h-4 w-4" />
+          <Trans>New project</Trans>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          close();
+          setShowArchived((v) => !v);
+        }}
+        className={menuItemClass}
+      >
+        <Archive className="h-4 w-4" />
+        {showArchived ? <Trans>Hide archived</Trans> : <Trans>Show archived</Trans>}
+      </button>
+    </>
+  );
+
   // Desktop project selector: a dropdown lifted onto the tab row, replacing the
   // old left-hand project column (#25). Shows the full project title (no clip)
   // and highlights when "All projects" is active. New project + show-archived
@@ -638,56 +697,7 @@ export function ProjectsPage() {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-1">
-        {selectedProject && canManageMembers(me, selectedProject) && (
-          <button
-            type="button"
-            className={menuItemClass}
-            onClick={() => {
-              setProjToolsMenuOpen(false);
-              setMembersOpen(true);
-            }}
-          >
-            <Users className="h-4 w-4" />
-            <Trans>Members</Trans>
-          </button>
-        )}
-        {selectedProject && canManageProjects && (
-          <button
-            type="button"
-            className={menuItemClass}
-            onClick={() => {
-              setProjToolsMenuOpen(false);
-              onArchiveProjectClick();
-            }}
-          >
-            {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-            {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
-          </button>
-        )}
-        {canManageProjects && (
-          <button
-            type="button"
-            className={menuItemClass}
-            onClick={() => {
-              setProjToolsMenuOpen(false);
-              setCreateOpen(true);
-            }}
-          >
-            <FolderPlus className="h-4 w-4" />
-            <Trans>New project</Trans>
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            setProjToolsMenuOpen(false);
-            setShowArchived((v) => !v);
-          }}
-          className={menuItemClass}
-        >
-          <Archive className="h-4 w-4" />
-          {showArchived ? <Trans>Hide archived</Trans> : <Trans>Show archived</Trans>}
-        </button>
+        {projectMenuItems(() => setProjToolsMenuOpen(false))}
       </PopoverContent>
     </Popover>
   );
@@ -778,57 +788,11 @@ export function ProjectsPage() {
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-52 p-1">
-              {selectedProject && canManageProjects && (
-                <button
-                  type="button"
-                  className={menuItemClass}
-                  onClick={() => {
-                    setProjMenuOpen(false);
-                    onArchiveProjectClick();
-                  }}
-                >
-                  {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                  {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
-                </button>
-              )}
-              {selectedProject && canManageMembers(me, selectedProject) && (
-                <button
-                  type="button"
-                  className={menuItemClass}
-                  onClick={() => {
-                    setProjMenuOpen(false);
-                    setMembersOpen(true);
-                  }}
-                >
-                  <Users className="h-4 w-4" />
-                  <Trans>Manage members</Trans>
-                </button>
-              )}
-              {canManageProjects && (
-                <button
-                  type="button"
-                  className={menuItemClass}
-                  onClick={() => {
-                    setProjMenuOpen(false);
-                    setCreateOpen(true);
-                  }}
-                >
-                  <FolderPlus className="h-4 w-4" />
-                  <Trans>New project</Trans>
-                </button>
-              )}
+            <PopoverContent align="end" className="w-56 p-1">
+              {projectMenuItems(() => setProjMenuOpen(false))}
             </PopoverContent>
           </Popover>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowArchived((v) => !v)}
-          className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Archive className="h-3.5 w-3.5" />
-          {showArchived ? <Trans>Hide archived</Trans> : <Trans>Show archived</Trans>}
-        </button>
       </div>
 
       {/* Page title, lifted to the top of the page. */}

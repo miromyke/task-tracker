@@ -227,57 +227,36 @@ whether the role is free-text or a fixed list; whether it's optional (omit the b
 entirely when empty); and whether it appears in compact contexts like mentions/avatars
 or only in fuller lists.
 
-## 27. Users page: clearer permissions UI + edit-user modal
+## 27. Users: allow user deletion
 
-Tidy up the admin users page (`UserManagement.tsx`): make per-user permissions read
-more clearly as toggles, and move per-user editing into a modal instead of expanding
-inline on the card.
+Deferred from the users-page tidy-up (the table / switches / edit-modal parts shipped —
+see changelog). Today an account can only be soft-disabled (cannot log in); there is no
+delete. Add a delete action (in the edit-user modal) that removes the user outright.
 
-Planned changes:
-- **Checkboxes instead of badges for capabilities.** The three capability toggles
-  (`manageProjects` / `viewReporting` / `viewHistory`, #17) currently render as
-  pill-shaped on/off buttons in `UserRow` — visually they read like status badges, so
-  it's unclear they're interactive controls. Replace them with explicit checkboxes (a
-  labeled checkbox per capability) so the on/off state and "this is editable" are
-  obvious.
-- **Edit-user modal instead of inline editing.** Today "Edit name" and "Reset password"
-  expand inline inputs inside the card, and capability toggles / role / enable-disable
-  are scattered across the card's footer. Consolidate per-user editing into a single
-  "Edit user" modal (mirroring `AddMemberDialog`) — name, password reset, capabilities,
-  admin role, and enable/disable in one place — leaving the card itself as a clean
-  read-only summary (avatar, name, login, role/disabled/you badges).
-- **Allow user deletion.** Today an account can only be soft-disabled (cannot log in) —
-  there is no delete. Add a delete action (in the edit-user modal), removing the user
-  outright. This needs a new backend endpoint + `api.deleteUser` (neither exists yet),
-  and a decision on what happens to a deleted user's references — authored/assigned
-  tasks, log entries, mentions, project/channel memberships — vs. keeping disable as the
-  non-destructive option. Guard against deleting yourself / the last admin, with a
-  confirm step.
-- **Table layout instead of cards.** Switch the users display from the responsive card
-  grid to a table — a row per user with columns for name/login, role, capabilities (the
-  checkboxes), status, and actions — which reads more densely and lines the permission
-  checkboxes up into scannable columns.
-
-Current state (starting point):
-- `UserManagement.tsx` lays users out as a responsive card grid; each `UserRow` holds
-  all the editing affordances inline (the `editingName` / `resetting` expanders, the
-  capability pill-buttons via `toggleCapability`, and the footer actions for role and
-  disable). Everything already routes through `api.updateUser`.
-- Capabilities are hidden for admins and for your own row (`showCaps`); the role action
-  has its own confirm step (`ConfirmDialog`) and self-demotion is blocked server-side.
-  A modal would need to preserve these same guards.
-
-Deliverable: switch the users display to a table, swap the capability pill-buttons for
-checkboxes, move per-user editing into an "Edit user" modal, and add user deletion
-(new endpoint + `api.deleteUser`). Decide: whether the modal is one combined form or
-tabbed sections; whether quick actions (disable, make-admin) stay in the table row or
-move fully into the modal; what becomes of a deleted user's references (vs. keeping
-disable as the soft option); and keep the existing admin/self guards intact.
+This needs a new backend endpoint + `api.deleteUser` (neither exists yet) and a decision
+on what happens to a deleted user's references — authored/assigned tasks, log entries,
+mentions, project/channel memberships. The DB enforces foreign keys (`foreign_keys(on)`
+in `store.go`) with NOT-NULL FKs from `tasks.created_by`, `log_items.user_id`,
+`assets.uploaded_by`, `channels.created_by`, `messages.user_id`, and
+`notifications.recipient_id`, so a user with authored content can't simply be removed.
+Options: block delete unless the user authored nothing (fall back to disable), reassign
+references to a sentinel "[deleted user]" account, or cascade-delete their content. Guard
+against deleting yourself / the last admin, with a confirm step.
 
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#27** Users page tidy-up (deletion deferred — see #27 above). The admin `/users`
+  page moved from a responsive card grid to a table: one row per user (identity + role +
+  permissions + actions). The capability pill-buttons (#17) became labelled on/off
+  switches stacked in a single "Permissions" column (admins/self show "—"); per-user
+  editing (rename, reset password, make/revoke admin, enable/disable) consolidated into
+  one "Edit user" modal, leaving the row a read-only summary. Existing guards kept
+  (last-admin demotion, self-row exclusions, admin bypass). Alongside it, the mobile
+  project three-dot menu was synced to the desktop blueprint via a shared renderer
+  (Members → Archive → New project → Show archived), retiring the standalone mobile
+  show-archived button.
 - **#25** Desktop projects page restructured into a single full-width column. The
   left-hand project column became a project dropdown lifted onto the tab row (full title,
   no clipping; highlighted when "All projects" is active), carrying the show-archived

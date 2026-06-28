@@ -656,13 +656,21 @@ msgid "e.g. waiting on the electrician to finish first"
 msgstr "напр., очікуємо, поки електрик закінчить"
 
 #: src/components/UserManagement.tsx
-msgid "Edit name"
-msgstr "Змінити ім'я"
+msgid "Edit"
+msgstr "Редагувати"
+
+#: src/components/UserManagement.tsx
+#~ msgid "Edit name"
+#~ msgstr "Змінити ім'я"
 
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Task.tsx
 msgid "Edit task"
 msgstr "Редагувати задачу"
+
+#: src/components/UserManagement.tsx
+msgid "Edit user"
+msgstr "Редагувати користувача"
 
 #: src/components/DayCarousel.tsx
 msgid "edited the checklist"
@@ -808,8 +816,8 @@ msgid "Make this user an admin?"
 msgstr "Зробити цього користувача адміністратором?"
 
 #: src/pages/Projects.tsx
-msgid "Manage members"
-msgstr "Керування учасниками"
+#~ msgid "Manage members"
+#~ msgstr "Керування учасниками"
 
 #: src/components/UserManagement.tsx
 msgid "Manage projects"
@@ -822,6 +830,10 @@ msgstr "Керування проєктами"
 #: src/components/NotificationBell.tsx
 msgid "Mark all read"
 msgstr "Позначити всі прочитаними"
+
+#: src/components/UserManagement.tsx
+msgid "member"
+msgstr "учасник"
 
 #: src/pages/Projects.tsx
 msgid "Members"
@@ -852,6 +864,7 @@ msgstr "повернено у «Зробити»"
 msgid "moved to To do"
 msgstr "повернено у «Зробити»"
 
+#: src/components/UserManagement.tsx
 #: src/pages/Chat.tsx
 #: src/pages/Projects.tsx
 msgid "Name"
@@ -965,6 +978,10 @@ msgstr "Паролі не збігаються"
 #~ msgid "past 14 days"
 #~ msgstr "за 14 днів"
 
+#: src/components/UserManagement.tsx
+msgid "Permissions"
+msgstr "Дозволи"
+
 #: src/pages/Task.tsx
 #~ msgid "Photo"
 #~ msgstr "Фото"
@@ -1052,8 +1069,8 @@ msgid "renamed this task"
 msgstr "перейменовано цю задачу"
 
 #: src/components/UserManagement.tsx
-#~ msgid "Reset"
-#~ msgstr "Скинути"
+msgid "Reset"
+msgstr "Скинути"
 
 #: src/components/UserManagement.tsx
 msgid "Reset password"
@@ -1076,14 +1093,21 @@ msgstr "Відновлено"
 msgid "Revoke admin"
 msgstr "Зняти права адміністратора"
 
-#: src/components/AppLayout.tsx
 #: src/components/UserManagement.tsx
+msgid "Role"
+msgstr "Роль"
+
+#: src/components/AppLayout.tsx
 msgid "Save"
 msgstr "Зберегти"
 
 #: src/components/TaskFormDialog.tsx
 msgid "Save changes"
 msgstr "Зберегти зміни"
+
+#: src/components/UserManagement.tsx
+msgid "Save name"
+msgstr "Зберегти ім'я"
 
 #: src/pages/Chat.tsx
 msgid "Select a channel to start chatting."
@@ -1248,6 +1272,10 @@ msgstr "Назва обовʼязкова"
 msgid "To do"
 msgstr "Зробити"
 
+#: src/components/UserManagement.tsx
+#~ msgid "Toggle capability"
+#~ msgstr "Перемкнути дозвіл"
+
 #: src/pages/Task.tsx
 msgid "Unarchive"
 msgstr "Розархівувати"
@@ -1328,6 +1356,10 @@ msgstr "Завантажено: {uploaderName}"
 #: src/components/AppLayout.tsx
 msgid "Uploading…"
 msgstr "Завантаження…"
+
+#: src/components/UserManagement.tsx
+msgid "User"
+msgstr "Користувач"
 
 #: src/pages/Login.tsx
 msgid "Username"
