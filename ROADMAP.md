@@ -172,6 +172,25 @@ Options: block delete unless the user authored nothing (fall back to disable), r
 references to a sentinel "[deleted user]" account, or cascade-delete their content. Guard
 against deleting yourself / the last admin, with a confirm step.
 
+## 28. Task comments: show most recent on top
+
+Reverse the task comment order so the newest comment is at the top of the list instead
+of the bottom, surfacing the latest discussion without scrolling to the end.
+
+Current state (starting point):
+- A task's log entries are fetched oldest-first: `GET /tasks/{id}` returns `logs` ordered
+  `created_at, id` ascending (`store.go`, the `log_items WHERE task_id=? ORDER BY
+  created_at, id` query).
+- `pages/Task.tsx` splits them into `comments = logs.filter(type === "note")` and
+  `activity` (the rest), then renders the active list in that same ascending order
+  (the `.map` at the bottom of the activity panel). So comments read oldest → newest.
+
+Deliverable: render comments newest-first. Decide whether this is comments-only or also
+the activity tab; whether to reverse on the frontend (e.g. a reversed copy of `comments`
+in `Task.tsx`, keeping the API ascending) vs. ordering at the query; and where the
+"add comment" composer sits relative to the now top-most newest comment (it currently
+sits under the list).
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
