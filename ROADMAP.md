@@ -199,6 +199,110 @@ Left to do / open questions (why it's parked):
 - Whether selectable users are scoped to the current project's members vs. all visible
   users (currently: all visible users).
 
+## 25. Restructure the desktop layout of the main projects page
+
+Rework the desktop projects page from its current two-column shape into a single
+full-width column, lifting the project selector up to sit on the tab row and moving the
+tag filter next to "Add task".
+
+Planned changes:
+- **Project selector → dropdown, aligned with the tabs.** Replace the dedicated
+  left-hand project column with a project dropdown lifted up onto the tab row (Tasks /
+  Calendar / Files), rather than occupying its own column.
+- **Tag filter next to "Add task".** Move the tag filter out of its current spot and
+  place it alongside the "Add task" button.
+- **Pulse + tasks board span the full width.** With the project selector no longer a
+  separate column, the layout becomes a single column — the pulse and the tasks board
+  take up the full available width.
+- **Heading: "Tasks" instead of "Tasks for …".** Drop the project name from the board
+  heading (`<Trans>Tasks for {selectedProject.name}</Trans>` in `Projects.tsx`) — now
+  that the selected project is shown in the dropdown, the heading is just "Tasks".
+- **Don't truncate the project title in the selector.** The current project tile
+  truncates the name (`truncate` on the label in `ProjectTile`); in the new dropdown,
+  show the full project title rather than clipping it.
+- **Highlight the selector when "All projects" is selected.** Make the "All projects"
+  state more noticeable by visually highlighting the selector (it's easy to miss that
+  no single project is filtered), so it's clear you're looking across all projects.
+
+> Scope note: desktop only — the mobile projects view already collapsed project + tag
+> selection into one compact selector above the tabs (#13). This brings the desktop
+> layout closer to that single-column shape.
+
+## 26. Users: add a "role" label shown after the name
+
+Give a user a free-text **role** (e.g. their job/function — "Architect", "Foreman"),
+stored alongside `first_name` / `surname` (#19), and show it in round braces after the
+display name everywhere a user name appears — e.g. `Jane Doe (Architect)`.
+
+> Naming caution: `users.role` is already taken — it's the access role (`"admin"` /
+> `"member"`, see the `User.Role` field in `store.go`). This new label needs a distinct
+> column/field name (e.g. `title`, `position`, or `job_role`) so it doesn't collide with
+> the admin/member role.
+
+Current state (starting point):
+- A user is `username` + the structured `first_name` / `surname` with a denormalized
+  `name` display field (`User` in `store.go`, `userCols`). There is no job/role label.
+- The display name is rendered in many places, all reading `user.name` — assignee on
+  the board (`KanbanBoard.tsx`), mentions (`MessageText.tsx`), member/user lists
+  (`UserManagement.tsx`), activity (`DayCarousel.tsx`), notifications
+  (`NotificationBell.tsx`), the account menu (`AppLayout.tsx`). A "(role)" suffix would
+  need to appear consistently across these.
+
+Deliverable: add the label field (schema column + create/edit-user and profile forms +
+API), and render it in round braces after the name wherever a user name is shown.
+Decide: whether to centralize the "name (role)" formatting in one helper (e.g. extend
+`lib/format.ts`) so every consumer stays consistent rather than concatenating ad hoc;
+whether the role is free-text or a fixed list; whether it's optional (omit the braces
+entirely when empty); and whether it appears in compact contexts like mentions/avatars
+or only in fuller lists.
+
+## 27. Users page: clearer permissions UI + edit-user modal
+
+Tidy up the admin users page (`UserManagement.tsx`): make per-user permissions read
+more clearly as toggles, and move per-user editing into a modal instead of expanding
+inline on the card.
+
+Planned changes:
+- **Checkboxes instead of badges for capabilities.** The three capability toggles
+  (`manageProjects` / `viewReporting` / `viewHistory`, #17) currently render as
+  pill-shaped on/off buttons in `UserRow` — visually they read like status badges, so
+  it's unclear they're interactive controls. Replace them with explicit checkboxes (a
+  labeled checkbox per capability) so the on/off state and "this is editable" are
+  obvious.
+- **Edit-user modal instead of inline editing.** Today "Edit name" and "Reset password"
+  expand inline inputs inside the card, and capability toggles / role / enable-disable
+  are scattered across the card's footer. Consolidate per-user editing into a single
+  "Edit user" modal (mirroring `AddMemberDialog`) — name, password reset, capabilities,
+  admin role, and enable/disable in one place — leaving the card itself as a clean
+  read-only summary (avatar, name, login, role/disabled/you badges).
+- **Allow user deletion.** Today an account can only be soft-disabled (cannot log in) —
+  there is no delete. Add a delete action (in the edit-user modal), removing the user
+  outright. This needs a new backend endpoint + `api.deleteUser` (neither exists yet),
+  and a decision on what happens to a deleted user's references — authored/assigned
+  tasks, log entries, mentions, project/channel memberships — vs. keeping disable as the
+  non-destructive option. Guard against deleting yourself / the last admin, with a
+  confirm step.
+- **Table layout instead of cards.** Switch the users display from the responsive card
+  grid to a table — a row per user with columns for name/login, role, capabilities (the
+  checkboxes), status, and actions — which reads more densely and lines the permission
+  checkboxes up into scannable columns.
+
+Current state (starting point):
+- `UserManagement.tsx` lays users out as a responsive card grid; each `UserRow` holds
+  all the editing affordances inline (the `editingName` / `resetting` expanders, the
+  capability pill-buttons via `toggleCapability`, and the footer actions for role and
+  disable). Everything already routes through `api.updateUser`.
+- Capabilities are hidden for admins and for your own row (`showCaps`); the role action
+  has its own confirm step (`ConfirmDialog`) and self-demotion is blocked server-side.
+  A modal would need to preserve these same guards.
+
+Deliverable: switch the users display to a table, swap the capability pill-buttons for
+checkboxes, move per-user editing into an "Edit user" modal, and add user deletion
+(new endpoint + `api.deleteUser`). Decide: whether the modal is one combined form or
+tabbed sections; whether quick actions (disable, make-admin) stay in the table row or
+move fully into the modal; what becomes of a deleted user's references (vs. keeping
+disable as the soft option); and keep the existing admin/self guards intact.
+
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
