@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Archive, ArchiveRestore, CalendarDays, ChevronDown, FolderKanban, FolderPlus, Images, Loader2, MoreVertical, Plus, Users, X } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
-import { api, ApiError, can, criteriaMet, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
+import { api, ApiError, can, criteriaMet, type AssetKind, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { UserAvatar } from "@/components/UserAvatar";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { PulseCard } from "@/components/PulseCard";
 import { BlockTaskDialog } from "@/components/BlockTaskDialog";
 import { CalendarView } from "@/components/CalendarView";
-import { FilesView } from "@/components/FilesView";
+import { FilesView, FilesToolbar } from "@/components/FilesView";
 import { TaskFormDialog } from "@/components/TaskFormDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -405,12 +405,16 @@ export function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [tag, setTag] = useState<string>(ALL);
+  // Files view controls live in the page header (see FilesToolbar), so the page
+  // owns the kind/Deleted filter + Add files dialog state.
+  const [filesKind, setFilesKind] = useState<AssetKind | "">("");
+  const [filesPending, setFilesPending] = useState(false);
+  const [filesAddOpen, setFilesAddOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [projMenuOpen, setProjMenuOpen] = useState(false);
   const [projDropdownOpen, setProjDropdownOpen] = useState(false);
   const [projToolsMenuOpen, setProjToolsMenuOpen] = useState(false);
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -623,8 +627,9 @@ export function ProjectsPage() {
     </Popover>
   );
 
-  // Three-dot menu beside the desktop project selector: New project +
-  // show-archived toggle (the controls the old sidebar header carried).
+  // Three-dot menu beside the desktop project selector: per-project actions for
+  // the selected project (Members, Archive) plus New project + the show-archived
+  // toggle (the controls the old sidebar header carried).
   const projectToolsMenu = (
     <Popover open={projToolsMenuOpen} onOpenChange={setProjToolsMenuOpen}>
       <PopoverTrigger asChild>
@@ -632,7 +637,33 @@ export function ProjectsPage() {
           <MoreVertical className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-52 p-1">
+      <PopoverContent align="start" className="w-56 p-1">
+        {selectedProject && canManageMembers(me, selectedProject) && (
+          <button
+            type="button"
+            className={menuItemClass}
+            onClick={() => {
+              setProjToolsMenuOpen(false);
+              setMembersOpen(true);
+            }}
+          >
+            <Users className="h-4 w-4" />
+            <Trans>Members</Trans>
+          </button>
+        )}
+        {selectedProject && canManageProjects && (
+          <button
+            type="button"
+            className={menuItemClass}
+            onClick={() => {
+              setProjToolsMenuOpen(false);
+              onArchiveProjectClick();
+            }}
+          >
+            {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+            {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
+          </button>
+        )}
         {canManageProjects && (
           <button
             type="button"
@@ -723,7 +754,7 @@ export function ProjectsPage() {
   const usesTags = view === "board" || view === "calendar";
 
   return (
-    <div className="flex flex-col gap-10 pt-1 lg:gap-12">
+    <div className="flex flex-col gap-5 pt-1 lg:gap-6">
       {/* Mobile: the project selector sits above the view tabs (desktop keeps it
           in the left sidebar). The button shows the current selection as its value. */}
       <div className="lg:hidden">
@@ -800,9 +831,18 @@ export function ProjectsPage() {
         </button>
       </div>
 
-      {/* Tab row: desktop carries the project selector dropdown to its left
-          (#25); on mobile the tabs span full width and the selector lives above. */}
-      <div className="flex flex-row items-center gap-4">
+      {/* Page title, lifted to the top of the page. */}
+      <div className="min-w-0">
+        <h2 className="text-xl font-bold tracking-tight lg:text-2xl">{heading}</h2>
+        {selectedProject?.description && (
+          <p className="mt-1 text-sm text-muted-foreground">{selectedProject.description}</p>
+        )}
+      </div>
+
+      {/* Project selector (desktop) and the page actions share one line, pushed
+          to opposite ends. On mobile the tabs take the selector's spot (the
+          selector itself lives in the block above). */}
+      <div className="flex items-center justify-between gap-4">
         <div className="hidden items-center gap-2 lg:flex">
           {desktopProjectSelector}
           {projectToolsMenu}
@@ -810,74 +850,38 @@ export function ProjectsPage() {
         {/* In-page tabs on mobile/tablet; desktop drives the view from the nav
             rail submenu instead. */}
         <div className="min-w-0 flex-1 lg:hidden">{viewTabs}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* Add task shows from tablet up; phones use the overflow menu below.
+              Members + Archive live in the three-dot menu next to Add task on
+              desktop; phone/tablet reach them from the project selector's menu. */}
+          <div className="flex items-center gap-2">
+            {/* Tag filter sits next to Add task on desktop (#25); mobile
+                filters tags from the FilterDialog instead. */}
+            {usesTags && tagFilter}
+            {view === "board" && (
+              <Button className="hidden sm:inline-flex" onClick={openTaskForm}>
+                <Plus className="h-4 w-4" />
+                <Trans>Add task</Trans>
+              </Button>
+            )}
+            {view === "files" && (
+              <FilesToolbar
+                kind={filesKind}
+                pending={filesPending}
+                isAdmin={me?.role === "admin"}
+                onKindChange={setFilesKind}
+                onPendingChange={setFilesPending}
+                onAdd={() => setFilesAddOpen(true)}
+              />
+            )}
+          </div>
+          {/* Phone: Add task collapses into a labelled overflow menu. */}
+          {hasHeaderActions && <div className="sm:hidden">{actionMenu}</div>}
+        </div>
       </div>
 
       {/* Main content: a single full-width column (#25). */}
       <div className="min-w-0 space-y-6 lg:space-y-8">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-xl font-bold tracking-tight lg:text-2xl">{heading}</h2>
-            {selectedProject?.description && (
-              <p className="mt-1 text-sm text-muted-foreground">{selectedProject.description}</p>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Add task shows from tablet up; phones use the overflow menu below.
-                Members + Archive live in the three-dot menu next to Add task on
-                desktop; phone/tablet reach them from the project selector's menu. */}
-            <div className="flex items-center gap-2">
-              {/* Tag filter sits next to Add task on desktop (#25); mobile
-                  filters tags from the FilterDialog instead. */}
-              {usesTags && tagFilter}
-              {view === "board" && (
-                <Button className="hidden sm:inline-flex" onClick={openTaskForm}>
-                  <Plus className="h-4 w-4" />
-                  <Trans>Add task</Trans>
-                </Button>
-              )}
-              {selectedProject && (canManageMembers(me, selectedProject) || canManageProjects) && (
-                <Popover open={headerMenuOpen} onOpenChange={setHeaderMenuOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="icon" className="hidden lg:inline-flex" aria-label={t`Project actions`}>
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-52 p-1">
-                    {canManageMembers(me, selectedProject) && (
-                      <button
-                        type="button"
-                        className={menuItemClass}
-                        onClick={() => {
-                          setHeaderMenuOpen(false);
-                          setMembersOpen(true);
-                        }}
-                      >
-                        <Users className="h-4 w-4" />
-                        <Trans>Members</Trans>
-                      </button>
-                    )}
-                    {canManageProjects && (
-                      <button
-                        type="button"
-                        className={menuItemClass}
-                        onClick={() => {
-                          setHeaderMenuOpen(false);
-                          onArchiveProjectClick();
-                        }}
-                      >
-                        {selectedProject.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                        {selectedProject.archived ? <Trans>Unarchive this project</Trans> : <Trans>Archive this project</Trans>}
-                      </button>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-            {/* Phone: Add task collapses into a labelled overflow menu. */}
-            {hasHeaderActions && <div className="sm:hidden">{actionMenu}</div>}
-          </div>
-        </div>
-
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -889,7 +893,15 @@ export function ProjectsPage() {
             includeArchived={showArchived}
           />
         ) : view === "files" ? (
-          <FilesView projectId={selectedId ?? undefined} projects={projects} usersById={usersById} />
+          <FilesView
+            projectId={selectedId ?? undefined}
+            projects={projects}
+            usersById={usersById}
+            kind={filesKind}
+            pending={filesPending}
+            addOpen={filesAddOpen}
+            onAddOpenChange={setFilesAddOpen}
+          />
         ) : (
           <>
             {moveError && (

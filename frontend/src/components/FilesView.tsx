@@ -35,6 +35,11 @@ import { cn } from "@/lib/utils";
 // non-empty string value).
 const NO_PROJECT = "none";
 
+// Filter Select values (Select needs non-empty strings): "all" = every kind,
+// "deleted" = the admin soft-delete queue.
+const ALL_KINDS = "all";
+const DELETED = "deleted";
+
 // Kind filter tabs. "" = all kinds.
 const KIND_TABS: { value: AssetKind | ""; label: MessageDescriptor }[] = [
   { value: "", label: msg`All` },
@@ -409,39 +414,107 @@ function AddFilesDialog({
   );
 }
 
+// FilesToolbar is the Files view's controls — the kind/Deleted filter strip plus
+// the Add files button. It lives up in the page header (next to the project
+// selector) rather than inside FilesView's body, so the page owns its state.
+export function FilesToolbar({
+  kind,
+  pending,
+  isAdmin,
+  onKindChange,
+  onPendingChange,
+  onAdd,
+}: {
+  kind: AssetKind | "";
+  pending: boolean;
+  isAdmin: boolean;
+  onKindChange: (k: AssetKind | "") => void;
+  onPendingChange: (p: boolean) => void;
+  onAdd: () => void;
+}) {
+  const { i18n } = useLingui();
+  // "deleted" picks the admin soft-delete queue; otherwise a kind (or "all").
+  const value = pending ? DELETED : kind || ALL_KINDS;
+  function onChange(v: string) {
+    if (v === DELETED) {
+      onPendingChange(true);
+      onKindChange("");
+    } else {
+      onPendingChange(false);
+      onKindChange(v === ALL_KINDS ? "" : (v as AssetKind));
+    }
+  }
+  return (
+    <div className="flex items-center gap-2">
+      {/* kind + deleted filter — desktop only; mobile keeps just the upload
+          button. "Deleted" (admin only) shows the soft-delete queue. */}
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="hidden h-9 w-36 sm:flex">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {KIND_TABS.map(({ value, label }) => (
+            <SelectItem key={value || ALL_KINDS} value={value || ALL_KINDS}>
+              {i18n._(label)}
+            </SelectItem>
+          ))}
+          {isAdmin && (
+            <SelectItem value={DELETED}>
+              <Trans>Deleted</Trans>
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+      {!pending && (
+        <Button onClick={onAdd}>
+          <Upload className="h-4 w-4" />
+          <Trans>Add files</Trans>
+        </Button>
+      )}
+    </div>
+  );
+}
+
 // FilesView is the Files tab of the overview: a grid of uploaded assets scoped to
 // the page's selected project (projectId undefined = all projects). Project
-// selection and tag filtering are owned by the overview; tags don't apply here.
-// Admins get a second "Submitted for deletion" view holding the soft-delete queue.
+// selection, the kind/Deleted filter, and the Add files action are owned by the
+// page (see FilesToolbar) and passed in; tags don't apply here.
 export function FilesView({
   projectId,
   projects,
   usersById,
+  kind,
+  pending,
+  addOpen,
+  onAddOpenChange,
 }: {
   projectId?: number;
   projects: Project[];
   usersById?: Map<number, User>;
+  kind: AssetKind | "";
+  pending: boolean;
+  addOpen: boolean;
+  onAddOpenChange: (o: boolean) => void;
 }) {
-  const { i18n, t } = useLingui();
+  const { t } = useLingui();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const [pending, setPending] = useState(false);
-  const [kind, setKind] = useState<AssetKind | "">("");
   const [assets, setAssets] = useState<Asset[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState<Asset | null>(null);
   const [confirmPurge, setConfirmPurge] = useState<Asset | null>(null);
 
   // Reload from the first page whenever the view/project/kind filter changes.
+  // The lightbox indexes into the loaded list, so close it on any filter change.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLightbox(null);
     api
       .listAssets({ projectId, kind: kind || undefined, pending, page: 0 })
       .then((r) => {
@@ -492,48 +565,6 @@ export function FilesView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        {/* kind tabs — desktop only; mobile keeps just the upload button. */}
-        <div className="hidden rounded-md border p-0.5 sm:inline-flex">
-          {KIND_TABS.map(({ value, label }) => (
-            <button
-              key={value || "all"}
-              type="button"
-              onClick={() => setKind(value)}
-              className={cn(
-                "rounded px-3 py-1 text-sm font-medium transition-colors",
-                kind === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {i18n._(label)}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button
-              variant={pending ? "default" : "outline"}
-              className="hidden sm:inline-flex"
-              onClick={() => {
-                setPending((p) => !p);
-                setLightbox(null);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">
-                <Trans>Submitted for deletion</Trans>
-              </span>
-            </Button>
-          )}
-          {!pending && (
-            <Button onClick={() => setAddOpen(true)}>
-              <Upload className="h-4 w-4" />
-              <Trans>Add files</Trans>
-            </Button>
-          )}
-        </div>
-      </div>
-
       {pending && assets.length > 0 && (
         <p className="text-sm text-muted-foreground">
           <Trans>
@@ -549,7 +580,7 @@ export function FilesView({
         </div>
       ) : assets.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">
-          {pending ? <Trans>Nothing submitted for deletion.</Trans> : <Trans>No files yet.</Trans>}
+          {pending ? <Trans>No deleted files.</Trans> : <Trans>No files yet.</Trans>}
         </p>
       ) : (
         <>
@@ -624,7 +655,7 @@ export function FilesView({
 
       <AddFilesDialog
         open={addOpen}
-        onOpenChange={setAddOpen}
+        onOpenChange={onAddOpenChange}
         projectId={projectId}
         projects={projects}
         onUploaded={() => setRefreshKey((k) => k + 1)}

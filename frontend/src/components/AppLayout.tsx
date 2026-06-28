@@ -200,8 +200,10 @@ function NavLink({
     <Link
       to={to}
       className={cn(
-        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-full",
-        active && "bg-muted text-foreground"
+        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors sm:w-full",
+        active
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
       {children}
@@ -227,8 +229,10 @@ function SubNavLink({
     <Link
       to={to}
       className={cn(
-        "flex h-8 items-center gap-2 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        active && "bg-muted text-foreground"
+        "flex h-8 items-center gap-2 rounded-md px-2.5 text-sm font-medium transition-colors",
+        active
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
       {children}

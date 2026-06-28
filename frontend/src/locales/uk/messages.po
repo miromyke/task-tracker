@@ -576,6 +576,10 @@ msgid "deleted"
 msgstr "видалено"
 
 #: src/components/FilesView.tsx
+msgid "Deleted"
+msgstr "Видалені"
+
+#: src/components/FilesView.tsx
 msgid "Deletion requested"
 msgstr "Запит на видалення"
 
@@ -885,6 +889,10 @@ msgstr "Новий тимчасовий пароль"
 msgid "No comments yet. Post the first update below."
 msgstr "Коментарів ще немає. Додайте перше оновлення нижче."
 
+#: src/components/FilesView.tsx
+msgid "No deleted files."
+msgstr "Немає видалених файлів."
+
 #: src/pages/Chat.tsx
 msgid "No files uploaded yet."
 msgstr "Ще немає завантажених файлів."
@@ -930,8 +938,8 @@ msgstr "Цього дня нічого не записано."
 #~ msgstr "Немає відкритих задач — чудова робота."
 
 #: src/components/FilesView.tsx
-msgid "Nothing submitted for deletion."
-msgstr "Немає файлів на видалення."
+#~ msgid "Nothing submitted for deletion."
+#~ msgstr "Немає файлів на видалення."
 
 #: src/components/NotificationBell.tsx
 msgid "Notifications"
@@ -1128,8 +1136,8 @@ msgstr "Статус"
 #~ msgstr "Надіслати цей файл на видалення?"
 
 #: src/components/FilesView.tsx
-msgid "Submitted for deletion"
-msgstr "Надіслані на видалення"
+#~ msgid "Submitted for deletion"
+#~ msgstr "Надіслані на видалення"
 
 #: src/components/KanbanBoard.tsx
 #: src/components/TaskFormDialog.tsx
