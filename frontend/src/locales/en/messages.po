@@ -378,6 +378,10 @@ msgstr "blocked this task"
 msgid "by {0}"
 msgstr "by {0}"
 
+#: src/pages/Chat.tsx
+msgid "by {deleterName} · {deletedTime}"
+msgstr "by {deleterName} · {deletedTime}"
+
 #: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Calendar"
@@ -426,7 +430,7 @@ msgid "Channels"
 msgstr "Channels"
 
 #: src/components/AppLayout.tsx
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Chat"
 msgstr "Chat"
 
@@ -551,6 +555,7 @@ msgid "Dark"
 msgstr "Dark"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/pages/Chat.tsx
 msgid "Delete"
 msgstr "Delete"
@@ -560,6 +565,7 @@ msgid "Delete message"
 msgstr "Delete message"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Delete permanently"
 msgstr "Delete permanently"
 
@@ -576,18 +582,19 @@ msgid "Delete this message?"
 msgstr "Delete this message?"
 
 #: src/pages/Chat.tsx
-msgid "deleted"
-msgstr "deleted"
+#~ msgid "deleted"
+#~ msgstr "deleted"
 
 #: src/components/FilesView.tsx
+#: src/pages/Chat.tsx
 msgid "Deleted"
 msgstr "Deleted"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Deletion requested"
 msgstr "Deletion requested"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Deletion requested by {requesterName}"
 msgstr "Deletion requested by {requesterName}"
 
@@ -626,7 +633,7 @@ msgstr "Docs"
 msgid "Done"
 msgstr "Done"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Download file"
 msgstr "Download file"
 
@@ -711,6 +718,7 @@ msgstr "Events"
 
 #: src/components/AppLayout.tsx
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Files"
@@ -1025,6 +1033,7 @@ msgid "Postponed"
 msgstr "Postponed"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Project"
@@ -1039,7 +1048,7 @@ msgstr "Project actions"
 #~ msgid "Project not found."
 #~ msgstr "Project not found."
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Project: {projectName}"
 msgstr "Project: {projectName}"
 
@@ -1093,7 +1102,7 @@ msgstr "Reset"
 msgid "Reset password"
 msgstr "Reset password"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Restore"
 msgstr "Restore"
 
@@ -1212,7 +1221,7 @@ msgid "Tags"
 msgstr "Tags"
 
 #: src/components/DayCarousel.tsx
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Task"
 msgstr "Task"
 
@@ -1367,7 +1376,7 @@ msgstr "Upload"
 msgid "Upload a file"
 msgstr "Upload a file"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Uploaded by {uploaderName}"
 msgstr "Uploaded by {uploaderName}"
 

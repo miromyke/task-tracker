@@ -37,28 +37,43 @@ function TaskRef({ id, title }: { id: number; title: string }) {
   );
 }
 
-function FileRef({ asset }: { asset: Asset }) {
-  const isImage = asset.kind === "image";
-  if (isImage) {
-    return (
+// When onOpen is supplied the file opens in the shared in-app Lightbox (chat
+// passes it); otherwise it falls back to opening the raw asset in a new tab, so
+// MessageText stays usable without a viewer wired up.
+function FileRef({ asset, onOpen }: { asset: Asset; onOpen?: (a: Asset) => void }) {
+  if (asset.kind === "image") {
+    const img = (
+      <img
+        src={asset.path}
+        alt={asset.filename}
+        className="max-h-48 max-w-[16rem] rounded-lg border object-cover"
+      />
+    );
+    return onOpen ? (
+      <button type="button" onClick={() => onOpen(asset)} className="my-1 block cursor-zoom-in">
+        {img}
+      </button>
+    ) : (
       <a href={asset.path} target="_blank" rel="noreferrer" className="my-1 block">
-        <img
-          src={asset.path}
-          alt={asset.filename}
-          className="max-h-48 max-w-[16rem] rounded-lg border object-cover"
-        />
+        {img}
       </a>
     );
   }
-  return (
-    <a
-      href={asset.path}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-primary hover:underline"
-    >
+  const cls =
+    "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-primary hover:underline";
+  const inner = (
+    <>
       <FileText className="h-3.5 w-3.5 shrink-0" />
       <span className="truncate">{asset.filename}</span>
+    </>
+  );
+  return onOpen ? (
+    <button type="button" onClick={() => onOpen(asset)} className={cls}>
+      {inner}
+    </button>
+  ) : (
+    <a href={asset.path} target="_blank" rel="noreferrer" className={cls}>
+      {inner}
     </a>
   );
 }
@@ -66,7 +81,15 @@ function FileRef({ asset }: { asset: Asset }) {
 // MessageText renders a raw message string into React nodes, turning reference
 // tokens into chips/links. Unresolved references (deleted task, unknown user,
 // not-yet-loaded file) fall back to plain text — rendering never throws.
-export function MessageText({ text, refs }: { text: string; refs: RefMaps }) {
+export function MessageText({
+  text,
+  refs,
+  onOpenAsset,
+}: {
+  text: string;
+  refs: RefMaps;
+  onOpenAsset?: (asset: Asset) => void;
+}) {
   const out: React.ReactNode[] = [];
   let last = 0;
   let key = 0;
@@ -90,7 +113,13 @@ export function MessageText({ text, refs }: { text: string; refs: RefMaps }) {
       // #file<id>
       const id = Number(token.slice(5));
       const asset = refs.assetsById[id];
-      out.push(asset ? <FileRef key={key++} asset={asset} /> : <Fragment key={key++}>{token}</Fragment>);
+      out.push(
+        asset ? (
+          <FileRef key={key++} asset={asset} onOpen={onOpenAsset} />
+        ) : (
+          <Fragment key={key++}>{token}</Fragment>
+        )
+      );
     } else {
       // #<id>
       const id = Number(token.slice(1));

@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { MessageText, referencedFileIds, type RefMaps } from "@/components/MessageText";
+import { Lightbox } from "@/components/Lightbox";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -376,6 +377,7 @@ function MessageRow({
   canDelete,
   isAdmin,
   onDelete,
+  onOpenAsset,
 }: {
   message: Message;
   author?: User;
@@ -383,12 +385,18 @@ function MessageRow({
   canDelete: boolean;
   isAdmin: boolean;
   onDelete: (m: Message) => void;
+  onOpenAsset: (asset: Asset) => void;
 }) {
   const { t } = useLingui();
   const deleted = message.deletedAt != null;
   // Admins keep the original text (marked deleted) for the audit view; everyone
   // else sees a contentless tombstone (the server already redacted the text).
   const showText = !deleted || (isAdmin && message.text !== "");
+  // The admin audit view flags the preserved message prominently (who/when).
+  const adminDeleted = deleted && isAdmin && message.text !== "";
+  const deleter = message.deletedBy != null ? refs.usersById[message.deletedBy] : undefined;
+  const deleterName = deleter ? displayName(deleter) : "";
+  const deletedTime = message.deletedAt ? formatDateTime(message.deletedAt) : "";
   return (
     <div className="group flex gap-2.5">
       <UserAvatar
@@ -403,8 +411,19 @@ function MessageRow({
           <span className="text-sm font-medium">{author ? displayName(author) : <Trans>Unknown</Trans>}</span>
           <span className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</span>
           {deleted && (
-            <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">
-              <Trans>deleted</Trans>
+            <span className="rounded bg-red-600/15 px-1.5 text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
+              <Trans>Deleted</Trans>
+            </span>
+          )}
+          {adminDeleted && (
+            <span className="text-xs text-muted-foreground">
+              {deleterName ? (
+                <Trans>
+                  by {deleterName} · {deletedTime}
+                </Trans>
+              ) : (
+                deletedTime
+              )}
             </span>
           )}
           {canDelete && !deleted && (
@@ -420,7 +439,13 @@ function MessageRow({
         </div>
         <div className="text-sm text-foreground">
           {showText ? (
-            <MessageText text={message.text} refs={refs} />
+            adminDeleted ? (
+              <div className="rounded border-l-2 border-red-500/60 bg-red-500/5 px-2 py-1 text-muted-foreground">
+                <MessageText text={message.text} refs={refs} onOpenAsset={onOpenAsset} />
+              </div>
+            ) : (
+              <MessageText text={message.text} refs={refs} onOpenAsset={onOpenAsset} />
+            )
           ) : (
             <span className="italic text-muted-foreground">
               <Trans>This message was deleted.</Trans>
@@ -501,6 +526,7 @@ export function ChatPage() {
     [usersById, usersByUsername, tasksById, assetsById]
   );
   const [confirmDel, setConfirmDel] = useState<Message | null>(null);
+  const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
 
   // Lazily fetch any referenced files we haven't loaded yet.
   const resolveFiles = useCallback((msgs: Message[]) => {
@@ -654,6 +680,7 @@ export function ChatPage() {
                     isAdmin={isAdmin}
                     canDelete={!!user && (user.id === m.userId || isAdmin)}
                     onDelete={setConfirmDel}
+                    onOpenAsset={setLightboxAsset}
                   />
                 ))
               )}
@@ -678,6 +705,18 @@ export function ChatPage() {
           if (confirmDel) await deleteMessage(confirmDel);
         }}
       />
+
+      {lightboxAsset && (
+        <Lightbox
+          assets={[lightboxAsset]}
+          index={0}
+          uploaderName={(() => {
+            const u = usersById[lightboxAsset.uploadedBy];
+            return u ? displayName(u) : undefined;
+          })()}
+          onClose={() => setLightboxAsset(null)}
+        />
+      )}
     </div>
   );
 }

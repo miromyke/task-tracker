@@ -3,48 +3,8 @@
 These are planned, not finalized — details may change. Notes reference the current
 implementation so the work has a starting point. Numbers are stable ids (commits
 reference them as `ROADMAP #N`); shipped items are kept as a one-line changelog below
-rather than renumbered.
-
-## 12. Task activity: "postponed ×N" tag
-
-Surface how often a task's due date has slipped, as a visible **"postponed ×N"** badge
-in its activity view.
-
-> Scope note: this item originally also covered gating reporting and the task activity
-> log behind a per-user capability. That access-control half shipped in **#17**
-> (attribute-based access control), which owns the capability model and server-side
-> enforcement for the history/pulse reads. What's left here is the render-only tag.
-
-Current state (starting point):
-- `tasks.postpone_count` already exists and is incremented on a later-due-date move
-  (`UpdateTask`, `store.go`), and `due_date_change` log entries are recorded — but the
-  count isn't surfaced anywhere as a tag/badge.
-- The task activity log ships inside `GET /tasks/{id}` (`{task, logs}`) and renders in
-  `pages/Task.tsx`, where the badge would live.
-
-Deliverable: render a "postponed ×N" tag on tasks (driven by `postpone_count`) within
-the activity view. Pure frontend over data that already exists.
-
-## 15. Chat: delete messages (admins still see deleted)
-
-Let members remove a chat message they posted, but keep deleted messages visible to
-admins (for moderation/audit) rather than erasing them outright.
-
-Current state (starting point):
-- Chat is strictly append-only: `store.go` notes "messages are never edited or
-  deleted," the `Message` struct has no deleted/edited fields, the `messages` table
-  has no `deleted_at` column, and the only endpoints are `GET`/`POST`
-  `…/channels/{id}/messages` (`handleListMessages` / `handlePostMessage`) — there is
-  no DELETE route.
-- The pattern already exists elsewhere: files use soft delete with admin-only
-  visibility/purge (shipped #4), so this can mirror that — a reversible `deleted_at`
-  flag plus role-gated rendering, not a hard delete.
-
-Deliverable: soft-delete for messages — add `deleted_at` / `deleted_by` columns, a
-`DELETE /api/channels/{id}/messages/{mid}` endpoint, and role-aware listing where
-non-admins see a tombstone (or nothing) while admins see the original text marked as
-deleted. Decide who may delete (author-only vs. author + admin) and whether a deleted
-message's references (task/file/mention tokens) stay resolvable for the admin view.
+rather than renumbered. Open items are listed in priority order — the current focus is
+**#16 → #28**.
 
 ## 16. Chat: don't expose usernames in mentions
 
@@ -66,6 +26,45 @@ display name / a chip and store an id-based token instead of `@username`), which
 changing the stored token format and the `TOKEN_RE` + `usersByUsername` resolution in
 `MessageText.tsx`; or keep the `@username` token internally and only change what's
 displayed.
+
+## 28. Task comments: show most recent on top
+
+Reverse the task comment order so the newest comment is at the top of the list instead
+of the bottom, surfacing the latest discussion without scrolling to the end.
+
+Current state (starting point):
+- A task's log entries are fetched oldest-first: `GET /tasks/{id}` returns `logs` ordered
+  `created_at, id` ascending (`store.go`, the `log_items WHERE task_id=? ORDER BY
+  created_at, id` query).
+- `pages/Task.tsx` splits them into `comments = logs.filter(type === "note")` and
+  `activity` (the rest), then renders the active list in that same ascending order
+  (the `.map` at the bottom of the activity panel). So comments read oldest → newest.
+
+Deliverable: render comments newest-first. Decide whether this is comments-only or also
+the activity tab; whether to reverse on the frontend (e.g. a reversed copy of `comments`
+in `Task.tsx`, keeping the API ascending) vs. ordering at the query; and where the
+"add comment" composer sits relative to the now top-most newest comment (it currently
+sits under the list).
+
+## 12. Task activity: "postponed ×N" tag
+
+Surface how often a task's due date has slipped, as a visible **"postponed ×N"** badge
+in its activity view.
+
+> Scope note: this item originally also covered gating reporting and the task activity
+> log behind a per-user capability. That access-control half shipped in **#17**
+> (attribute-based access control), which owns the capability model and server-side
+> enforcement for the history/pulse reads. What's left here is the render-only tag.
+
+Current state (starting point):
+- `tasks.postpone_count` already exists and is incremented on a later-due-date move
+  (`UpdateTask`, `store.go`), and `due_date_change` log entries are recorded — but the
+  count isn't surfaced anywhere as a tag/badge.
+- The task activity log ships inside `GET /tasks/{id}` (`{task, logs}`) and renders in
+  `pages/Task.tsx`, where the badge would live.
+
+Deliverable: render a "postponed ×N" tag on tasks (driven by `postpone_count`) within
+the activity view. Pure frontend over data that already exists.
 
 ## 20. Per-project user permissions
 
@@ -156,45 +155,23 @@ Left to do / open questions (why it's parked):
 - Whether selectable users are scoped to the current project's members vs. all visible
   users (currently: all visible users).
 
-## 27. Users: allow user deletion
-
-Deferred from the users-page tidy-up (the table / switches / edit-modal parts shipped —
-see changelog). Today an account can only be soft-disabled (cannot log in); there is no
-delete. Add a delete action (in the edit-user modal) that removes the user outright.
-
-This needs a new backend endpoint + `api.deleteUser` (neither exists yet) and a decision
-on what happens to a deleted user's references — authored/assigned tasks, log entries,
-mentions, project/channel memberships. The DB enforces foreign keys (`foreign_keys(on)`
-in `store.go`) with NOT-NULL FKs from `tasks.created_by`, `log_items.user_id`,
-`assets.uploaded_by`, `channels.created_by`, `messages.user_id`, and
-`notifications.recipient_id`, so a user with authored content can't simply be removed.
-Options: block delete unless the user authored nothing (fall back to disable), reassign
-references to a sentinel "[deleted user]" account, or cascade-delete their content. Guard
-against deleting yourself / the last admin, with a confirm step.
-
-## 28. Task comments: show most recent on top
-
-Reverse the task comment order so the newest comment is at the top of the list instead
-of the bottom, surfacing the latest discussion without scrolling to the end.
-
-Current state (starting point):
-- A task's log entries are fetched oldest-first: `GET /tasks/{id}` returns `logs` ordered
-  `created_at, id` ascending (`store.go`, the `log_items WHERE task_id=? ORDER BY
-  created_at, id` query).
-- `pages/Task.tsx` splits them into `comments = logs.filter(type === "note")` and
-  `activity` (the rest), then renders the active list in that same ascending order
-  (the `.map` at the bottom of the activity panel). So comments read oldest → newest.
-
-Deliverable: render comments newest-first. Decide whether this is comments-only or also
-the activity tab; whether to reverse on the frontend (e.g. a reversed copy of `comments`
-in `Task.tsx`, keeping the API ascending) vs. ordering at the query; and where the
-"add comment" composer sits relative to the now top-most newest comment (it currently
-sits under the list).
-
 ## Shipped
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#29** Chat: open files in the Files lightbox — extracted the Files viewer out of
+  `FilesView.tsx` into a shared `components/Lightbox.tsx`, with list navigation (`onMove`)
+  and the admin soft-delete/restore/purge actions made optional props. Chat's `FileRef`
+  (`MessageText.tsx`) now opens a clicked file in that dialog via an `onOpenAsset` callback
+  threaded through `MessageText` → `MessageRow` → the `ChatPage` (uploader name resolved
+  from the chat's user map; no nav/delete in the chat view). The raw-new-tab `<a>` stays as
+  the fallback when no `onOpenAsset` is wired.
+- **#15** Chat: delete messages (admins still see deleted) — soft-delete mirroring the
+  files pattern (#4): `messages.deleted_at` / `deleted_by` columns, a
+  `DELETE /api/channels/{id}/messages/{mid}` route, and role-aware listing. Author or
+  admin may delete; the server redacts the text for non-admins (a "This message was
+  deleted." tombstone) while admins keep the original for audit, rendered prominently —
+  a red **Deleted** badge with who/when, and the preserved text in a red-flagged block.
 - **#26** User job-role label — a free-text `job_role` field (JSON `jobRole`, distinct
   from the access `role`) added to users (migration + create/edit-user + self-profile
   forms + API). A single `displayName(user)` helper in `lib/format.ts` renders
@@ -271,3 +248,9 @@ Done items, newest first — see git history for the full implementation notes.
   & file refs, short-poll realtime.
 - **#4** Files: soft delete with admin purge queue.
 - **#3** Activity log: record structured action details (JSON `details` per action type).
+
+## Cancelled
+
+Dropped items, kept here so their ids aren't reused.
+
+- **#27** Users: allow user deletion — won't do; accounts stay soft-disable-only.

@@ -374,6 +374,10 @@ msgstr "заблоковано цю задачу"
 msgid "by {0}"
 msgstr "автор: {0}"
 
+#: src/pages/Chat.tsx
+msgid "by {deleterName} · {deletedTime}"
+msgstr "ким: {deleterName} · {deletedTime}"
+
 #: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Calendar"
@@ -422,7 +426,7 @@ msgid "Channels"
 msgstr "Канали"
 
 #: src/components/AppLayout.tsx
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Chat"
 msgstr "Чат"
 
@@ -547,6 +551,7 @@ msgid "Dark"
 msgstr "Темна"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/pages/Chat.tsx
 msgid "Delete"
 msgstr "Видалити"
@@ -556,6 +561,7 @@ msgid "Delete message"
 msgstr "Видалити повідомлення"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Delete permanently"
 msgstr "Видалити назавжди"
 
@@ -572,18 +578,19 @@ msgid "Delete this message?"
 msgstr "Видалити це повідомлення?"
 
 #: src/pages/Chat.tsx
-msgid "deleted"
-msgstr "видалено"
+#~ msgid "deleted"
+#~ msgstr "видалено"
 
 #: src/components/FilesView.tsx
+#: src/pages/Chat.tsx
 msgid "Deleted"
-msgstr "Видалені"
+msgstr "Видалено"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Deletion requested"
 msgstr "Запит на видалення"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Deletion requested by {requesterName}"
 msgstr "Запит на видалення від {requesterName}"
 
@@ -622,7 +629,7 @@ msgstr "Документи"
 msgid "Done"
 msgstr "Готово"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Download file"
 msgstr "Завантажити файл"
 
@@ -707,6 +714,7 @@ msgstr "Події"
 
 #: src/components/AppLayout.tsx
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
 msgstr "Файли"
@@ -1021,6 +1029,7 @@ msgid "Postponed"
 msgstr "Відкладено"
 
 #: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 #: src/components/TaskFormDialog.tsx
 #: src/pages/Projects.tsx
 msgid "Project"
@@ -1035,7 +1044,7 @@ msgstr "Дії проєкту"
 #~ msgid "Project not found."
 #~ msgstr "Проєкт не знайдено."
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Project: {projectName}"
 msgstr "Проєкт: {projectName}"
 
@@ -1089,7 +1098,7 @@ msgstr "Скинути"
 msgid "Reset password"
 msgstr "Скинути пароль"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Restore"
 msgstr "Відновити"
 
@@ -1208,7 +1217,7 @@ msgid "Tags"
 msgstr "Теги"
 
 #: src/components/DayCarousel.tsx
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Task"
 msgstr "Задача"
 
@@ -1363,7 +1372,7 @@ msgstr "Завантажити"
 msgid "Upload a file"
 msgstr "Завантажити файл"
 
-#: src/components/FilesView.tsx
+#: src/components/Lightbox.tsx
 msgid "Uploaded by {uploaderName}"
 msgstr "Завантажено: {uploaderName}"
 
