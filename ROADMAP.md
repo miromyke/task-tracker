@@ -119,10 +119,9 @@ Left to do / open questions (why it's parked):
 
 Done items, newest first — see git history for the full implementation notes.
 
-- **#28** Task comments: show most recent on top — comments now render newest-first in
-  `pages/Task.tsx` (a reversed copy of the `note` logs; the API stays ascending). Scope:
-  comments only — the activity history stays chronological — and the composer stays pinned
-  below the scrolling list.
+- **#28** Task comments: show most recent on top — both the comments and the activity
+  history now render newest-first in `pages/Task.tsx` (a reversed copy of each log subset;
+  the API stays ascending). The composer stays pinned below the scrolling list.
 - **#16** Chat: don't expose usernames in mentions — the privacy half was already in
   place (the `@`-autocomplete carries no `@username` sub-label, the composer inserts the
   display name `@Name`, and `resolveMentions` rewrites it to an id-based `@[id]` token on

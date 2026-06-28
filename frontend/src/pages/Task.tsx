@@ -344,13 +344,16 @@ export function TaskPage() {
   }, [taskId]);
 
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
-  // Comments read newest-first so the latest discussion is on top (#28); the API
-  // stays ascending and we reverse a copy here. Activity stays chronological.
+  // Both comments and activity read newest-first so the latest is on top (#28);
+  // the API stays ascending and we reverse a copy of each here.
   const comments = useMemo(
     () => logs.filter((l) => l.type === "note").reverse(),
     [logs]
   );
-  const activity = useMemo(() => logs.filter((l) => l.type !== "note"), [logs]);
+  const activity = useMemo(
+    () => logs.filter((l) => l.type !== "note").reverse(),
+    [logs]
+  );
   // Resolve the blocker's title by cross-referencing the loaded task list.
   const taskTitleById = useMemo(() => new Map(allTasks.map((t) => [t.id, t.title])), [allTasks]);
 
