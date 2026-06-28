@@ -231,17 +231,16 @@ msgid "Admins can manage all users, projects, and files, and bypass every permis
 msgstr "Адміністратори можуть керувати всіма користувачами, проєктами та файлами й обходять усі дозволи. Це потужні права."
 
 #: src/components/FilesView.tsx
-#: src/pages/Projects.tsx
 msgid "All"
 msgstr "Усі"
 
 #: src/pages/Projects.tsx
-msgid "All events"
-msgstr "Усі події"
+#~ msgid "All events"
+#~ msgstr "Усі події"
 
 #: src/pages/Projects.tsx
-msgid "All files"
-msgstr "Усі файли"
+#~ msgid "All files"
+#~ msgstr "Усі файли"
 
 #: src/pages/Projects.tsx
 msgid "All projects"
@@ -256,8 +255,8 @@ msgid "All tags"
 msgstr "Усі теги"
 
 #: src/pages/Projects.tsx
-msgid "All tasks"
-msgstr "Усі задачі"
+#~ msgid "All tasks"
+#~ msgstr "Усі задачі"
 
 #: src/components/DayCarousel.tsx
 msgid "Also today"
@@ -375,6 +374,7 @@ msgstr "заблоковано цю задачу"
 msgid "by {0}"
 msgstr "автор: {0}"
 
+#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Calendar"
 msgstr "Календар"
@@ -680,11 +680,16 @@ msgstr "відредаговано задачу"
 msgid "Enable"
 msgstr "Увімкнути"
 
+#: src/pages/Projects.tsx
+msgid "Events"
+msgstr "Події"
+
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Events for {0}"
-msgstr "Події для {0}"
+#~ msgid "Events for {0}"
+#~ msgstr "Події для {0}"
 
+#: src/components/AppLayout.tsx
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
@@ -692,8 +697,8 @@ msgstr "Файли"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Files for {0}"
-msgstr "Файли для {0}"
+#~ msgid "Files for {0}"
+#~ msgstr "Файли для {0}"
 
 #: src/pages/Projects.tsx
 msgid "Filter"
@@ -849,7 +854,6 @@ msgid "Name"
 msgstr "Назва"
 
 #: src/pages/Chat.tsx
-#: src/pages/Projects.tsx
 msgid "New"
 msgstr "Новий"
 
@@ -998,7 +1002,6 @@ msgid "Project: {projectName}"
 msgstr "Проєкт: {projectName}"
 
 #: src/components/AppLayout.tsx
-#: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Проєкти"
 
@@ -1171,14 +1174,15 @@ msgstr "Задачу завершено"
 msgid "Task not found."
 msgstr "Задачу не знайдено."
 
+#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Tasks"
 msgstr "Задачі"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Tasks for {0}"
-msgstr "Задачі для {0}"
+#~ msgid "Tasks for {0}"
+#~ msgstr "Задачі для {0}"
 
 #: src/pages/Chat.tsx
 msgid "Team-wide chat"

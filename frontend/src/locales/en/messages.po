@@ -231,7 +231,6 @@ msgid "Admins can manage all users, projects, and files, and bypass every permis
 msgstr "Admins can manage all users, projects, and files, and bypass every permission. This is a powerful grant."
 
 #: src/components/FilesView.tsx
-#: src/pages/Projects.tsx
 msgid "All"
 msgstr "All"
 
@@ -240,12 +239,12 @@ msgstr "All"
 #~ msgstr "All criteria must be checked before a task can be marked done."
 
 #: src/pages/Projects.tsx
-msgid "All events"
-msgstr "All events"
+#~ msgid "All events"
+#~ msgstr "All events"
 
 #: src/pages/Projects.tsx
-msgid "All files"
-msgstr "All files"
+#~ msgid "All files"
+#~ msgstr "All files"
 
 #: src/pages/Projects.tsx
 msgid "All projects"
@@ -260,8 +259,8 @@ msgid "All tags"
 msgstr "All tags"
 
 #: src/pages/Projects.tsx
-msgid "All tasks"
-msgstr "All tasks"
+#~ msgid "All tasks"
+#~ msgstr "All tasks"
 
 #: src/components/DayCarousel.tsx
 msgid "Also today"
@@ -379,6 +378,7 @@ msgstr "blocked this task"
 msgid "by {0}"
 msgstr "by {0}"
 
+#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Calendar"
 msgstr "Calendar"
@@ -684,11 +684,16 @@ msgstr "edited this task"
 msgid "Enable"
 msgstr "Enable"
 
+#: src/pages/Projects.tsx
+msgid "Events"
+msgstr "Events"
+
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Events for {0}"
-msgstr "Events for {0}"
+#~ msgid "Events for {0}"
+#~ msgstr "Events for {0}"
 
+#: src/components/AppLayout.tsx
 #: src/components/FilesView.tsx
 #: src/pages/Projects.tsx
 msgid "Files"
@@ -696,8 +701,8 @@ msgstr "Files"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Files for {0}"
-msgstr "Files for {0}"
+#~ msgid "Files for {0}"
+#~ msgstr "Files for {0}"
 
 #: src/pages/Projects.tsx
 msgid "Filter"
@@ -853,7 +858,6 @@ msgid "Name"
 msgstr "Name"
 
 #: src/pages/Chat.tsx
-#: src/pages/Projects.tsx
 msgid "New"
 msgstr "New"
 
@@ -1002,7 +1006,6 @@ msgid "Project: {projectName}"
 msgstr "Project: {projectName}"
 
 #: src/components/AppLayout.tsx
-#: src/pages/Projects.tsx
 msgid "Projects"
 msgstr "Projects"
 
@@ -1175,14 +1178,15 @@ msgstr "Task completed"
 msgid "Task not found."
 msgstr "Task not found."
 
+#: src/components/AppLayout.tsx
 #: src/pages/Projects.tsx
 msgid "Tasks"
 msgstr "Tasks"
 
 #. placeholder {0}: selectedProject.name
 #: src/pages/Projects.tsx
-msgid "Tasks for {0}"
-msgstr "Tasks for {0}"
+#~ msgid "Tasks for {0}"
+#~ msgstr "Tasks for {0}"
 
 #: src/pages/Chat.tsx
 msgid "Team-wide chat"

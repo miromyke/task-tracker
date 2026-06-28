@@ -1,9 +1,9 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { FolderKanban, LogOut, MessageCircle, Pencil, Upload, Users } from "lucide-react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { CalendarDays, FolderKanban, Images, ListTodo, LogOut, MessageCircle, Pencil, Upload, Users } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { useAuth } from "@/context/auth";
-import { api } from "@/lib/api";
+import { api, can } from "@/lib/api";
 import { activateLocale, LOCALES, type Locale } from "@/i18n";
 import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -13,12 +13,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
@@ -189,9 +183,8 @@ function AccountDialog() {
   );
 }
 
-// NavLink is a nav link that adapts to the layout: on the desktop rail it's an
-// icon-only square with a hover tooltip; on the mobile top bar it shows the label
-// as inline text (tooltips don't work on touch) with no tooltip.
+// NavLink shows an icon + text label inline, both on the mobile top bar and on
+// the wide desktop rail (the rail stretches each link full-width).
 function NavLink({
   to,
   label,
@@ -204,25 +197,43 @@ function NavLink({
   children: ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          to={to}
-          aria-label={label}
-          className={cn(
-            "flex h-9 items-center gap-2 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-9 sm:justify-center sm:px-0",
-            active && "bg-muted text-foreground"
-          )}
-        >
-          {children}
-          <span className="sm:hidden">{label}</span>
-        </Link>
-      </TooltipTrigger>
-      {/* Tooltip only on the desktop rail; the mobile bar shows the label inline. */}
-      <TooltipContent side="right" className="hidden sm:block">
-        {label}
-      </TooltipContent>
-    </Tooltip>
+    <Link
+      to={to}
+      className={cn(
+        "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:w-full",
+        active && "bg-muted text-foreground"
+      )}
+    >
+      {children}
+      <span>{label}</span>
+    </Link>
+  );
+}
+
+// SubNavLink is an indented child of a NavLink — used for the Projects views
+// (Tasks / Calendar / Files) submenu on the desktop rail.
+function SubNavLink({
+  to,
+  label,
+  active,
+  children,
+}: {
+  to: string;
+  label: string;
+  active: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex h-8 items-center gap-2 rounded-md px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+        active && "bg-muted text-foreground"
+      )}
+    >
+      {children}
+      <span>{label}</span>
+    </Link>
   );
 }
 
@@ -230,29 +241,57 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { t } = useLingui();
   const { user } = useAuth();
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const chatActive = pathname.startsWith("/chat");
   const usersActive = pathname.startsWith("/users");
   const projectsActive = !chatActive && !usersActive;
+
+  // The Projects views (Tasks / Calendar / Files) are driven by `?view=` so the
+  // rail submenu can switch them; each link preserves the selected project.
+  const currentView = searchParams.get("view") ?? "board";
+  const projectParam = searchParams.get("project");
+  const canViewReporting = can(user, "viewReporting");
+  function viewHref(view: "board" | "calendar" | "files") {
+    const params = new URLSearchParams();
+    if (projectParam) params.set("project", projectParam);
+    if (view !== "board") params.set("view", view);
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+  }
   return (
     <div className="flex h-full flex-col sm:flex-row">
-      {/* Mobile: top bar. Desktop (sm+): left rail. */}
-      <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:h-full sm:w-16 sm:flex-col sm:border-b-0 sm:border-r sm:px-0 sm:py-4">
-        <TooltipProvider delayDuration={300}>
-          <div className="flex items-center gap-1 sm:flex-col sm:gap-2">
-            <NavLink to="/" label={t`Projects`} active={projectsActive}>
-              <FolderKanban className="h-5 w-5" />
-            </NavLink>
-            <NavLink to="/chat" label={t`Chat`} active={chatActive}>
-              <MessageCircle className="h-5 w-5" />
-            </NavLink>
-            {user?.role === "admin" && (
-              <NavLink to="/users" label={t`Users`} active={usersActive}>
-                <Users className="h-5 w-5" />
-              </NavLink>
+      {/* Mobile: top bar. Desktop (sm+): wide left rail with labelled links. */}
+      <nav className="z-30 flex h-14 w-full shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur sm:h-full sm:w-52 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r sm:px-3 sm:py-4">
+        <div className="flex items-center gap-1 sm:flex-col sm:items-stretch sm:gap-1">
+          <NavLink to="/" label={t`Projects`} active={projectsActive}>
+            <FolderKanban className="h-5 w-5 shrink-0" />
+          </NavLink>
+          {/* Projects views submenu — always expanded on the desktop rail;
+              mobile/tablet use the in-page tabs. An item is only "active" when
+              you're actually on the Projects route. */}
+          <div className="ml-4 hidden flex-col gap-0.5 border-l pl-2 lg:flex">
+            <SubNavLink to={viewHref("board")} label={t`Tasks`} active={projectsActive && currentView === "board"}>
+              <ListTodo className="h-4 w-4 shrink-0" />
+            </SubNavLink>
+            {canViewReporting && (
+              <SubNavLink to={viewHref("calendar")} label={t`Calendar`} active={projectsActive && currentView === "calendar"}>
+                <CalendarDays className="h-4 w-4 shrink-0" />
+              </SubNavLink>
             )}
+            <SubNavLink to={viewHref("files")} label={t`Files`} active={projectsActive && currentView === "files"}>
+              <Images className="h-4 w-4 shrink-0" />
+            </SubNavLink>
           </div>
-        </TooltipProvider>
-        <div className="flex items-center gap-1 sm:flex-col sm:gap-2">
+          <NavLink to="/chat" label={t`Chat`} active={chatActive}>
+            <MessageCircle className="h-5 w-5 shrink-0" />
+          </NavLink>
+          {user?.role === "admin" && (
+            <NavLink to="/users" label={t`Users`} active={usersActive}>
+              <Users className="h-5 w-5 shrink-0" />
+            </NavLink>
+          )}
+        </div>
+        <div className="flex items-center gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <NotificationBell />
           <AccountDialog />
         </div>

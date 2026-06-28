@@ -199,35 +199,6 @@ Left to do / open questions (why it's parked):
 - Whether selectable users are scoped to the current project's members vs. all visible
   users (currently: all visible users).
 
-## 25. Restructure the desktop layout of the main projects page
-
-Rework the desktop projects page from its current two-column shape into a single
-full-width column, lifting the project selector up to sit on the tab row and moving the
-tag filter next to "Add task".
-
-Planned changes:
-- **Project selector → dropdown, aligned with the tabs.** Replace the dedicated
-  left-hand project column with a project dropdown lifted up onto the tab row (Tasks /
-  Calendar / Files), rather than occupying its own column.
-- **Tag filter next to "Add task".** Move the tag filter out of its current spot and
-  place it alongside the "Add task" button.
-- **Pulse + tasks board span the full width.** With the project selector no longer a
-  separate column, the layout becomes a single column — the pulse and the tasks board
-  take up the full available width.
-- **Heading: "Tasks" instead of "Tasks for …".** Drop the project name from the board
-  heading (`<Trans>Tasks for {selectedProject.name}</Trans>` in `Projects.tsx`) — now
-  that the selected project is shown in the dropdown, the heading is just "Tasks".
-- **Don't truncate the project title in the selector.** The current project tile
-  truncates the name (`truncate` on the label in `ProjectTile`); in the new dropdown,
-  show the full project title rather than clipping it.
-- **Highlight the selector when "All projects" is selected.** Make the "All projects"
-  state more noticeable by visually highlighting the selector (it's easy to miss that
-  no single project is filtered), so it's clear you're looking across all projects.
-
-> Scope note: desktop only — the mobile projects view already collapsed project + tag
-> selection into one compact selector above the tabs (#13). This brings the desktop
-> layout closer to that single-column shape.
-
 ## 26. Users: add a "role" label shown after the name
 
 Give a user a free-text **role** (e.g. their job/function — "Architect", "Foreman"),
@@ -307,6 +278,13 @@ disable as the soft option); and keep the existing admin/self guards intact.
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#25** Desktop projects page restructured into a single full-width column. The
+  left-hand project column became a project dropdown lifted onto the tab row (full title,
+  no clipping; highlighted when "All projects" is active), carrying the show-archived
+  toggle + New project action the sidebar used to hold. The tag filter moved next to "Add
+  task" in the content header; the pulse and board now span the full width. The board
+  heading dropped the project name ("Tasks" / "Events" / "Files" — the selector shows the
+  project). Desktop only; the mobile selector/FilterDialog path (#13) is unchanged.
 - **#14** Personalized notifications — per-user `notifications` table fanned out on three
   triggers: chat @-mentions (parsed server-side in `handlePostMessage`), activity on tasks
   you created or are assigned (coalesced per (recipient, task) while unread — "N updates"),
