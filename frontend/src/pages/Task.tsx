@@ -262,7 +262,13 @@ function LogEntry({
   const showText = log.text && (isNote || log.type === "status_change");
   return (
     <div className="flex gap-3">
-      <UserAvatar name={name} avatarPath={user?.avatarPath} className="mt-0.5 h-8 w-8 text-[10px]" />
+      <UserAvatar
+        name={user?.name ?? name}
+        firstName={user?.firstName}
+        surname={user?.surname}
+        avatarPath={user?.avatarPath}
+        className="mt-0.5 h-8 w-8 text-[10px]"
+      />
       <div className="min-w-0 flex-1">
         <div className="text-sm">
           <span className="font-medium">{name}:</span>{" "}
