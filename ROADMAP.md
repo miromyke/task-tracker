@@ -174,29 +174,30 @@ removed member's task assignments); and how this composes with admin bypass and 
 Let the activity pulse and calendar be narrowed to a single user, so you can see just
 one person's activity instead of everyone's. Mirrors the existing project/tag filters.
 
-Current state (starting point):
-- Pulse and calendar already filter by project and tag, but not by user. The store
-  queries (`LogsInRange`, `ProjectLogsSince`, `DayEvents` in `calendar.go`) take
-  `tag`, `projectID`, `includeArchived`, and a membership `scope []int64`, but no
-  actor/user dimension — they aggregate every member's logs in range.
-- The actor is already joined in: the day query does `JOIN users u ON u.id =
-  li.user_id` and each `DayEvent` carries `UserName` (`calendar.go`). So the log rows
-  know who acted; nothing filters on it.
-- The handlers read filters from query params (`handlePulse`/`handleCalendar`/
-  `handleCalendarDay` parse `?project=`, `tag`, `archived=1`); a `?user=<id>` param
-  would slot in alongside, gated by the existing `capViewReporting` capability and
-  membership `scope`.
-- Frontend: `api.getPulse` / `api.getCalendar` / `api.getCalendarDay` (`lib/api.ts`)
-  and `CalendarView` (`projectId` + `tag` props, refetch on change) carry the existing
-  filters — a user selector would thread through the same way.
+> **Status: parked (partially built).** WIP is archived on branch
+> `roadmap-24-user-filter` (not merged). Resume from there rather than restarting.
 
-Deliverable: add an optional user filter to pulse + calendar — a `?user=<id>` param
-threaded through `LogsInRange`/`ProjectLogsSince`/`DayEvents`, the three reporting
-handlers, the `api` calls, and a user selector in the shared calendar/pulse filter UI
-(alongside project + tag). Decide: scope the selectable users to the current project's
-members (when a project is selected) vs. all users you can see; whether to filter on the
-log actor (`user_id`) only, or also surface a task's assignee; and how it composes with
-the existing project/tag filters (all AND-ed).
+Done so far (on the branch):
+- **Backend — complete.** An optional `?user=<id>` actor filter is threaded through the
+  reporting store queries (`LogsInRange`, `ProjectLogsSince`, `DayEvents`,
+  `DayMinorEvents`) and the calendar/pulse handlers, gated by the existing
+  `view_reporting` capability + membership scope (a non-member's logs can't leak — the
+  project scope still constrains it). `api.getPulse`/`getCalendar`/`getCalendarDay` carry
+  a `userId`.
+- **Frontend — partial.** A "User" selector is surfaced on the **calendar view only**
+  (desktop sidebar under Tags + the mobile filter sheet), populated from the visible user
+  list and AND-ed with the project/tag/archived filters; it scopes the calendar heatmap
+  and the day-carousel drill-down.
+
+Left to do / open questions (why it's parked):
+- **Pulse has no UI control yet.** The pulse renders as a summary card inside the *board*
+  view, which isn't itself user-filtered; the backend `?user=` param is wired but no
+  selector is surfaced there. Decide whether to add one (and what scoping the board pulse
+  to a user should mean) vs. keeping the filter calendar-only.
+- **Calendar placement.** The selector currently sits in the sidebar under Tags; consider
+  a filter bar atop the calendar (next to the month nav) so it's more discoverable.
+- Whether selectable users are scoped to the current project's members vs. all visible
+  users (currently: all visible users).
 
 ## Shipped
 
