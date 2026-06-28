@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatDateTime } from "@/lib/format";
+import { displayName, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Sentinel for the "No project" choice in the upload picker (Select needs a
@@ -606,12 +606,16 @@ export function FilesView({
           index={lightbox}
           pending={pending}
           isAdmin={!!isAdmin}
-          requesterName={
-            assets[lightbox].deletionRequestedBy
-              ? usersById?.get(assets[lightbox].deletionRequestedBy!)?.name
-              : undefined
-          }
-          uploaderName={usersById?.get(assets[lightbox].uploadedBy)?.name}
+          requesterName={(() => {
+            const u = assets[lightbox].deletionRequestedBy
+              ? usersById?.get(assets[lightbox].deletionRequestedBy!)
+              : undefined;
+            return u ? displayName(u) : undefined;
+          })()}
+          uploaderName={(() => {
+            const u = usersById?.get(assets[lightbox].uploadedBy);
+            return u ? displayName(u) : undefined;
+          })()}
           projectName={
             assets[lightbox].projectId
               ? projects.find((p) => p.id === assets[lightbox].projectId)?.name

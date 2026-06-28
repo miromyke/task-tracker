@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, CalendarDays, ChevronDown, FolderKanban, Folde
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, ApiError, can, criteriaMet, type AssetKind, type Project, type Pulse, type Status, type Task, type User } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { displayName } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { PulseCard } from "@/components/PulseCard";
@@ -193,7 +194,7 @@ function ManageMembersDialog({
               <SelectContent>
                 {candidates.map((u) => (
                   <SelectItem key={u.id} value={String(u.id)}>
-                    {u.name}
+                    {displayName(u)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -222,7 +223,7 @@ function ManageMembersDialog({
                       avatarPath={m.avatarPath}
                       className="h-7 w-7"
                     />
-                    <span className="truncate text-sm">{m.name}</span>
+                    <span className="truncate text-sm">{displayName(m)}</span>
                     {isAuthor && (
                       <span className="shrink-0 text-xs text-muted-foreground">
                         <Trans>author</Trans>

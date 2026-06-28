@@ -7,6 +7,7 @@ import { api, can } from "@/lib/api";
 import { activateLocale, LOCALES, type Locale } from "@/i18n";
 import { getStoredTheme, setTheme, type Theme } from "@/lib/theme";
 import { UserAvatar } from "@/components/UserAvatar";
+import { displayName } from "@/lib/format";
 import { ChangePasswordDialog } from "@/components/UserManagement";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ function AccountDialog() {
   const [editingName, setEditingName] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [surname, setSurname] = useState(user?.surname ?? "");
+  const [jobRole, setJobRole] = useState(user?.jobRole ?? "");
   if (!user) return null;
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -49,7 +51,11 @@ function AccountDialog() {
   async function saveName() {
     setBusy(true);
     try {
-      const updated = await api.updateProfile({ firstName: firstName.trim(), surname: surname.trim() });
+      const updated = await api.updateProfile({
+        firstName: firstName.trim(),
+        surname: surname.trim(),
+        jobRole: jobRole.trim(),
+      });
       setUser(updated);
       setEditingName(false);
     } finally {
@@ -89,6 +95,11 @@ function AccountDialog() {
                 />
                 <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
               </div>
+              <Input
+                placeholder={t`Job title (e.g. Architect)`}
+                value={jobRole}
+                onChange={(e) => setJobRole(e.target.value)}
+              />
               <div className="flex justify-center gap-2">
                 <Button size="sm" disabled={busy || (!firstName.trim() && !surname.trim())} onClick={saveName}>
                   <Trans>Save</Trans>
@@ -114,7 +125,7 @@ function AccountDialog() {
                 onClick={() => setEditingName(true)}
                 className="inline-flex items-center gap-1 font-medium hover:text-primary"
               >
-                {user.name}
+                {displayName(user)}
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
               <div className="text-sm text-muted-foreground">@{user.username}</div>

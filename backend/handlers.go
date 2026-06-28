@@ -276,6 +276,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		Username  string `json:"username"`
 		FirstName string `json:"firstName"`
 		Surname   string `json:"surname"`
+		JobRole   string `json:"jobRole"`
 		Password  string `json:"password"`
 		Role      string `json:"role"`
 	}
@@ -286,6 +287,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(req.Username)
 	firstName := strings.TrimSpace(req.FirstName)
 	surname := strings.TrimSpace(req.Surname)
+	jobRole := strings.TrimSpace(req.JobRole)
 	if username == "" {
 		writeErr(w, http.StatusBadRequest, "username is required")
 		return
@@ -310,7 +312,7 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	user, err := s.store.CreateUser(username, firstName, surname, role, hash)
+	user, err := s.store.CreateUser(username, firstName, surname, jobRole, role, hash)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
@@ -333,6 +335,7 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		Password     *string       `json:"password"`
 		FirstName    *string       `json:"firstName"`
 		Surname      *string       `json:"surname"`
+		JobRole      *string       `json:"jobRole"`
 		Role         *string       `json:"role"`
 		Disabled     *bool         `json:"disabled"`
 		Capabilities *Capabilities `json:"capabilities"`
@@ -357,6 +360,12 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.store.SetName(id, first, surname); err != nil {
+			writeErr(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if req.JobRole != nil {
+		if err := s.store.SetJobRole(id, strings.TrimSpace(*req.JobRole)); err != nil {
 			writeErr(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -435,11 +444,13 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, currentUser(r))
 }
 
-// handleUpdateProfile lets the signed-in user edit their own structured name (#19).
+// handleUpdateProfile lets the signed-in user edit their own structured name (#19)
+// and job-role label (#26).
 func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		FirstName string `json:"firstName"`
 		Surname   string `json:"surname"`
+		JobRole   string `json:"jobRole"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid body")
@@ -453,6 +464,10 @@ func (s *Server) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	me := currentUser(r)
 	if err := s.store.SetName(me.ID, first, surname); err != nil {
+		writeErr(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.store.SetJobRole(me.ID, strings.TrimSpace(req.JobRole)); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}

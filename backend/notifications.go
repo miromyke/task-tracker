@@ -25,6 +25,7 @@ var mentionRE = regexp.MustCompile(`@\[(\d+)\]|@([A-Za-z0-9_.-]+)`)
 type NotifActor struct {
 	ID         int64   `json:"id"`
 	Name       string  `json:"name"`
+	JobRole    string  `json:"jobRole"`
 	AvatarPath *string `json:"avatarPath"`
 }
 
@@ -86,7 +87,7 @@ func (s *Store) ListNotifications(recipient int64, limit int) ([]NotificationVie
 	rows, err := s.db.Query(
 		`SELECT n.id, n.type, n.count, n.created_at, n.updated_at, n.read_at,
 		        n.task_id, t.title, n.channel_id, c.name, n.message_id,
-		        n.actor_id, u.name, u.avatar_path
+		        n.actor_id, u.name, u.job_role, u.avatar_path
 		 FROM notifications n
 		 LEFT JOIN tasks t    ON t.id = n.task_id
 		 LEFT JOIN channels c ON c.id = n.channel_id
@@ -101,11 +102,11 @@ func (s *Store) ListNotifications(recipient int64, limit int) ([]NotificationVie
 	out := []NotificationView{}
 	for rows.Next() {
 		var v NotificationView
-		var readAt, taskTitle, channelName, actorName, actorAvatar sql.NullString
+		var readAt, taskTitle, channelName, actorName, actorJobRole, actorAvatar sql.NullString
 		var taskID, channelID, messageID, actorID sql.NullInt64
 		if err := rows.Scan(&v.ID, &v.Type, &v.Count, &v.CreatedAt, &v.UpdatedAt, &readAt,
 			&taskID, &taskTitle, &channelID, &channelName, &messageID,
-			&actorID, &actorName, &actorAvatar); err != nil {
+			&actorID, &actorName, &actorJobRole, &actorAvatar); err != nil {
 			return nil, err
 		}
 		v.Read = readAt.Valid
@@ -125,7 +126,7 @@ func (s *Store) ListNotifications(recipient int64, limit int) ([]NotificationVie
 			v.MessageID = &messageID.Int64
 		}
 		if actorID.Valid {
-			a := &NotifActor{ID: actorID.Int64, Name: actorName.String}
+			a := &NotifActor{ID: actorID.Int64, Name: actorName.String, JobRole: actorJobRole.String}
 			if actorAvatar.Valid {
 				a.AvatarPath = &actorAvatar.String
 			}

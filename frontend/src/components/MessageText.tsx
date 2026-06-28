@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { FileText, Hash } from "lucide-react";
 import type { Asset, Task, User } from "@/lib/api";
+import { displayName } from "@/lib/format";
 
 // Resolution maps passed down from the chat page. Messages store raw tokens; we
 // resolve them at render time so stored text stays language-neutral and survives
@@ -79,12 +80,12 @@ export function MessageText({ text, refs }: { text: string; refs: RefMaps }) {
       // @[id] — id-based mention
       const id = Number(token.slice(2, -1));
       const user = refs.usersById[id];
-      out.push(user ? <Mention key={key++} name={user.name} /> : <Fragment key={key++}>{token}</Fragment>);
+      out.push(user ? <Mention key={key++} name={displayName(user)} /> : <Fragment key={key++}>{token}</Fragment>);
     } else if (m[2]) {
       // @username — legacy mention
       const username = token.slice(1);
       const user = refs.usersByUsername[username];
-      out.push(user ? <Mention key={key++} name={user.name} /> : <Fragment key={key++}>{token}</Fragment>);
+      out.push(user ? <Mention key={key++} name={displayName(user)} /> : <Fragment key={key++}>{token}</Fragment>);
     } else if (m[3]) {
       // #file<id>
       const id = Number(token.slice(5));

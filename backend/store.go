@@ -32,6 +32,9 @@ type User struct {
 	Name       string       `json:"name"`
 	FirstName  string       `json:"firstName"`
 	Surname    string       `json:"surname"`
+	// JobRole is a free-text job/function label shown after the name (#26), e.g.
+	// "Architect". Distinct from Role (the admin/member access role).
+	JobRole    string       `json:"jobRole"`
 	AvatarPath *string      `json:"avatarPath"`
 	Role       string       `json:"role"`     // "admin" | "member"
 	Disabled   bool         `json:"disabled"` // soft-disabled: cannot log in
@@ -448,6 +451,11 @@ func (s *Store) Migrate() error {
 	if err := s.addColumnIfMissing("users", "surname", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
+	// job_role is a free-text label (job/function, e.g. "Architect") shown after
+	// the display name (#26) — distinct from the access `role` column.
+	if err := s.addColumnIfMissing("users", "job_role", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	if err := s.addColumnIfMissing("users", "disabled", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
@@ -764,7 +772,7 @@ func dueDisplay(p *string) string {
 
 // ---- Users ----
 
-const userCols = "id, username, name, first_name, surname, avatar_path, role, disabled, " +
+const userCols = "id, username, name, first_name, surname, job_role, avatar_path, role, disabled, " +
 	"cap_manage_projects, cap_view_reporting, cap_view_history, password_hash"
 
 type scanner interface{ Scan(dest ...any) error }
@@ -778,7 +786,7 @@ func composeName(firstName, surname string) string {
 func scanUser(sc scanner) (*User, error) {
 	var u User
 	var avatar, hash sql.NullString
-	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &u.FirstName, &u.Surname, &avatar, &u.Role, &u.Disabled,
+	if err := sc.Scan(&u.ID, &u.Username, &u.Name, &u.FirstName, &u.Surname, &u.JobRole, &avatar, &u.Role, &u.Disabled,
 		&u.Caps.ManageProjects, &u.Caps.ViewReporting, &u.Caps.ViewHistory, &hash); err != nil {
 		return nil, err
 	}
@@ -814,13 +822,13 @@ func (s *Store) EnsureAdmin(username, name, passwordHash string) error {
 }
 
 // CreateUser inserts a new member with the given password hash. The display name
-// is composed from firstName + surname (#19).
-func (s *Store) CreateUser(username, firstName, surname, role, passwordHash string) (*User, error) {
+// is composed from firstName + surname (#19); jobRole is the optional label (#26).
+func (s *Store) CreateUser(username, firstName, surname, jobRole, role, passwordHash string) (*User, error) {
 	now := nowUTC()
 	res, err := s.db.Exec(
-		`INSERT INTO users (username, name, first_name, surname, role, disabled, password_hash, created_at)
-		 VALUES (?,?,?,?,?,0,?,?)`,
-		username, composeName(firstName, surname), firstName, surname, role, passwordHash, now)
+		`INSERT INTO users (username, name, first_name, surname, job_role, role, disabled, password_hash, created_at)
+		 VALUES (?,?,?,?,?,?,0,?,?)`,
+		username, composeName(firstName, surname), firstName, surname, jobRole, role, passwordHash, now)
 	if err != nil {
 		return nil, err
 	}
@@ -833,6 +841,12 @@ func (s *Store) SetName(id int64, firstName, surname string) error {
 	_, err := s.db.Exec(
 		"UPDATE users SET first_name=?, surname=?, name=? WHERE id=?",
 		firstName, surname, composeName(firstName, surname), id)
+	return err
+}
+
+// SetJobRole updates a user's free-text job-role label (#26).
+func (s *Store) SetJobRole(id int64, jobRole string) error {
+	_, err := s.db.Exec("UPDATE users SET job_role=? WHERE id=?", jobRole, id)
 	return err
 }
 

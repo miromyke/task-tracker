@@ -25,6 +25,15 @@ export function avatarInitials(firstName?: string, surname?: string, name = ""):
   return initials(name);
 }
 
+// displayName renders a user's name with their job-role label in round braces
+// when set (#26) — "Jane Doe (Architect)" — and just the name when it's empty.
+// The single source of truth so every consumer formats the suffix the same way.
+// Accepts a minimal shape so partial payloads (notification actor, etc.) work.
+export function displayName(u: { name: string; jobRole?: string | null }): string {
+  const role = (u.jobRole ?? "").trim();
+  return role ? `${u.name} (${role})` : u.name;
+}
+
 // Deterministic background color for an initials avatar.
 const AVATAR_COLORS = [
   "bg-rose-200 text-rose-800",

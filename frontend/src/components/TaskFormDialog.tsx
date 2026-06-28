@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatShortDate } from "@/lib/format";
+import { displayName, formatShortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -462,7 +462,7 @@ export function TaskFormDialog({ open, onOpenChange, projectId, projects, task, 
                   </SelectItem>
                   {assignableUsers.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
-                      {u.name}
+                      {displayName(u)}
                     </SelectItem>
                   ))}
                 </SelectContent>

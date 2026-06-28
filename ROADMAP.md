@@ -67,28 +67,6 @@ changing the stored token format and the `TOKEN_RE` + `usersByUsername` resoluti
 `MessageText.tsx`; or keep the `@username` token internally and only change what's
 displayed.
 
-## 19. Users: separate surname, initials-aware avatars
-
-Give users a structured surname (first + last name) instead of one free-form name, and
-derive avatar initials from it explicitly.
-
-Current state (starting point):
-- A user has a single display field: `users.name` (`store.go`), alongside `username`.
-  There is no separate first/last name. Names are set in user management (admin create
-  + the profile "Display name" field).
-- Avatar initials are derived heuristically from that one string by `initials()` in
-  `lib/format.ts`: split on whitespace, take the first letter of the first and last
-  word (or the first two chars for a single word). It already yields two letters for a
-  two-word name, but it's a guess over a free-form string, not a real first/last split
-  (`UserAvatar.tsx` calls `initials(name)`).
-
-Deliverable: add a surname field to users (schema column + create/edit-user and profile
-forms + API), and compute avatar initials from first name + surname directly rather than
-the whitespace heuristic. Decide: best-effort split of existing `name` values into
-first/last on migration vs. keeping `name` as the display value and adding `surname`
-alongside; whether surname is required; and how the full name renders everywhere it's
-shown (mentions, assignee, activity log, member lists).
-
 ## 20. Per-project user permissions
 
 Let a project manager grant permissions to a project's members per-project, so what a
@@ -120,27 +98,6 @@ baseline, per-project can extend within that project); what a "project manager" 
 manager; how it composes with admin bypass; and the exact permission set (reuse
 manage_projects / view_reporting / view_history per-project, or a project-specific list
 like manage-members / edit-tasks / view-reporting).
-
-## 21. Admin can promote others to admin
-
-Let an admin grant the admin role to another user (and revoke it) from user management.
-
-Current state (starting point):
-- The backend already supports the role change: `handleUpdateUser` accepts a `role` field
-  and calls `SetRole` (`store.go`), promoting to `roleAdmin` or demoting to `roleMember`,
-  guarded against self-demotion ("cannot change your own role"). `api.updateUser` already
-  takes `role?` (`lib/api.ts`).
-- The gap is purely UI: the user-management page (`UserManagement.tsx`) shows an "admin"
-  badge on admins but exposes no control to change the role — `UserRow` only offers reset
-  password, enable/disable, and the per-user capability toggles (#17). Capability toggles
-  are deliberately hidden for admins, since admins bypass capabilities.
-
-Deliverable: add a "Make admin" / "Revoke admin" action to `UserRow` (admin-only, hidden
-on your own row to respect the self-demotion guard), wired through the existing
-`api.updateUser({ role })`. Decide: a confirm step for promotion (it's a powerful grant);
-whether to keep at least one admin (block demoting the last admin, server-side); and how the
-admin action sits alongside the capability toggles now that an admin implicitly holds all
-capabilities.
 
 ## 23. Chat: invite users to a channel
 
@@ -199,34 +156,6 @@ Left to do / open questions (why it's parked):
 - Whether selectable users are scoped to the current project's members vs. all visible
   users (currently: all visible users).
 
-## 26. Users: add a "role" label shown after the name
-
-Give a user a free-text **role** (e.g. their job/function — "Architect", "Foreman"),
-stored alongside `first_name` / `surname` (#19), and show it in round braces after the
-display name everywhere a user name appears — e.g. `Jane Doe (Architect)`.
-
-> Naming caution: `users.role` is already taken — it's the access role (`"admin"` /
-> `"member"`, see the `User.Role` field in `store.go`). This new label needs a distinct
-> column/field name (e.g. `title`, `position`, or `job_role`) so it doesn't collide with
-> the admin/member role.
-
-Current state (starting point):
-- A user is `username` + the structured `first_name` / `surname` with a denormalized
-  `name` display field (`User` in `store.go`, `userCols`). There is no job/role label.
-- The display name is rendered in many places, all reading `user.name` — assignee on
-  the board (`KanbanBoard.tsx`), mentions (`MessageText.tsx`), member/user lists
-  (`UserManagement.tsx`), activity (`DayCarousel.tsx`), notifications
-  (`NotificationBell.tsx`), the account menu (`AppLayout.tsx`). A "(role)" suffix would
-  need to appear consistently across these.
-
-Deliverable: add the label field (schema column + create/edit-user and profile forms +
-API), and render it in round braces after the name wherever a user name is shown.
-Decide: whether to centralize the "name (role)" formatting in one helper (e.g. extend
-`lib/format.ts`) so every consumer stays consistent rather than concatenating ad hoc;
-whether the role is free-text or a fixed list; whether it's optional (omit the braces
-entirely when empty); and whether it appears in compact contexts like mentions/avatars
-or only in fuller lists.
-
 ## 27. Users: allow user deletion
 
 Deferred from the users-page tidy-up (the table / switches / edit-modal parts shipped —
@@ -247,6 +176,21 @@ against deleting yourself / the last admin, with a confirm step.
 
 Done items, newest first — see git history for the full implementation notes.
 
+- **#26** User job-role label — a free-text `job_role` field (JSON `jobRole`, distinct
+  from the access `role`) added to users (migration + create/edit-user + self-profile
+  forms + API). A single `displayName(user)` helper in `lib/format.ts` renders
+  `Name (Title)` — braces omitted when empty — and is used everywhere a name shows:
+  board/task assignee, chat author + @mentions, notification lines, the users table,
+  account menu, member lists, files uploader, and the activity carousel (the day-events
+  and notification-actor payloads were extended with `job_role`). Avatars keep their
+  two-letter initials.
+- **#19** Structured first/last name + initials-aware avatars — `users.first_name` /
+  `surname` columns (backfilled from the legacy free-form `name`, which stays as the
+  denormalized display value via `composeName`), wired through create/edit-user and the
+  self-profile form; `avatarInitials()` derives the two letters from the parts.
+- **#21** Admin can promote/revoke admin — "Make admin" / "Revoke admin" action in user
+  management (now in the #27 edit-user modal), wired to `api.updateUser({ role })` with a
+  promotion confirm; server blocks self-demotion and demoting the last admin.
 - **#27** Users page tidy-up (deletion deferred — see #27 above). The admin `/users`
   page moved from a responsive card grid to a table: one row per user (identity + role +
   permissions + actions). The capability pill-buttons (#17) became labelled on/off

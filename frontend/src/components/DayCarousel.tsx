@@ -7,7 +7,7 @@ import type { MessageDescriptor } from "@lingui/core";
 import { api, type Asset, type DayEvent, type MinorEvent } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { formatDayHeading, formatTime } from "@/lib/format";
+import { displayName, formatDayHeading, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -94,7 +94,7 @@ function EventLine({ event }: { event: DayEvent }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] leading-snug">
-          <span className="font-semibold">{event.user.name}:</span>{" "}
+          <span className="font-semibold">{displayName(event.user)}:</span>{" "}
           <span className="text-white/70">
             <Trans>Task</Trans> <span className="font-medium text-white">«{event.task.title}»</span>{" "}
             <span className="font-semibold text-lime-300">{action}</span>

@@ -369,7 +369,7 @@ msgstr "заблоковано цю задачу"
 #~ msgid "Board"
 #~ msgstr "Дошка"
 
-#. placeholder {0}: creator.name
+#. placeholder {0}: displayName(creator)
 #: src/pages/Task.tsx
 msgid "by {0}"
 msgstr "автор: {0}"
@@ -635,6 +635,10 @@ msgstr "Термін"
 msgid "Due date pushed back"
 msgstr "Термін перенесено на пізніше"
 
+#: src/components/UserManagement.tsx
+msgid "e.g. Architect, Foreman"
+msgstr "напр., Архітектор, Виконроб"
+
 #: src/pages/Projects.tsx
 msgid "e.g. Kitchen Remodel"
 msgstr "напр. Ремонт кухні"
@@ -764,6 +768,15 @@ msgstr "Його буде приховано для всіх. Адміністр
 #: src/components/FilesView.tsx
 msgid "It will be removed from Files."
 msgstr "Його буде вилучено з розділу «Файли»."
+
+#: src/components/UserManagement.tsx
+msgid "Job title"
+msgstr "Посада"
+
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "Job title (e.g. Architect)"
+msgstr "Посада (напр., Архітектор)"
 
 #: src/components/AppLayout.tsx
 msgid "Language"
@@ -1098,6 +1111,7 @@ msgid "Role"
 msgstr "Роль"
 
 #: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
 msgid "Save"
 msgstr "Зберегти"
 
@@ -1106,8 +1120,8 @@ msgid "Save changes"
 msgstr "Зберегти зміни"
 
 #: src/components/UserManagement.tsx
-msgid "Save name"
-msgstr "Зберегти ім'я"
+#~ msgid "Save name"
+#~ msgstr "Зберегти ім'я"
 
 #: src/pages/Chat.tsx
 msgid "Select a channel to start chatting."

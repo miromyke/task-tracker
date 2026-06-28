@@ -358,7 +358,7 @@ func (s *Store) ProjectLogsSince(projectID int64, startUTC string, includeArchiv
 func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, includeArchived bool, scope []int64) ([]DayEvent, error) {
 	q := `
 		SELECT li.id, li.type, li.text, li.from_status, li.to_status, li.created_at,
-		       u.id, u.username, u.name, u.avatar_path,
+		       u.id, u.username, u.name, u.job_role, u.avatar_path,
 		       t.id, t.title, t.project_id, p.name
 		FROM log_items li
 		JOIN users u ON u.id = li.user_id
@@ -396,7 +396,7 @@ func (s *Store) DayEvents(startUTC, endUTC, tag string, projectID int64, include
 		var from, to, avatar *string
 		if err := rows.Scan(
 			&e.ID, &e.Type, &e.Text, &from, &to, &e.CreatedAt,
-			&e.User.ID, &e.User.Username, &e.User.Name, &avatar,
+			&e.User.ID, &e.User.Username, &e.User.Name, &e.User.JobRole, &avatar,
 			&e.Task.ID, &e.Task.Title, &e.Task.ProjectID, &e.Task.ProjectName,
 		); err != nil {
 			return nil, err

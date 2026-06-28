@@ -373,7 +373,7 @@ msgstr "blocked this task"
 #~ msgid "Board"
 #~ msgstr "Board"
 
-#. placeholder {0}: creator.name
+#. placeholder {0}: displayName(creator)
 #: src/pages/Task.tsx
 msgid "by {0}"
 msgstr "by {0}"
@@ -639,6 +639,10 @@ msgstr "Due date"
 msgid "Due date pushed back"
 msgstr "Due date pushed back"
 
+#: src/components/UserManagement.tsx
+msgid "e.g. Architect, Foreman"
+msgstr "e.g. Architect, Foreman"
+
 #: src/pages/Projects.tsx
 msgid "e.g. Kitchen Remodel"
 msgstr "e.g. Kitchen Remodel"
@@ -768,6 +772,15 @@ msgstr "It will be removed for everyone. Admins can still see it for moderation.
 #: src/components/FilesView.tsx
 msgid "It will be removed from Files."
 msgstr "It will be removed from Files."
+
+#: src/components/UserManagement.tsx
+msgid "Job title"
+msgstr "Job title"
+
+#: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
+msgid "Job title (e.g. Architect)"
+msgstr "Job title (e.g. Architect)"
 
 #: src/components/AppLayout.tsx
 msgid "Language"
@@ -1102,6 +1115,7 @@ msgid "Role"
 msgstr "Role"
 
 #: src/components/AppLayout.tsx
+#: src/components/UserManagement.tsx
 msgid "Save"
 msgstr "Save"
 
@@ -1110,8 +1124,8 @@ msgid "Save changes"
 msgstr "Save changes"
 
 #: src/components/UserManagement.tsx
-msgid "Save name"
-msgstr "Save name"
+#~ msgid "Save name"
+#~ msgstr "Save name"
 
 #: src/pages/Chat.tsx
 msgid "Select a channel to start chatting."

@@ -4,6 +4,7 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { api, ApiError, type Capability, type Role, type User } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { UserAvatar } from "@/components/UserAvatar";
+import { displayName } from "@/lib/format";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -213,7 +214,7 @@ function UserRow({ user, onChanged }: { user: User; onChanged: () => void }) {
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="truncate font-medium">{user.name}</span>
+              <span className="truncate font-medium">{displayName(user)}</span>
               {user.disabled && (
                 <Badge className="border-transparent bg-muted text-muted-foreground">
                   <Trans>disabled</Trans>
@@ -287,6 +288,7 @@ function EditUserDialog({
   // undefined would crash the controlled inputs and the trim() guards below.
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [surname, setSurname] = useState(user.surname ?? "");
+  const [jobRole, setJobRole] = useState(user.jobRole ?? "");
   const [pw, setPw] = useState("");
   const [promoting, setPromoting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -297,7 +299,11 @@ function EditUserDialog({
     setBusy(true);
     setError(null);
     try {
-      await api.updateUser(user.id, { firstName: firstName.trim(), surname: surname.trim() });
+      await api.updateUser(user.id, {
+        firstName: firstName.trim(),
+        surname: surname.trim(),
+        jobRole: jobRole.trim(),
+      });
       onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t`Could not save`);
@@ -364,13 +370,18 @@ function EditUserDialog({
               <Input placeholder={t`First name`} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
             </div>
+            <Input
+              placeholder={t`Job title (e.g. Architect)`}
+              value={jobRole}
+              onChange={(e) => setJobRole(e.target.value)}
+            />
             <Button
               size="sm"
               className="self-start"
               disabled={busy || (!firstName.trim() && !surname.trim())}
               onClick={saveName}
             >
-              <Trans>Save name</Trans>
+              <Trans>Save</Trans>
             </Button>
           </div>
 
@@ -432,6 +443,7 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
   const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
+  const [jobRole, setJobRole] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -440,6 +452,7 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
     setUsername("");
     setFirstName("");
     setSurname("");
+    setJobRole("");
     setPassword("");
     setError(null);
   }
@@ -453,6 +466,7 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
         username: username.trim(),
         firstName: firstName.trim(),
         surname: surname.trim(),
+        jobRole: jobRole.trim(),
         password,
         role: "member",
       });
@@ -522,6 +536,16 @@ function AddMemberDialog({ onAdded }: { onAdded: () => void }) {
               </Label>
               <Input placeholder={t`Surname`} value={surname} onChange={(e) => setSurname(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              <Trans>Job title</Trans>
+            </Label>
+            <Input
+              placeholder={t`e.g. Architect, Foreman`}
+              value={jobRole}
+              onChange={(e) => setJobRole(e.target.value)}
+            />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" className="w-full" disabled={busy || !username.trim() || password.length < 6}>

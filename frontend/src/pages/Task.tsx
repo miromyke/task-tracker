@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDateTime, formatShortDate, isPast } from "@/lib/format";
+import { displayName, formatDateTime, formatShortDate, isPast } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // Returns a translatable descriptor for an activity-log entry's action.
@@ -168,8 +168,11 @@ function LogDetailView({
   }
 
   if (log.type === "assignee_change") {
-    const nameOf = (uid: number | null | undefined) =>
-      uid ? usersById.get(uid)?.name ?? `#${uid}` : i18n._(msg`Unassigned`);
+    const nameOf = (uid: number | null | undefined) => {
+      if (!uid) return i18n._(msg`Unassigned`);
+      const u = usersById.get(uid);
+      return u ? displayName(u) : `#${uid}`;
+    };
     return (
       <p className="mt-1 text-xs text-muted-foreground">
         {nameOf(d.fromUser)} → {nameOf(d.toUser)}
@@ -252,7 +255,7 @@ function LogEntry({
   usersById: Map<number, User>;
 }) {
   const { i18n } = useLingui();
-  const name = user?.name ?? i18n._(msg`Someone`);
+  const name = user ? displayName(user) : i18n._(msg`Someone`);
   const isNote = log.type === "note";
   // Comments show the author then their message; activity entries narrate the
   // action. A blocked status_change carries the block reason as its text.
@@ -501,7 +504,7 @@ export function TaskPage() {
                 avatarPath={assignee.avatarPath}
                 className="h-5 w-5 text-[9px]"
               />
-              {assignee.name}
+              {displayName(assignee)}
             </span>
           ) : (
             <span className="text-muted-foreground">
@@ -585,7 +588,7 @@ export function TaskPage() {
                   avatarPath={assignee.avatarPath}
                   className="h-6 w-6 text-[10px]"
                 />
-                {assignee.name}
+                {displayName(assignee)}
               </span>
             ) : (
               <span className="text-muted-foreground">
@@ -605,7 +608,7 @@ export function TaskPage() {
             {creator && (
               <span className="text-muted-foreground">
                 {" "}
-                <Trans>by {creator.name}</Trans>
+                <Trans>by {displayName(creator)}</Trans>
               </span>
             )}
           </MetaRow>

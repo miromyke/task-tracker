@@ -21,6 +21,9 @@ export interface User {
   name: string;
   firstName: string;
   surname: string;
+  // jobRole is a free-text job/function label (e.g. "Architect") shown in braces
+  // after the name (#26). Distinct from `role` (the admin/member access role).
+  jobRole: string;
   avatarPath: string | null;
   role: Role;
   disabled: boolean;
@@ -241,7 +244,7 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   updatedAt: string;
-  actor: { id: number; name: string; avatarPath: string | null } | null;
+  actor: { id: number; name: string; jobRole: string; avatarPath: string | null } | null;
   taskId: number | null;
   taskTitle: string | null;
   channelId: number | null;
@@ -314,21 +317,28 @@ export const api = {
     req<User>("/login", jsonBody("POST", { username, password })),
   logout: () => req<{ ok: boolean }>("/logout", { method: "POST" }),
   me: () => req<User>("/me"),
-  updateProfile: (body: { firstName: string; surname: string }) =>
+  updateProfile: (body: { firstName: string; surname: string; jobRole: string }) =>
     req<User>("/me", jsonBody("PATCH", body)),
   changePassword: (currentPassword: string, newPassword: string) =>
     req<{ ok: boolean }>("/me/password", jsonBody("POST", { currentPassword, newPassword })),
 
   // users
   listUsers: () => req<User[]>("/users"),
-  createUser: (body: { username: string; firstName: string; surname: string; password: string; role: Role }) =>
-    req<User>("/users", jsonBody("POST", body)),
+  createUser: (body: {
+    username: string;
+    firstName: string;
+    surname: string;
+    jobRole: string;
+    password: string;
+    role: Role;
+  }) => req<User>("/users", jsonBody("POST", body)),
   updateUser: (
     id: number,
     body: {
       password?: string;
       firstName?: string;
       surname?: string;
+      jobRole?: string;
       role?: Role;
       disabled?: boolean;
       capabilities?: Capabilities;

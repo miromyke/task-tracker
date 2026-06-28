@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { formatDateTime } from "@/lib/format";
+import { displayName, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 // How often (ms) to poll the active channel for new messages.
@@ -220,7 +220,7 @@ function Composer({
       return users
         .filter((u) => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))
         .slice(0, 6)
-        .map((u) => ({ key: u.id, label: u.name, sub: "", insert: `@${u.name}`, userId: u.id }));
+        .map((u) => ({ key: u.id, label: displayName(u), sub: "", insert: `@${u.name}`, userId: u.id }));
     }
     return tasks
       .filter((tk) => tk.title.toLowerCase().includes(q) || String(tk.id) === q)
@@ -400,7 +400,7 @@ function MessageRow({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-sm font-medium">{author?.name ?? <Trans>Unknown</Trans>}</span>
+          <span className="text-sm font-medium">{author ? displayName(author) : <Trans>Unknown</Trans>}</span>
           <span className="text-xs text-muted-foreground">{formatDateTime(message.createdAt)}</span>
           {deleted && (
             <span className="rounded bg-muted px-1.5 text-xs text-muted-foreground">

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell, Loader2 } from "lucide-react";
 import { Trans, useLingui } from "@lingui/react/macro";
 import { api, type Notification } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { displayName, formatDateTime } from "@/lib/format";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,7 +15,7 @@ const POLL_MS = 30000;
 // notificationLine renders the human-readable summary for a notification, using the
 // resolved actor name + task title / channel name the server attached to the row.
 function NotificationLine({ n }: { n: Notification }) {
-  const actor = n.actor?.name ?? "Someone";
+  const actor = n.actor ? displayName(n.actor) : "Someone";
   const task = n.taskTitle ?? "a task";
   const channel = n.channelName ?? "chat";
   if (n.type === "mention") {
