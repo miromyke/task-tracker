@@ -650,10 +650,10 @@ export function ProjectsPage() {
   const desktopProjectSelector = (
     <Popover open={projDropdownOpen} onOpenChange={setProjDropdownOpen}>
       <PopoverTrigger asChild>
-        <Button className="h-9 min-w-[12rem] max-w-sm justify-between gap-2 whitespace-normal text-left font-semibold">
+        <Button className="h-9 min-w-[12rem] max-w-[500px] justify-between gap-2 whitespace-nowrap text-left font-semibold">
           <span className="flex min-w-0 items-center gap-2">
             <FolderKanban className="h-4 w-4 shrink-0 opacity-80" />
-            <span>{selectedProject ? selectedProject.name : <Trans>All projects</Trans>}</span>
+            <span className="truncate">{selectedProject ? selectedProject.name : <Trans>All projects</Trans>}</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
         </Button>
